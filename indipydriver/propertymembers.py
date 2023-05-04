@@ -52,3 +52,25 @@ class SwitchMember:
         xmldata.set("name", self.name)
         xmldata.text = self._switchstate
         return xmldata
+
+
+
+class LightMember:
+
+    def __init__(self, name, label=None):
+        self.name = name
+        if label:
+            self.label = label
+        else:
+            self.label = name
+        # lightstate should be one of Idle|Ok|Busy|Alert
+        self.lightstate = 'Idle'
+
+
+    def deflight(self):
+        """Returns a defLight"""
+        xmldata = ET.Element('defLight')
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.text = self.lightstate
+        return xmldata

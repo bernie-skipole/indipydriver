@@ -22,6 +22,8 @@ class PropertyVector:
         # this will be set when the driver asyncrun is run
         self.driver = None
 
+        self.members = {}
+
 
     def set_propertyquedict(self, propertyquedict):
         """Every PropertyVector has access to the dataque of
@@ -33,6 +35,9 @@ class PropertyVector:
     def send_defVector(timestamp, timeout, message):
         "overridden in child classes"
         pass
+
+    def __getitem__(self, membername):
+        return self.members[membername]
 
 
     async def handler(self):
@@ -67,10 +72,8 @@ class SwitchVector(PropertyVector):
         self.rule = rule
         self.state = state
         # this is a dictionary of switch name : switch
-        self.switches = {switch.name:switch for switch in switches}
+        self.members = {switch.name:switch for switch in switches}
 
-    def __getitem__(self, switchname):
-        return self.switches[switchname]
 
     def send_defVector(self, timestamp, timeout, message):
         """Sets defSwitchVector into writerque"""
@@ -86,6 +89,33 @@ class SwitchVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for switch in self.switches.values():
+        for switch in self.members.values():
             xmldata.append(switch.defswitch())
+        self.driver.writerque.append(xmldata)
+
+
+
+class LightVector(PropertyVector):
+
+    def __init__(self, name, label, group, state, lights):
+        super().__init__(name)
+        self.label = label
+        self.group = group
+        self.state = state
+        # this is a dictionary of light name : light
+        self.members = {light.name:light for light in lights}
+
+    def send_defVector(self, timestamp, timeout, message):
+        """Sets defLightVector into writerque"""
+        xmldata = ET.Element('defLightVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.set("group", self.group)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        for light in self.members.values():
+            xmldata.append(light.deflight())
         self.driver.writerque.append(xmldata)
