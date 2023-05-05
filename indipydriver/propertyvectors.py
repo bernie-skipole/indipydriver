@@ -41,15 +41,13 @@ class PropertyVector:
     def state(self, value):
         self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
 
-
     def set_propertyquedict(self, propertyquedict):
         """Every PropertyVector has access to the dataque of
            all other propertyvectors via this dictionary, which is
            a name:dataque dictionary"""
         self.propertyquedict = propertyquedict
 
-
-    def send_defVector(timestamp, timeout, message):
+    def send_defVector(self, timestamp=None, timeout=0, message=''):
         "overridden in child classes"
         pass
 
@@ -60,35 +58,6 @@ class PropertyVector:
         return membername in self.members
 
 
-    async def handler(self):
-        """Check received data and take action"""
-        while True:
-            await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
-            # test if any xml data has been received
-            if not self.dataque:
-                continue
-            try:
-                root = self.dataque.popleft()
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self)
-                    await self.driver.eventaction(event)
-                    continue
-                elif root.tag == "newSwitchVector":
-                    # create event
-                    event = newSwitchVector(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
-                    continue
-                else:
-                    # further elifs should go here
-                    pass
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                continue
-
 
 class SwitchVector(PropertyVector):
 
@@ -97,8 +66,9 @@ class SwitchVector(PropertyVector):
         self.perm = perm
         self.rule = rule
         # this is a dictionary of switch name : switch
-        self.members = {switch.name:switch for switch in switches}
-
+        self.members = {}
+        for switch in switches:
+            self.members[switch.name] = switch
 
     @property
     def perm(self):
@@ -116,8 +86,39 @@ class SwitchVector(PropertyVector):
     def rule(self, value):
         self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
 
-    def send_defVector(self, timestamp, timeout, message):
+    async def handler(self):
+        """Check received data and take action"""
+        while True:
+            await asyncio.sleep(0)
+            if not self.enable:
+                await asyncio.sleep(0.1)
+                continue
+            # test if any xml data has been received
+            if not self.dataque:
+                continue
+            try:
+                root = self.dataque.popleft()
+                if root.tag == "getProperties":
+                    # create event
+                    event = getProperties(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+                elif root.tag == "newSwitchVector":
+                    if self._perm == 'ro':
+                        # read only, cannot be changed
+                        continue
+                    # create event
+                    event = newSwitchVector(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+            except EventException:
+                # if an error is raised parsing the incoming data, just continue
+                continue
+
+    def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defSwitchVector into writerque"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
             raise TypeError("timestamp must be a datetime.datetime object")
         xmldata = ET.Element('defSwitchVector')
@@ -137,17 +138,41 @@ class SwitchVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
-
 class LightVector(PropertyVector):
 
     def __init__(self, name, label, group, state, lights):
         super().__init__(name, label, group, state)
         # this is a dictionary of light name : light
-        self.members = {light.name:light for light in lights}
+        self.members = {}
+        for light in lights:
+            self.members[light.name] = light
+
+    async def handler(self):
+        """Check received data and take action"""
+        while True:
+            await asyncio.sleep(0)
+            if not self.enable:
+                await asyncio.sleep(0.1)
+                continue
+            # test if any xml data has been received
+            if not self.dataque:
+                continue
+            try:
+                root = self.dataque.popleft()
+                if root.tag == "getProperties":
+                    # create event
+                    event = getProperties(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+            except EventException:
+                # if an error is raised parsing the incoming data, just continue
+                continue
 
 
-    def send_defVector(self, timestamp, timeout, message):
+    def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defLightVector into writerque"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
             raise TypeError("timestamp must be a datetime.datetime object")
         xmldata = ET.Element('defLightVector')

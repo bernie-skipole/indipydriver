@@ -4,9 +4,11 @@ from datetime import datetime
 
 class Event:
 
-    def __init__(self, devicename, vectorname):
+    def __init__(self, devicename, vectorname, vector, root):
         self.devicename = devicename
         self.vectorname = vectorname
+        self.vector = vector
+        self.root = root
 
 
 class EventException(Exception):
@@ -14,17 +16,10 @@ class EventException(Exception):
     pass
 
 
-
 class getProperties(Event):
 
-    def __init__(self, devicename, vectorname, vector):
-        super().__init__(devicename, vectorname)
-        self.vector = vector
-
-    def send(self, timestamp=None, timeout=0, message=''):
-        if not timestamp:
-            timestamp = datetime.utcnow()
-        self.vector.send_defVector(timestamp, timeout, message)
+    def __init__(self, devicename, vectorname, vector, root):
+        super().__init__(devicename, vectorname, vector, root)
 
 
 class newSwitchVector(Event):
@@ -32,9 +27,8 @@ class newSwitchVector(Event):
     "defines an event with self.values, and self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname)
-        self.vector = vector
-        timestamp_string = root.get(timestamp)       ##### convert to datetime object
+        super().__init__(devicename, vectorname, vector, root)
+        timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
                 self.timestamp = datetime.fromisoformat(timestamp_string)

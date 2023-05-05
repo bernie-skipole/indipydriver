@@ -17,7 +17,6 @@ class PropertyMember:
         return value
 
 
-
 class SwitchMember(PropertyMember):
 
     def __init__(self, name, label=None):
