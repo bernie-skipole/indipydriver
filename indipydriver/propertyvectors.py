@@ -1,5 +1,5 @@
 
-import collections
+import collections, datetime
 
 import asyncio
 
@@ -11,8 +11,11 @@ from .events import getProperties
 class PropertyVector:
     "Parent class of SwitchVector etc.."
 
-    def __init__(self, name):
+    def __init__(self, name, label, group, state):
         self.name = name
+        self.label = label
+        self.group = group
+        self.state = state
         # if self.enable is False, this property is dormant
         self.enable = True
         # the device places data in this dataque
@@ -23,6 +26,20 @@ class PropertyVector:
         self.driver = None
 
         self.members = {}
+
+    def checkvalue(self, value, allowed):
+        "allowed is a list of values, checks if value is in it"
+        if value not in allowed:
+            raise ValueError(f"Value \"{value}\" is not one of {str(allowed).strip('[]')}")
+        return value
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
 
 
     def set_propertyquedict(self, propertyquedict):
@@ -65,18 +82,33 @@ class PropertyVector:
 class SwitchVector(PropertyVector):
 
     def __init__(self, name, label, group, perm, rule, state, switches):
-        super().__init__(name)
-        self.label = label
-        self.group = group
+        super().__init__(name, label, group, state)
         self.perm = perm
         self.rule = rule
-        self.state = state
         # this is a dictionary of switch name : switch
         self.members = {switch.name:switch for switch in switches}
 
 
+    @property
+    def perm(self):
+        return self._perm
+
+    @perm.setter
+    def perm(self, value):
+        self._perm = self.checkvalue(value, ['ro','wo','rw'])
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    def rule(self, value):
+        self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
+
     def send_defVector(self, timestamp, timeout, message):
         """Sets defSwitchVector into writerque"""
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
         xmldata = ET.Element('defSwitchVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
@@ -98,15 +130,15 @@ class SwitchVector(PropertyVector):
 class LightVector(PropertyVector):
 
     def __init__(self, name, label, group, state, lights):
-        super().__init__(name)
-        self.label = label
-        self.group = group
-        self.state = state
+        super().__init__(name, label, group, state)
         # this is a dictionary of light name : light
         self.members = {light.name:light for light in lights}
 
+
     def send_defVector(self, timestamp, timeout, message):
         """Sets defLightVector into writerque"""
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
         xmldata = ET.Element('defLightVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
