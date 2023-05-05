@@ -5,7 +5,7 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
-from .events import getProperties
+from .events import EventException, getProperties, newSwitchVector
 
 
 class PropertyVector:
@@ -56,10 +56,12 @@ class PropertyVector:
     def __getitem__(self, membername):
         return self.members[membername]
 
+    def __contains__(self, membername):
+        return membername in self.members
+
 
     async def handler(self):
         """Check received data and take action"""
-        # xmldata to be sent is to be generated here
         while True:
             await asyncio.sleep(0)
             if not self.enable:
@@ -68,15 +70,24 @@ class PropertyVector:
             # test if any xml data has been received
             if not self.dataque:
                 continue
-            root = self.dataque.popleft()
-            if root.tag == "getProperties":
-                # create event
-                event = getProperties(self.devicename, self.name, self)
-                await self.driver.eventaction(event)
+            try:
+                root = self.dataque.popleft()
+                if root.tag == "getProperties":
+                    # create event
+                    event = getProperties(self.devicename, self.name, self)
+                    await self.driver.eventaction(event)
+                    continue
+                elif root.tag == "newSwitchVector":
+                    # create event
+                    event = newSwitchVector(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+                else:
+                    # further elifs should go here
+                    pass
+            except EventException:
+                # if an error is raised parsing the incoming data, just continue
                 continue
-            else:
-                # further elifs should go here
-                pass
 
 
 class SwitchVector(PropertyVector):

@@ -158,7 +158,7 @@ class Device:
             self.propertyvectors[p.name] = p
 
     async def handler(self):
-        """Handles data read from readerque"""
+        """Handles data read from dataque"""
         while True:
             # get block of data from the self.dataque
             await asyncio.sleep(0)
