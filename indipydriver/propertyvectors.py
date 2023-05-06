@@ -116,7 +116,7 @@ class SwitchVector(PropertyVector):
                 continue
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defSwitchVector into writerque"""
+        """Sets defSwitchVector into writerque for transmission"""
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -126,6 +126,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         xmldata.set("group", self.group)
+        xmldata.set("state", self.state)
         xmldata.set("perm", self.perm)
         xmldata.set("rule", self.rule)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
@@ -136,6 +137,26 @@ class SwitchVector(PropertyVector):
         for switch in self.members.values():
             xmldata.append(switch.defswitch())
         self.driver.writerque.append(xmldata)
+
+    def send_setVector(self, timestamp=None, timeout=0, message=''):
+       """Sets setSwitchVector into writerque for transmission"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setSwitchVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for switch in self.members.values():
+            xmldata.append(switch.oneswitch())
+        self.driver.writerque.append(xmldata)
+
 
 
 class LightVector(PropertyVector):
@@ -170,7 +191,8 @@ class LightVector(PropertyVector):
 
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defLightVector into writerque"""
+        """Sets defLightVector into writerque for transmission"""
+        # Note timeout is not used
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -186,4 +208,24 @@ class LightVector(PropertyVector):
             xmldata.set("message", message)
         for light in self.members.values():
             xmldata.append(light.deflight())
+        self.driver.writerque.append(xmldata)
+
+
+    def send_setVector(self, timestamp=None, timeout=0, message=''):
+       """Sets setLightVector into writerque for transmission"""
+        # Note timeout is not used
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setLightVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        for light in self.members.values():
+            xmldata.append(light.onelight())
         self.driver.writerque.append(xmldata)

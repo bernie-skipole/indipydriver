@@ -36,7 +36,6 @@ class SwitchMember(PropertyMember):
     def switchstate(self, value):
         self._switchstate = self.checkvalue(value, ['On', 'Off'])
 
-
     def defswitch(self):
         """Returns a defSwitch"""
         xmldata = ET.Element('defSwitch')
@@ -46,10 +45,9 @@ class SwitchMember(PropertyMember):
         return xmldata
 
     def oneswitch(self, switchstate=None):
-        """Returns xml of a oneSwitch, switchstate is True, False or not giben"""
-        if switchstate is None:
-            switchstate = self._switchstate
-        else:
+        """Returns xml of a oneSwitch, sets switchstate
+           or if None the current value is unchanged"""
+        if switchstate:
             self.switchstate = switchstate
         xmldata = ET.Element('oneSwitch')
         xmldata.set("name", self.name)
@@ -82,5 +80,15 @@ class LightMember(PropertyMember):
         xmldata = ET.Element('defLight')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
+        xmldata.text = self._lightstate
+        return xmldata
+
+    def onelight(self, lightstate=None):
+        """Returns xml of a oneLight, sets lightstate
+           or if None the current value is unchanged"""
+        if lightstate:
+            self.lightstate = lightstate
+        xmldata = ET.Element('oneLight')
+        xmldata.set("name", self.name)
         xmldata.text = self._lightstate
         return xmldata
