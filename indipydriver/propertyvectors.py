@@ -139,7 +139,7 @@ class SwitchVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
-       """Sets setSwitchVector into writerque for transmission"""
+        """Sets setSwitchVector into writerque for transmission"""
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -212,7 +212,7 @@ class LightVector(PropertyVector):
 
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
-       """Sets setLightVector into writerque for transmission"""
+        """Sets setLightVector into writerque for transmission"""
         # Note timeout is not used
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
