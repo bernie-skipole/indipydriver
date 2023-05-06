@@ -5,7 +5,7 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
-from .events import EventException, getProperties, newSwitchVector
+from .events import EventException, getProperties, newSwitchVector, newTextVector
 
 
 class PropertyVector:
@@ -316,5 +316,5 @@ class TextVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for text in self.members.values():
-            xmldata.append(text.oneswitch())
+            xmldata.append(text.onetext())
         self.driver.writerque.append(xmldata)

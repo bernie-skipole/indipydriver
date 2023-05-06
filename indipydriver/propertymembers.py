@@ -115,7 +115,7 @@ class TextMember(PropertyMember):
     def onetext(self, textvalue=None):
         """Returns xml of a oneText, sets textvalue
            or if None the current value is unchanged"""
-        if textvalue is None:
+        if textvalue:
             self.textvalue = textvalue
         xmldata = ET.Element('oneText')
         xmldata.set("name", self.name)
