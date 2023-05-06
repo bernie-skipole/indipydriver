@@ -25,33 +25,33 @@ class SwitchMember(PropertyMember):
             self.label = label
         else:
             self.label = name
-        # switchstate should be either 'Off' or 'On'
-        self._switchstate = 'Off'
+        # switchvalue should be either 'Off' or 'On'
+        self._switchvalue = 'Off'
 
     @property
-    def switchstate(self):
-        return self._switchstate
+    def switchvalue(self):
+        return self._switchvalue
 
-    @switchstate.setter
-    def switchstate(self, value):
-        self._switchstate = self.checkvalue(value, ['On', 'Off'])
+    @switchvalue.setter
+    def switchvalue(self, value):
+        self._switchvalue = self.checkvalue(value, ['On', 'Off'])
 
     def defswitch(self):
         """Returns a defSwitch"""
         xmldata = ET.Element('defSwitch')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
-        xmldata.text = self._switchstate
+        xmldata.text = self._switchvalue
         return xmldata
 
-    def oneswitch(self, switchstate=None):
-        """Returns xml of a oneSwitch, sets switchstate
+    def oneswitch(self, switchvalue=None):
+        """Returns xml of a oneSwitch, sets switchvalue
            or if None the current value is unchanged"""
-        if switchstate:
-            self.switchstate = switchstate
+        if switchvalue:
+            self.switchvalue = switchvalue
         xmldata = ET.Element('oneSwitch')
         xmldata.set("name", self.name)
-        xmldata.text = self._switchstate
+        xmldata.text = self._switchvalue
         return xmldata
 
 
@@ -64,31 +64,60 @@ class LightMember(PropertyMember):
             self.label = label
         else:
             self.label = name
-        # lightstate should be one of Idle|Ok|Busy|Alert
-        self._lightstate = 'Idle'
+        # lightvalue should be one of Idle|Ok|Busy|Alert
+        self._lightvalue = 'Idle'
 
     @property
-    def lightstate(self):
-        return self._lightstate
+    def lightvalue(self):
+        return self._lightvalue
 
-    @lightstate.setter
-    def lightstate(self, value):
-        self._lightstate = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
+    @lightvalue.setter
+    def lightvalue(self, value):
+        self._lightvalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
 
     def deflight(self):
         """Returns a defLight"""
         xmldata = ET.Element('defLight')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
-        xmldata.text = self._lightstate
+        xmldata.text = self._lightvalue
         return xmldata
 
-    def onelight(self, lightstate=None):
-        """Returns xml of a oneLight, sets lightstate
+    def onelight(self, lightvalue=None):
+        """Returns xml of a oneLight, sets lightvalue
            or if None the current value is unchanged"""
-        if lightstate:
-            self.lightstate = lightstate
+        if lightvalue:
+            self.lightvalue = lightvalue
         xmldata = ET.Element('oneLight')
         xmldata.set("name", self.name)
-        xmldata.text = self._lightstate
+        xmldata.text = self._lightvalue
+        return xmldata
+
+
+class TextMember(PropertyMember):
+
+    def __init__(self, name, label=None):
+        self.name = name
+        if label:
+            self.label = label
+        else:
+            self.label = name
+        self.textvalue = ''
+
+    def deftext(self):
+        """Returns a defText"""
+        xmldata = ET.Element('defText')
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.text = self.textvalue
+        return xmldata
+
+    def onetext(self, textvalue=None):
+        """Returns xml of a oneText, sets textvalue
+           or if None the current value is unchanged"""
+        if textvalue is None:
+            self.textvalue = textvalue
+        xmldata = ET.Element('oneText')
+        xmldata.set("name", self.name)
+        xmldata.text = self.textvalue
         return xmldata
