@@ -5,7 +5,7 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
-from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB
+from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 
 
 class PropertyVector:
@@ -320,6 +320,136 @@ class TextVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
+
+class NumberVector(PropertyVector):
+
+    def __init__(self, name, label, group, perm, state, numbermembers):
+        super().__init__(name, label, group, state)
+        self.perm = perm
+        # this is a dictionary of number name : numbermember
+        self.members = {}
+        for number in numbermembers:
+            self.members[number.name] = number
+
+    @property
+    def perm(self):
+        return self._perm
+
+    @perm.setter
+    def perm(self, value):
+        self._perm = self.checkvalue(value, ['ro','wo','rw'])
+
+    async def handler(self):
+        """Check received data and take action"""
+        while True:
+            await asyncio.sleep(0)
+            if not self.enable:
+                await asyncio.sleep(0.1)
+                continue
+            # test if any xml data has been received
+            if not self.dataque:
+                continue
+            try:
+                root = self.dataque.popleft()
+                if root.tag == "getProperties":
+                    # create event
+                    event = getProperties(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+                elif root.tag == "newNumberVector":
+                    if self._perm == 'ro':
+                        # read only, cannot be changed
+                        continue
+                    # create event
+                    event = newNumberVector(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+            except EventException:
+                # if an error is raised parsing the incoming data, just continue
+                continue
+
+    def send_defVector(self, timestamp=None, timeout=0, message=''):
+        """Sets defNumberVector into writerque for transmission"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('defNumberVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.set("group", self.group)
+        xmldata.set("state", self.state)
+        xmldata.set("perm", self.perm)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for number in self.members.values():
+            xmldata.append(number.defnumber())
+        self.driver.writerque.append(xmldata)
+
+    def send_setVector(self, timestamp=None, timeout=0, message=''):
+        """Sets setNumberVector into writerque for transmission"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setNumberVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for number in self.members.values():
+            xmldata.append(number.onenumber())
+        self.driver.writerque.append(xmldata)
+
+
+    def value_to_float(self, value):
+        """The INDI spec allows a number of different number formats, given any, this returns a float"""
+        # negative is True, if the value is negative
+        negative = value.startswith("-")
+        if negative:
+            value = value.lstrip("-")
+        # Is the number provided in sexagesimal form?
+        if value == "":
+            parts = [0, 0, 0]
+        elif " " in value:
+            parts = value.split(" ")
+        elif ":" in value:
+            parts = value.split(":")
+        elif ";" in value:
+            parts = value.split(";")
+        else:
+            # not sexagesimal
+            parts = [value, "0", "0"]
+        # Any missing parts should have zero
+        if len(parts) == 2:
+            # assume seconds are missing, set to zero
+            parts.append("0")
+        assert len(parts) == 3
+        number_strings = list(x if x else "0" for x in parts)
+        # convert strings to integers or floats
+        number_list = []
+        for part in number_strings:
+            try:
+                num = int(part)
+            except ValueError:
+                num = float(part)
+            number_list.append(num)
+        floatvalue = number_list[0] + (number_list[1]/60) + (number_list[2]/360)
+        if negative:
+            floatvalue = -1 * floatvalue
+        return floatvalue
+
+
+
+
 class BLOBVector(PropertyVector):
 
     def __init__(self, name, label, group, perm, state, blobmembers):
@@ -395,12 +525,12 @@ class BLOBVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
-        """Sets setTextVector into writerque for transmission"""
+        """Sets setBLOBVector into writerque for transmission"""
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
             raise TypeError("timestamp must be a datetime.datetime object")
-        xmldata = ET.Element('setTextVector')
+        xmldata = ET.Element('setBLOBVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
@@ -409,6 +539,6 @@ class BLOBVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for text in self.members.values():
-            xmldata.append(text.onetext())
+        for blob in self.members.values():
+            xmldata.append(blob.oneblob())
         self.driver.writerque.append(xmldata)

@@ -123,6 +123,43 @@ class TextMember(PropertyMember):
         return xmldata
 
 
+class NumberMember(PropertyMember):
+
+    def __init__(self, name, label=None, format='', min='', max='', step='0'):
+        self.name = name
+        if label:
+            self.label = label
+        else:
+            self.label = name
+        self.format = format
+        self.min = min
+        self.max = max
+        self.step = step
+        self.numbervalue = ''
+
+    def defnumber(self):
+        """Returns a defNumber"""
+        xmldata = ET.Element('defNumber')
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.set("format", self.format)
+        xmldata.set("min", self.min)
+        xmldata.set("max", self.max)
+        xmldata.set("step", self.step)
+        xmldata.text = self.numbervalue
+        return xmldata
+
+    def onenumber(self, numbervalue=None):
+        """Returns xml of a oneNumber, sets numbervalue
+           or if None the current value is unchanged"""
+        if numbervalue:
+            self.numbervalue = numbervalue
+        xmldata = ET.Element('oneNumber')
+        xmldata.set("name", self.name)
+        xmldata.text = self.numbervalue
+        return xmldata
+
+
 class BLOBMember(PropertyMember):
 
     def __init__(self, name, label=None):
@@ -132,10 +169,24 @@ class BLOBMember(PropertyMember):
         else:
             self.label = name
         self.blobvalue = ''
+        self.blobsize = ''
+        self.blobformat = ''
 
     def defblob(self):
         """Returns a defBlob, does not contain a blobvalue"""
         xmldata = ET.Element('defBlob')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
+        return xmldata
+
+    def oneblob(self, blobvalue=None):
+        """Returns xml of a oneBLOB, sets blobvalue
+           or if None the current value is unchanged"""
+        if blobvalue:
+            self.blobvalue = blobvalue
+        xmldata = ET.Element('oneBLOB')
+        xmldata.set("name", self.name)
+        xmldata.set("size", str(self.blobsize))
+        xmldata.set("format", self.blobformat)
+        xmldata.text = self.blobvalue
         return xmldata
