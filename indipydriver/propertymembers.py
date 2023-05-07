@@ -121,3 +121,21 @@ class TextMember(PropertyMember):
         xmldata.set("name", self.name)
         xmldata.text = self.textvalue
         return xmldata
+
+
+class BLOBMember(PropertyMember):
+
+    def __init__(self, name, label=None):
+        self.name = name
+        if label:
+            self.label = label
+        else:
+            self.label = name
+        self.blobvalue = ''
+
+    def defblob(self):
+        """Returns a defBlob, does not contain a blobvalue"""
+        xmldata = ET.Element('defBlob')
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        return xmldata

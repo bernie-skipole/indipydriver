@@ -45,11 +45,6 @@ class RX:
             root = await anext(source)
             if root is not None:
                 self.readerque.append(root)
-
-
-
-
-
     async def datasource(self):
         """This is an iterator, which should be overridden in child classes to produce
            xml.etree.ElementTree data blocks"""

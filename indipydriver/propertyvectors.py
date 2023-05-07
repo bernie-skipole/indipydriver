@@ -5,7 +5,7 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
-from .events import EventException, getProperties, newSwitchVector, newTextVector
+from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB
 
 
 class PropertyVector:
@@ -298,6 +298,100 @@ class TextVector(PropertyVector):
             xmldata.set("message", message)
         for text in self.members.values():
             xmldata.append(text.deftext())
+        self.driver.writerque.append(xmldata)
+
+    def send_setVector(self, timestamp=None, timeout=0, message=''):
+        """Sets setTextVector into writerque for transmission"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setTextVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for text in self.members.values():
+            xmldata.append(text.onetext())
+        self.driver.writerque.append(xmldata)
+
+
+class BLOBVector(PropertyVector):
+
+    def __init__(self, name, label, group, perm, state, blobmembers):
+        super().__init__(name, label, group, state)
+        self.perm = perm
+        # this is a dictionary of blob name : blobmember
+        self.members = {}
+        for blob in blobmembers:
+            self.members[blob.name] = blob
+
+    @property
+    def perm(self):
+        return self._perm
+
+    @perm.setter
+    def perm(self, value):
+        self._perm = self.checkvalue(value, ['ro','wo','rw'])
+
+    async def handler(self):
+        """Check received data and take action"""
+        while True:
+            await asyncio.sleep(0)
+            if not self.enable:
+                await asyncio.sleep(0.1)
+                continue
+            # test if any xml data has been received
+            if not self.dataque:
+                continue
+            try:
+                root = self.dataque.popleft()
+                if root.tag == "getProperties":
+                    # create event
+                    event = getProperties(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+                elif root.tag == "enableBLOB":
+                    # create event
+                    event = enableBLOB(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+                elif root.tag == "newBLOBVector":
+                    if self._perm == 'ro':
+                        # read only, cannot be changed
+                        continue
+                    # create event
+                    event = newBLOBVector(self.devicename, self.name, self, root)
+                    await self.driver.eventaction(event)
+                    continue
+            except EventException:
+                # if an error is raised parsing the incoming data, just continue
+                continue
+
+    def send_defVector(self, timestamp=None, timeout=0, message=''):
+        """Sets defBLOBVector into writerque for transmission"""
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('defBLOBVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("label", self.label)
+        xmldata.set("group", self.group)
+        xmldata.set("state", self.state)
+        xmldata.set("perm", self.perm)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for blob in self.members.values():
+            xmldata.append(blob.defblob())
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
