@@ -410,43 +410,6 @@ class NumberVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
-    def value_to_float(self, value):
-        """The INDI spec allows a number of different number formats, given any, this returns a float"""
-        # negative is True, if the value is negative
-        negative = value.startswith("-")
-        if negative:
-            value = value.lstrip("-")
-        # Is the number provided in sexagesimal form?
-        if value == "":
-            parts = [0, 0, 0]
-        elif " " in value:
-            parts = value.split(" ")
-        elif ":" in value:
-            parts = value.split(":")
-        elif ";" in value:
-            parts = value.split(";")
-        else:
-            # not sexagesimal
-            parts = [value, "0", "0"]
-        # Any missing parts should have zero
-        if len(parts) == 2:
-            # assume seconds are missing, set to zero
-            parts.append("0")
-        assert len(parts) == 3
-        number_strings = list(x if x else "0" for x in parts)
-        # convert strings to integers or floats
-        number_list = []
-        for part in number_strings:
-            try:
-                num = int(part)
-            except ValueError:
-                num = float(part)
-            number_list.append(num)
-        floatvalue = number_list[0] + (number_list[1]/60) + (number_list[2]/360)
-        if negative:
-            floatvalue = -1 * floatvalue
-        return floatvalue
-
 
 
 

@@ -131,7 +131,6 @@ class newNumberVector(Event):
 
 
 
-
 class newBLOBVector(Event):
     """defines an event with self.values, self.sizeformat and self.timestamp
        The values of the self.sizeformat dictionary is a tuple of filesize, fileformat"""
