@@ -135,7 +135,115 @@ class NumberMember(PropertyMember):
         self.min = min
         self.max = max
         self.step = step
-        self.numbervalue = ''
+        self._numbervalue = None
+
+        # If numbervalue, min, max step are given as strings, they are assumed to
+        # be correctly formatted and used in the xml directly.
+        # if given as integers or floats, they are formatted using the format string
+
+
+    @property
+    def numbervalue(self):
+        return self._numbervalue
+
+    @numbervalue.setter
+    def numbervalue(self, value):
+        if isinstance(value, str):
+            self._numbervalue = value
+        else:
+            self._numbervalue = self.format_number(value)
+
+    @property
+    def min(self):
+        return self._min
+
+    @min.setter
+    def min(self, value):
+        if isinstance(value, str):
+            self._min = value
+        else:
+            self._min = self.format_number(value)
+
+    @property
+    def max(self):
+        return self._max
+
+    @max.setter
+    def max(self, value):
+        if isinstance(value, str):
+            self._max = value
+        else:
+            self._max = self.format_number(value)
+
+    @property
+    def step(self):
+        return self._step
+
+    @step.setter
+    def step(self, value):
+        if isinstance(value, str):
+            self._step = value
+        else:
+            self._step = self.format_number(value)
+
+    def format_number(self, value):
+        """This takes a float, and returns a formatted string
+        """
+        if (not self.format.startswith("%")) or (not self.format.endswith("m")):
+            return self.format % value
+        # sexagesimal format
+        if value<0:
+            negative = True
+            value = abs(value)
+        else:
+            negative = False
+        # number list will be degrees, minutes, seconds
+        number_list = [0,0,0]
+        if isinstance(value, int):
+            number_list[0] = value
+        else:
+            # get integer part and fraction part
+            fractdegrees, degrees = math.modf(value)
+            number_list[0] = int(degrees)
+            mins = 60*fractdegrees
+            fractmins, mins = math.modf(mins)
+            number_list[1] = int(mins)
+            number_list[2] = 60*fractmins
+
+        # so number list is a valid degrees, minutes, seconds
+        # degrees
+        if negative:
+            number = f"-{number_list[0]}:"
+        else:
+            number = f"{number_list[0]}:"
+        # format string is of the form  %<w>.<f>m
+        w,f = self.format.split(".")
+        w = w.lstrip("%")
+        f = f.rstrip("m")
+        if (f == "3") or (f == "5"):
+            # no seconds, so create minutes value
+            minutes = float(number_list[1]) + number_list[2]/60.0
+            if f == "5":
+                number += f"{minutes:04.1f}"
+            else:
+                number += f"{minutes:02.0f}"
+        else:
+            number += f"{number_list[1]:02d}:"
+            seconds = float(number_list[2])
+            if f == "6":
+                number += f"{seconds:02.0f}"
+            elif f == "8":
+                number += f"{seconds:04.1f}"
+            else:
+                number += f"{seconds:05.2f}"
+
+        # w is the overall length of the string, prepend with spaces to make the length up to w
+        w = int(w)
+        l = len(number)
+        if w>l:
+            number = " "*(w-l) + number
+        return number
+
 
     def defnumber(self):
         """Returns a defNumber"""
@@ -143,20 +251,20 @@ class NumberMember(PropertyMember):
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         xmldata.set("format", self.format)
-        xmldata.set("min", self.min)
-        xmldata.set("max", self.max)
-        xmldata.set("step", self.step)
-        xmldata.text = self.numbervalue
+        xmldata.set("min", self._min)
+        xmldata.set("max", self._max)
+        xmldata.set("step", self._step)
+        xmldata.text = self._numbervalue
         return xmldata
 
     def onenumber(self, numbervalue=None):
         """Returns xml of a oneNumber, sets numbervalue
            or if None the current value is unchanged"""
-        if numbervalue:
+        if not numbervalue is None:
             self.numbervalue = numbervalue
         xmldata = ET.Element('oneNumber')
         xmldata.set("name", self.name)
-        xmldata.text = self.numbervalue
+        xmldata.text = self._numbervalue
         return xmldata
 
 

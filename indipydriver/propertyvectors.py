@@ -57,6 +57,18 @@ class PropertyVector:
     def __contains__(self, membername):
         return membername in self.members
 
+    def __iter__(self):
+        return iter(self.members)
+
+    def keys(self):
+        return self.members.keys()
+
+    def items(self):
+        return self.members.items()
+
+    def values(self):
+        return self.members.values()
+
 
 
 class SwitchVector(PropertyVector):

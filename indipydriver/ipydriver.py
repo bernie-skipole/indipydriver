@@ -93,9 +93,13 @@ class IPyDriver:
                         continue
 
     async def hardware(self):
-        "Override this, typically uses a while loop to control device hardware"
-        while True:
-            await asyncio.sleep(0)
+        "Override this, operate device hardware, and transmit updates"
+        await asyncio.sleep(0)
+        # for example: create a number of co routines - each having
+        # a while True loop, and running continuously, and controlling
+        # whatever hardware is required, and calling appropriate vector
+        # methods to send data, then
+        # await asyncio.gather(the co routines)
 
     async def eventaction(self, event):
         """On receiving data, this is called, and should handle any necessary actions
@@ -131,7 +135,7 @@ class IPyDriver:
         await asyncio.gather(self._rx.run_rx(),      # task in _rx object to get incoming xml data and pass to this driver
                              self._tx.run_tx(),      # task in _tx object to transmit xml data
                              self._read_readerque(), # task to handle received xml data
-                             self.hardware(),        # task to operate device hardware
+                             self.hardware(),        # task to operate device hardware, and transmit updates
                              *device_handlers,       # each device handles its incoming data
                              *property_handlers      # each property handles its incoming data
                             )
@@ -156,6 +160,25 @@ class Device:
             p.propertyquedict = self.propertyquedict
             p.devicename = self.devicename
             self.propertyvectors[p.name] = p
+
+    def __getitem__(self, vectorname):
+        return self.propertyvectors[vectorname]
+
+    def __contains__(self, vectorname):
+        return vectorname in self.propertyvectors
+
+    def __iter__(self):
+        return iter(self.propertyvectors)
+
+    def keys(self):
+        return self.propertyvectors.keys()
+
+    def items(self):
+        return self.propertyvectors.items()
+
+    def values(self):
+        return self.propertyvectors.values()
+
 
     async def handler(self):
         """Handles data read from dataque"""
