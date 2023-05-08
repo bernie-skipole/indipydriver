@@ -4,6 +4,10 @@ import collections
 
 import asyncio
 
+import datetime
+
+import xml.etree.ElementTree as ET
+
 from .receiver import STDIN_RX
 from .transmitter import STDOUT_TX
 from . import events
@@ -92,6 +96,19 @@ class IPyDriver:
                         # device not recognised
                         continue
 
+    def send_message(self, message="", timestamp=None):
+        "Send system wide message - without device name"
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp given in send_message must be a datetime.datetime object")
+        xmldata = ET.Element('message')
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        self.writerque.append(xmldata)
+
     async def hardware(self):
         "Override this, operate device hardware, and transmit updates"
         await asyncio.sleep(0)
@@ -125,6 +142,9 @@ class IPyDriver:
         device_handlers = []
         property_handlers = []
         for device in self.devices.values():
+            # also give the device a reference to this driver
+            # so it can have access to writerque
+            device.driver = self
             device_handlers.append(device.handler())
             for pv in device.propertyvectors.values():
                 property_handlers.append(pv.handler())
@@ -154,12 +174,32 @@ class Device:
         # Every property of this device has a dataque, which is set into this dictionary
         self.propertyquedict = {p.name:p.dataque for p in properties}
 
+        # this will be set when the driver asyncrun is run
+        self.driver = None
+
         # this is a dictionary of property name to propertyvector this device owns
         self.propertyvectors = {}
         for p in properties:
-            p.propertyquedict = self.propertyquedict
             p.devicename = self.devicename
             self.propertyvectors[p.name] = p
+
+    def send_device_message(self, message="", timestamp=None):
+        "Send message associated with this device"
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp given in send_message must be a datetime.datetime object")
+        xmldata = ET.Element('message')
+        xmldata.set("device", self.devicename)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        self.driver.writerque.append(xmldata)
+
+    def send_message(self, message="", timestamp=None):
+        "Send system wide message - without device name"
+        self.driver.send_message(message, timestamp)
 
     def __getitem__(self, vectorname):
         return self.propertyvectors[vectorname]

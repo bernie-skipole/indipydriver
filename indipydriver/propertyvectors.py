@@ -6,7 +6,7 @@ import asyncio
 import xml.etree.ElementTree as ET
 
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
-
+from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
 class PropertyVector:
     "Parent class of SwitchVector etc.."
@@ -22,10 +22,21 @@ class PropertyVector:
         # for the vector to act upon
         self.dataque = collections.deque()
 
+        # this will be set when the device is initialised
+        self.devicename = None
+
         # this will be set when the driver asyncrun is run
         self.driver = None
 
         self.members = {}
+
+    def send_device_message(self, message="", timestamp=None):
+        "Send message associated with the device this vector belongs to"
+        self.driver[self.devicename].send_device_message(message, timestamp)
+
+    def send_message(self, message="", timestamp=None):
+        "Send system wide message - without device name"
+        self.driver.send_message(message, timestamp)
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -40,12 +51,6 @@ class PropertyVector:
     @state.setter
     def state(self, value):
         self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
-
-    def set_propertyquedict(self, propertyquedict):
-        """Every PropertyVector has access to the dataque of
-           all other propertyvectors via this dictionary, which is
-           a name:dataque dictionary"""
-        self.propertyquedict = propertyquedict
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         "overridden in child classes"
@@ -80,6 +85,8 @@ class SwitchVector(PropertyVector):
         # this is a dictionary of switch name : switchmember
         self.members = {}
         for switch in switchmembers:
+            if not isinstance(switch, SwitchMember):
+                raise TypeError("Members of a SwitchVector must all be SwitchMembers")
             self.members[switch.name] = switch
 
     @property
@@ -178,6 +185,8 @@ class LightVector(PropertyVector):
         # this is a dictionary of light name : lightmember
         self.members = {}
         for light in lightmembers:
+            if not isinstance(light, LightMember):
+                raise TypeError("Members of a LightVector must all be LightMembers")
             self.members[light.name] = light
 
     async def handler(self):
@@ -251,6 +260,8 @@ class TextVector(PropertyVector):
         # this is a dictionary of text name : textmember
         self.members = {}
         for text in textmembers:
+            if not isinstance(text, TextMember):
+                raise TypeError("Members of a TextVector must all be TextMembers")
             self.members[text.name] = text
 
     @property
@@ -341,6 +352,8 @@ class NumberVector(PropertyVector):
         # this is a dictionary of number name : numbermember
         self.members = {}
         for number in numbermembers:
+            if not isinstance(number, NumberMember):
+                raise TypeError("Members of a NumberVector must all be NumberMembers")
             self.members[number.name] = number
 
     @property
@@ -433,6 +446,8 @@ class BLOBVector(PropertyVector):
         # this is a dictionary of blob name : blobmember
         self.members = {}
         for blob in blobmembers:
+            if not isinstance(blob, BLOBMember):
+                raise TypeError("Members of a BLOBVector must all be BLOBMembers")
             self.members[blob.name] = blob
 
     @property
