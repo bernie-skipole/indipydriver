@@ -32,7 +32,7 @@ class PropertyVector:
 
     def send_device_message(self, message="", timestamp=None):
         "Send message associated with the device this vector belongs to"
-        self.driver[self.devicename].send_device_message(message, timestamp)
+        self.driver.devices[self.devicename].send_device_message(message, timestamp)
 
     def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
