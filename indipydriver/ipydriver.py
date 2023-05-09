@@ -96,9 +96,11 @@ class IPyDriver:
                     # devicename is None (for all devices), or a named device
                     if devicename is None:
                         for d in self.devices.values():
-                            d.dataque.append(root)
+                            if d.enable:
+                                d.dataque.append(root)
                     elif devicename in self.devices:
-                        self.devices[devicename].dataque.append(root)
+                        if self.devices[devicename].enable:
+                            self.devices[devicename].dataque.append(root)
                     else:
                         # device not recognised
                         continue
@@ -109,7 +111,8 @@ class IPyDriver:
                         # device not given, ignore this
                         continue
                     elif devicename in self.devices:
-                        self.devices[devicename].dataque.append(root)
+                        if self.devices[devicename].enable:
+                            self.devices[devicename].dataque.append(root)
                     else:
                         # device not recognised
                         continue
@@ -186,6 +189,9 @@ class Device:
         # This device name
         self.devicename = devicename
 
+        # if self.enable is False, this device ignores incoming traffic
+        self.enable = True
+
         # the driver places data in this que to send data to this device
         self.dataque = collections.deque()
 
@@ -219,6 +225,21 @@ class Device:
         "Send system wide message - without device name"
         self.driver.send_message(message, timestamp)
 
+
+   def send_delProperty(self, message="", timestamp=None):
+        "Send delProperty with this device"
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp given in send_delProperty must be a datetime.datetime object")
+        xmldata = ET.Element('delProperty')
+        xmldata.set("device", self.devicename)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        self.driver.writerque.append(xmldata)
+
     def __getitem__(self, vectorname):
         return self.propertyvectors[vectorname]
 
@@ -245,14 +266,18 @@ class Device:
             await asyncio.sleep(0)
             if self.dataque:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     name = root.get("name")
                     # name is None (for all properties), or a named property
                     if name is None:
-                        for pname,pvector in self.propertyvectors.items():
-                            pvector.dataque.append(root)
+                        for pvector in self.propertyvectors.values():
+                            if pvector.enable:
+                                pvector.dataque.append(root)
                     elif name in self.propertyvectors:
-                        self.propertyvectors[name].dataque.append(root)
+s                       if self.propertyvectors[name].enable:
+                            self.propertyvectors[name].dataque.append(root)
                     else:
                         # property name not recognised
                         continue
@@ -260,10 +285,12 @@ class Device:
                     name = root.get("name")
                     # name is None (for all properties), or a named property
                     if name is None:
-                        for pname,pvector in self.propertyvectors.items():
-                            pvector.dataque.append(root)
+                        for pvector in self.propertyvectors.values():
+                            if pvector.enable:
+                                pvector.dataque.append(root)
                     elif name in self.propertyvectors:
-                        self.propertyvectors[name].dataque.append(root)
+                        if self.propertyvectors[name].enable:
+                            self.propertyvectors[name].dataque.append(root)
                     else:
                         # property name not recognised
                         continue
@@ -274,7 +301,8 @@ class Device:
                         # name not given, ignore this
                         continue
                     elif name in self.propertyvectors:
-                        self.propertyvectors[name].dataque.append(root)
+                        if self.propertyvectors[name].enable:
+                            self.propertyvectors[name].dataque.append(root)
                     else:
                         # property name not recognised
                         continue

@@ -16,7 +16,7 @@ class PropertyVector:
         self.label = label
         self.group = group
         self.state = state
-        # if self.enable is False, this property is dormant
+        # if self.enable is False, this property ignores incoming traffic
         self.enable = True
         # the device places data in this dataque
         # for the vector to act upon
@@ -37,6 +37,21 @@ class PropertyVector:
     def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
         self.driver.send_message(message, timestamp)
+
+    def send_delProperty(self, message="", timestamp=None):
+        "Send delProperty with this device and property"
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp given in send_delProperty must be a datetime.datetime object")
+        xmldata = ET.Element('delProperty')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        self.driver.writerque.append(xmldata)
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -109,14 +124,13 @@ class SwitchVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
             # test if any xml data has been received
             if not self.dataque:
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -193,14 +207,13 @@ class LightVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
             # test if any xml data has been received
             if not self.dataque:
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -276,14 +289,13 @@ class TextVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
             # test if any xml data has been received
             if not self.dataque:
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -368,14 +380,13 @@ class NumberVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
             # test if any xml data has been received
             if not self.dataque:
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -435,9 +446,6 @@ class NumberVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
-
-
-
 class BLOBVector(PropertyVector):
 
     def __init__(self, name, label, group, perm, state, blobmembers):
@@ -462,14 +470,13 @@ class BLOBVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            if not self.enable:
-                await asyncio.sleep(0.1)
-                continue
             # test if any xml data has been received
             if not self.dataque:
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.enable:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
