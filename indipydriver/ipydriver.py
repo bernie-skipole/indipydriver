@@ -63,6 +63,24 @@ class IPyDriver:
         self._tx = tx
         self._tx.writerque = self.writerque
 
+   def __getitem__(self, devicename):
+        return self.devices[devicename]
+
+    def __contains__(self, devicename):
+        return devicename in self.devices
+
+    def __iter__(self):
+        return iter(self.devices)
+
+    def keys(self):
+        return self.devices.keys()
+
+    def items(self):
+        return self.devices.items()
+
+    def values(self):
+        return self.devices.values()
+
     async def _read_readerque(self):
         while True:
             await asyncio.sleep(0)
