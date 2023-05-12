@@ -40,7 +40,7 @@ class enableBLOB(Event):
 
 
 class newSwitchVector(Event):
-    "defines an event with self.values, and self.timestamp"
+    "defines an event with self._values, and self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
@@ -53,28 +53,47 @@ class newSwitchVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self.values = {}
+        self._values = {}
         for member in root:
             if member.tag == "oneSwitch":
                 membername = member.get("name")
                 if membername in self.vector:
                     value = member.text
                     if value == "On":
-                        self.values[membername] = "On"
+                        self._values[membername] = "On"
                     elif value == "Off":
-                        self.values[membername] = "Off"
+                        self._values[membername] = "Off"
                     else:
                         raise EventException
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self.values:
+        if not self._values:
             raise EventException
+
+    def __getitem__(self, membername):
+        return self._values[membername]
+
+    def __contains__(self, membername):
+        return membername in self._values
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def keys(self):
+        return self._values.keys()
+
+    def items(self):
+        return self._values.items()
+
+    def values(self):
+        return self._values.values()
+
 
 
 class newTextVector(Event):
-    "defines an event with self.values, and self.timestamp"
+    "defines an event with self._values, and self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
@@ -87,22 +106,41 @@ class newTextVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self.values = {}
+        self._values = {}
         for member in root:
             if member.tag == "oneText":
                 membername = member.get("name")
                 if membername in self.vector:
-                    self.values[membername] = member.text
+                    self._values[membername] = member.text
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self.values:
+        if not self._values:
             raise EventException
+
+    def __getitem__(self, membername):
+        return self._values[membername]
+
+    def __contains__(self, membername):
+        return membername in self._values
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def keys(self):
+        return self._values.keys()
+
+    def items(self):
+        return self._values.items()
+
+    def values(self):
+        return self._values.values()
+
 
 
 class newNumberVector(Event):
-    "defines an event with self.values, and self.timestamp"
+    "defines an event with self._values, and self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
@@ -115,24 +153,42 @@ class newNumberVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self.values = {}
+        self._values = {}
         self.floatvalues = {}
         for member in root:
             if member.tag == "oneNumber":
                 membername = member.get("name")
                 if membername in self.vector:
-                    self.values[membername] = member.text
+                    self._values[membername] = member.text
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self.values:
+        if not self._values:
             raise EventException
+
+    def __getitem__(self, membername):
+        return self._values[membername]
+
+    def __contains__(self, membername):
+        return membername in self._values
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def keys(self):
+        return self._values.keys()
+
+    def items(self):
+        return self._values.items()
+
+    def values(self):
+        return self._values.values()
 
 
 
 class newBLOBVector(Event):
-    """defines an event with self.values, self.sizeformat and self.timestamp
+    """defines an event with self._values, self.sizeformat and self.timestamp
        The values of the self.sizeformat dictionary is a tuple of filesize, fileformat"""
 
     def __init__(self, devicename, vectorname, vector, root):
@@ -146,14 +202,14 @@ class newBLOBVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self.values = {}
+        self._values = {}
         self.sizeformat = {}
         for member in root:
             if member.tag == "oneBLOB":
                 membername = member.get("name")
                 if membername in self.vector:
                     try:
-                        self.values[membername] = standard_b64decode(member.text.encode('ascii'))
+                        self._values[membername] = standard_b64decode(member.text.encode('ascii'))
                         filesize = int(member.get("size"))
                     except:
                         raise EventException
@@ -165,5 +221,23 @@ class newBLOBVector(Event):
                     raise EventException
             else:
                 raise EventException
-        if not self.values:
+        if not self._values:
             raise EventException
+
+    def __getitem__(self, membername):
+        return self._values[membername]
+
+    def __contains__(self, membername):
+        return membername in self._values
+
+    def __iter__(self):
+        return iter(self._values)
+
+    def keys(self):
+        return self._values.keys()
+
+    def items(self):
+        return self._values.items()
+
+    def values(self):
+        return self._values.values()

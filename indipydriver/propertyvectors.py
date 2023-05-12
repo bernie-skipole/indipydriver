@@ -78,23 +78,32 @@ class PropertyVector:
         "overridden in child classes"
         pass
 
+    def valuedict(self):
+        return {membername:member.membervalue for membername,member in self.members.values()}
+
     def __getitem__(self, membername):
-        return self.members[membername]
+        return self.members[membername].membervalue
+
+    def __setitem__(self, membername, value):
+        self.members[membername].membervalue = value
 
     def __contains__(self, membername):
         return membername in self.members
 
     def __iter__(self):
-        return iter(self.members)
+        valuedictionary = self.valuedict()
+        return iter(valuedictionary)
 
     def keys(self):
         return self.members.keys()
 
     def items(self):
-        return self.members.items()
+        valuedictionary = self.valuedict()
+        return valuedictionary.items()
 
     def values(self):
-        return self.members.values()
+        valuedictionary = self.valuedict()
+        return valuedictionary.values()
 
 
 
@@ -156,6 +165,7 @@ class SwitchVector(PropertyVector):
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 continue
+
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defSwitchVector into writerque for transmission"""
