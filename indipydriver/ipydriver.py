@@ -63,7 +63,7 @@ class IPyDriver:
         self._tx = tx
         self._tx.writerque = self.writerque
 
-   def __getitem__(self, devicename):
+    def __getitem__(self, devicename):
         return self.devices[devicename]
 
     def __contains__(self, devicename):
@@ -190,6 +190,8 @@ class Device:
         self.devicename = devicename
 
         # if self.enable is False, this device ignores incoming traffic
+        # and (apart from delProperty) does not transmit anything
+        # from his device
         self.enable = True
 
         # the driver places data in this que to send data to this device
@@ -209,6 +211,9 @@ class Device:
 
     def send_device_message(self, message="", timestamp=None):
         "Send message associated with this device"
+        if not self.enable:
+            # messages only sent if self.enable is True
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -226,8 +231,8 @@ class Device:
         self.driver.send_message(message, timestamp)
 
 
-   def send_delProperty(self, message="", timestamp=None):
-        "Send delProperty with this device"
+    def send_delProperty(self, message="", timestamp=None):
+        "Send delProperty with this device, set self.enable to False"
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -239,6 +244,7 @@ class Device:
         if message:
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
+        self.enable = False
 
     def __getitem__(self, vectorname):
         return self.propertyvectors[vectorname]
@@ -276,7 +282,7 @@ class Device:
                             if pvector.enable:
                                 pvector.dataque.append(root)
                     elif name in self.propertyvectors:
-s                       if self.propertyvectors[name].enable:
+                        if self.propertyvectors[name].enable:
                             self.propertyvectors[name].dataque.append(root)
                     else:
                         # property name not recognised

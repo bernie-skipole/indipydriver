@@ -17,6 +17,7 @@ class PropertyVector:
         self.group = group
         self.state = state
         # if self.enable is False, this property ignores incoming traffic
+        # and (apart from delProperty) does not transmit anything
         self.enable = True
         # the device places data in this dataque
         # for the vector to act upon
@@ -30,16 +31,21 @@ class PropertyVector:
 
         self.members = {}
 
+
+    @property
+    def device(self):
+        return self.driver.devices[self.devicename]
+
     def send_device_message(self, message="", timestamp=None):
         "Send message associated with the device this vector belongs to"
-        self.driver.devices[self.devicename].send_device_message(message, timestamp)
+        self.device.send_device_message(message, timestamp)
 
     def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
         self.driver.send_message(message, timestamp)
 
     def send_delProperty(self, message="", timestamp=None):
-        "Send delProperty with this device and property"
+        "Send delProperty with this device and property, set self.enable to False"
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -52,6 +58,7 @@ class PropertyVector:
         if message:
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
+        self.enable = False
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -129,6 +136,8 @@ class SwitchVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.device.enable:
+                    continue
                 if not self.enable:
                     continue
                 if root.tag == "getProperties":
@@ -150,6 +159,10 @@ class SwitchVector(PropertyVector):
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defSwitchVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -173,6 +186,10 @@ class SwitchVector(PropertyVector):
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
         """Sets setSwitchVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -212,6 +229,8 @@ class LightVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.device.enable:
+                    continue
                 if not self.enable:
                     continue
                 if root.tag == "getProperties":
@@ -227,6 +246,10 @@ class LightVector(PropertyVector):
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defLightVector into writerque for transmission"""
         # Note timeout is not used
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -248,6 +271,10 @@ class LightVector(PropertyVector):
     def send_setVector(self, timestamp=None, timeout=0, message=''):
         """Sets setLightVector into writerque for transmission"""
         # Note timeout is not used
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -294,6 +321,8 @@ class TextVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.device.enable:
+                    continue
                 if not self.enable:
                     continue
                 if root.tag == "getProperties":
@@ -315,6 +344,10 @@ class TextVector(PropertyVector):
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defTextVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -337,6 +370,10 @@ class TextVector(PropertyVector):
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
         """Sets setTextVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -385,6 +422,8 @@ class NumberVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.device.enable:
+                    continue
                 if not self.enable:
                     continue
                 if root.tag == "getProperties":
@@ -406,6 +445,10 @@ class NumberVector(PropertyVector):
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defNumberVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -428,6 +471,10 @@ class NumberVector(PropertyVector):
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
         """Sets setNumberVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -475,6 +522,8 @@ class BLOBVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
+                if not self.device.enable:
+                    continue
                 if not self.enable:
                     continue
                 if root.tag == "getProperties":
@@ -501,6 +550,10 @@ class BLOBVector(PropertyVector):
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defBLOBVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -523,6 +576,10 @@ class BLOBVector(PropertyVector):
 
     def send_setVector(self, timestamp=None, timeout=0, message=''):
         """Sets setBLOBVector into writerque for transmission"""
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
