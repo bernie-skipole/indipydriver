@@ -8,10 +8,11 @@ import xml.etree.ElementTree as ET
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
-class PropertyVector:
+class PropertyVector(collections.UserDict):
     "Parent class of SwitchVector etc.."
 
     def __init__(self, name, label, group, state):
+        super().__init__()
         self.name = name
         self.label = label
         self.group = group
@@ -81,30 +82,12 @@ class PropertyVector:
     def valuedict(self):
         return {membername:member.membervalue for membername,member in self.members.values()}
 
-    def __getitem__(self, membername):
-        return self.members[membername].membervalue
-
     def __setitem__(self, membername, value):
         self.members[membername].membervalue = value
-
-    def __contains__(self, membername):
-        return membername in self.members
-
-    def __iter__(self):
-        valuedictionary = self.valuedict()
-        return iter(valuedictionary)
-
-    def keys(self):
-        return self.members.keys()
-
-    def items(self):
-        valuedictionary = self.valuedict()
-        return valuedictionary.items()
-
-    def values(self):
-        valuedictionary = self.valuedict()
-        return valuedictionary.values()
-
+        # setting value into self.members[membername].membervalue may
+        # include some changes (number format) so set self.data[membername]
+        # to the resultant self.members[membername].membervalue
+        self.data[membername] = self.members[membername].membervalue
 
 
 class SwitchVector(PropertyVector):
@@ -119,6 +102,7 @@ class SwitchVector(PropertyVector):
             if not isinstance(switch, SwitchMember):
                 raise TypeError("Members of a SwitchVector must all be SwitchMembers")
             self.members[switch.name] = switch
+            self.data[switch.name] = switch.membervalue
 
     @property
     def perm(self):
@@ -229,6 +213,7 @@ class LightVector(PropertyVector):
             if not isinstance(light, LightMember):
                 raise TypeError("Members of a LightVector must all be LightMembers")
             self.members[light.name] = light
+            self.data[light.name] = light.membervalue
 
     async def handler(self):
         """Check received data and take action"""
@@ -313,6 +298,7 @@ class TextVector(PropertyVector):
             if not isinstance(text, TextMember):
                 raise TypeError("Members of a TextVector must all be TextMembers")
             self.members[text.name] = text
+            self.data[text.name] = text.membervalue
 
     @property
     def perm(self):
@@ -414,6 +400,7 @@ class NumberVector(PropertyVector):
             if not isinstance(number, NumberMember):
                 raise TypeError("Members of a NumberVector must all be NumberMembers")
             self.members[number.name] = number
+            self.data[number.name] = number.membervalue
 
     @property
     def perm(self):
@@ -514,6 +501,7 @@ class BLOBVector(PropertyVector):
             if not isinstance(blob, BLOBMember):
                 raise TypeError("Members of a BLOBVector must all be BLOBMembers")
             self.members[blob.name] = blob
+            self.data[blob.name] = blob.membervalue
 
     @property
     def perm(self):

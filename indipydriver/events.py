@@ -2,8 +2,9 @@
 
 from datetime import datetime
 
-
 from base64 import standard_b64decode
+
+from collections import UserDict
 
 class Event:
     "Parent class for events"
@@ -39,11 +40,12 @@ class enableBLOB(Event):
             raise EventException
 
 
-class newSwitchVector(Event):
-    "defines an event with self._values, and self.timestamp"
+class newSwitchVector(Event, UserDict):
+    "defines an event with self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname, vector, root)
+        Event.__init__(self, devicename, vectorname, vector, root)
+        UserDict.__init__(self)
         timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
@@ -53,50 +55,34 @@ class newSwitchVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self._values = {}
         for member in root:
             if member.tag == "oneSwitch":
                 membername = member.get("name")
                 if membername in self.vector:
                     value = member.text
                     if value == "On":
-                        self._values[membername] = "On"
+                        self.data[membername] = "On"
                     elif value == "Off":
-                        self._values[membername] = "Off"
+                        self.data[membername] = "Off"
                     else:
                         raise EventException
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self._values:
+        if not self.data:
             raise EventException
 
-    def __getitem__(self, membername):
-        return self._values[membername]
-
-    def __contains__(self, membername):
-        return membername in self._values
-
-    def __iter__(self):
-        return iter(self._values)
-
-    def keys(self):
-        return self._values.keys()
-
-    def items(self):
-        return self._values.items()
-
-    def values(self):
-        return self._values.values()
+    def __setitem__(self, membername):
+        raise KeyError
 
 
-
-class newTextVector(Event):
-    "defines an event with self._values, and self.timestamp"
+class newTextVector(Event, UserDict):
+    "defines an event with self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname, vector, root)
+        Event.__init__(self, devicename, vectorname, vector, root)
+        UserDict.__init__(self)
         timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
@@ -106,44 +92,29 @@ class newTextVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self._values = {}
         for member in root:
             if member.tag == "oneText":
                 membername = member.get("name")
                 if membername in self.vector:
-                    self._values[membername] = member.text
+                    self.data[membername] = member.text
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self._values:
+        if not self.data:
             raise EventException
 
-    def __getitem__(self, membername):
-        return self._values[membername]
-
-    def __contains__(self, membername):
-        return membername in self._values
-
-    def __iter__(self):
-        return iter(self._values)
-
-    def keys(self):
-        return self._values.keys()
-
-    def items(self):
-        return self._values.items()
-
-    def values(self):
-        return self._values.values()
+    def __setitem__(self, membername):
+        raise KeyError
 
 
 
-class newNumberVector(Event):
-    "defines an event with self._values, and self.timestamp"
+class newNumberVector(Event, UserDict):
+    "defines an event with self.timestamp"
 
     def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname, vector, root)
+        Event.__init__(self, devicename, vectorname, vector, root)
+        UserDict.__init__(self)
         timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
@@ -153,46 +124,30 @@ class newNumberVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self._values = {}
-        self.floatvalues = {}
         for member in root:
             if member.tag == "oneNumber":
                 membername = member.get("name")
                 if membername in self.vector:
-                    self._values[membername] = member.text
+                    self.data[membername] = member.text
                 else:
                     raise EventException
             else:
                 raise EventException
-        if not self._values:
+        if not self.data:
             raise EventException
 
-    def __getitem__(self, membername):
-        return self._values[membername]
-
-    def __contains__(self, membername):
-        return membername in self._values
-
-    def __iter__(self):
-        return iter(self._values)
-
-    def keys(self):
-        return self._values.keys()
-
-    def items(self):
-        return self._values.items()
-
-    def values(self):
-        return self._values.values()
+    def __setitem__(self, membername):
+        raise KeyError
 
 
 
-class newBLOBVector(Event):
+class newBLOBVector(Event, UserDict):
     """defines an event with self._values, self.sizeformat and self.timestamp
        The values of the self.sizeformat dictionary is a tuple of filesize, fileformat"""
 
     def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname, vector, root)
+        Event.__init__(self, devicename, vectorname, vector, root)
+        UserDict.__init__(self)
         timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
@@ -202,14 +157,13 @@ class newBLOBVector(Event):
         else:
             self.timestamp = datetime.utcnow()
         # create a dictionary of member name to value
-        self._values = {}
         self.sizeformat = {}
         for member in root:
             if member.tag == "oneBLOB":
                 membername = member.get("name")
                 if membername in self.vector:
                     try:
-                        self._values[membername] = standard_b64decode(member.text.encode('ascii'))
+                        self.data[membername] = standard_b64decode(member.text.encode('ascii'))
                         filesize = int(member.get("size"))
                     except:
                         raise EventException
@@ -221,23 +175,8 @@ class newBLOBVector(Event):
                     raise EventException
             else:
                 raise EventException
-        if not self._values:
+        if not self.data:
             raise EventException
 
-    def __getitem__(self, membername):
-        return self._values[membername]
-
-    def __contains__(self, membername):
-        return membername in self._values
-
-    def __iter__(self):
-        return iter(self._values)
-
-    def keys(self):
-        return self._values.keys()
-
-    def items(self):
-        return self._values.items()
-
-    def values(self):
-        return self._values.values()
+    def __setitem__(self, membername):
+        raise KeyError
