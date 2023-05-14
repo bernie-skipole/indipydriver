@@ -30,8 +30,6 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
-        self.members = {}
-
 
     @property
     def device(self):
@@ -79,15 +77,11 @@ class PropertyVector(collections.UserDict):
         "overridden in child classes"
         pass
 
-    def valuedict(self):
-        return {membername:member.membervalue for membername,member in self.members.values()}
-
     def __setitem__(self, membername, value):
-        self.members[membername].membervalue = value
-        # setting value into self.members[membername].membervalue may
-        # include some changes (number format) so set self.data[membername]
-        # to the resultant self.members[membername].membervalue
-        self.data[membername] = self.members[membername].membervalue
+        self.data[membername].membervalue = value
+
+    def __getitem__(self, membername):
+        return self.data[membername].membervalue
 
 
 class SwitchVector(PropertyVector):
@@ -96,13 +90,11 @@ class SwitchVector(PropertyVector):
         super().__init__(name, label, group, state)
         self.perm = perm
         self.rule = rule
-        # this is a dictionary of switch name : switchmember
-        self.members = {}
+        # self.data is a dictionary of switch name : switchmember
         for switch in switchmembers:
             if not isinstance(switch, SwitchMember):
                 raise TypeError("Members of a SwitchVector must all be SwitchMembers")
-            self.members[switch.name] = switch
-            self.data[switch.name] = switch.membervalue
+            self.data[switch.name] = switch
 
     @property
     def perm(self):
@@ -174,7 +166,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for switch in self.members.values():
+        for switch in self.data.values():
             xmldata.append(switch.defswitch())
         self.driver.writerque.append(xmldata)
 
@@ -197,7 +189,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for switch in self.members.values():
+        for switch in self.data.values():
             xmldata.append(switch.oneswitch())
         self.driver.writerque.append(xmldata)
 
@@ -207,13 +199,11 @@ class LightVector(PropertyVector):
 
     def __init__(self, name, label, group, state, lightmembers):
         super().__init__(name, label, group, state)
-        # this is a dictionary of light name : lightmember
-        self.members = {}
+        # self.data is a dictionary of light name : lightmember
         for light in lightmembers:
             if not isinstance(light, LightMember):
                 raise TypeError("Members of a LightVector must all be LightMembers")
-            self.members[light.name] = light
-            self.data[light.name] = light.membervalue
+            self.data[light.name] = light
 
     async def handler(self):
         """Check received data and take action"""
@@ -258,7 +248,7 @@ class LightVector(PropertyVector):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        for light in self.members.values():
+        for light in self.data.values():
             xmldata.append(light.deflight())
         self.driver.writerque.append(xmldata)
 
@@ -282,7 +272,7 @@ class LightVector(PropertyVector):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        for light in self.members.values():
+        for light in self.data.values():
             xmldata.append(light.onelight())
         self.driver.writerque.append(xmldata)
 
@@ -292,13 +282,11 @@ class TextVector(PropertyVector):
     def __init__(self, name, label, group, perm, state, textmembers):
         super().__init__(name, label, group, state)
         self.perm = perm
-        # this is a dictionary of text name : textmember
-        self.members = {}
+        # self.data is a dictionary of text name : textmember
         for text in textmembers:
             if not isinstance(text, TextMember):
                 raise TypeError("Members of a TextVector must all be TextMembers")
-            self.members[text.name] = text
-            self.data[text.name] = text.membervalue
+            self.data[text.name] = text
 
     @property
     def perm(self):
@@ -360,7 +348,7 @@ class TextVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for text in self.members.values():
+        for text in self.data.values():
             xmldata.append(text.deftext())
         self.driver.writerque.append(xmldata)
 
@@ -383,7 +371,7 @@ class TextVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for text in self.members.values():
+        for text in self.data.values():
             xmldata.append(text.onetext())
         self.driver.writerque.append(xmldata)
 
@@ -394,13 +382,11 @@ class NumberVector(PropertyVector):
     def __init__(self, name, label, group, perm, state, numbermembers):
         super().__init__(name, label, group, state)
         self.perm = perm
-        # this is a dictionary of number name : numbermember
-        self.members = {}
+        # self.data is a dictionary of number name : numbermember
         for number in numbermembers:
             if not isinstance(number, NumberMember):
                 raise TypeError("Members of a NumberVector must all be NumberMembers")
-            self.members[number.name] = number
-            self.data[number.name] = number.membervalue
+            self.data[number.name] = number
 
     @property
     def perm(self):
@@ -462,7 +448,7 @@ class NumberVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for number in self.members.values():
+        for number in self.data.values():
             xmldata.append(number.defnumber())
         self.driver.writerque.append(xmldata)
 
@@ -485,7 +471,7 @@ class NumberVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for number in self.members.values():
+        for number in self.data.values():
             xmldata.append(number.onenumber())
         self.driver.writerque.append(xmldata)
 
@@ -495,13 +481,11 @@ class BLOBVector(PropertyVector):
     def __init__(self, name, label, group, perm, state, blobmembers):
         super().__init__(name, label, group, state)
         self.perm = perm
-        # this is a dictionary of blob name : blobmember
-        self.members = {}
+        # self.data is a dictionary of blob name : blobmember
         for blob in blobmembers:
             if not isinstance(blob, BLOBMember):
                 raise TypeError("Members of a BLOBVector must all be BLOBMembers")
-            self.members[blob.name] = blob
-            self.data[blob.name] = blob.membervalue
+            self.data[blob.name] = blob
 
     @property
     def perm(self):
@@ -568,7 +552,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for blob in self.members.values():
+        for blob in self.data.values():
             xmldata.append(blob.defblob())
         self.driver.writerque.append(xmldata)
 
@@ -591,6 +575,6 @@ class BLOBVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for blob in self.members.values():
+        for blob in self.data.values():
             xmldata.append(blob.oneblob())
         self.driver.writerque.append(xmldata)
