@@ -181,8 +181,8 @@ class IPyDriver(collections.UserDict):
 
         await asyncio.gather(self._rx.run_rx(),      # task in _rx object to get incoming xml data and pass to this driver
                              self._tx.run_tx(),      # task in _tx object to transmit xml data
-                             self._read_readerque(), # task to handle received xml data
                              self.hardware(),        # task to operate device hardware, and transmit updates
+                             self._read_readerque(), # task to handle received xml data
                              *device_handlers,       # each device handles its incoming data
                              *property_handlers      # each property handles its incoming data
                             )
