@@ -13,18 +13,24 @@ from .transmitter import STDOUT_TX
 from . import events
 
 
-class IPyDriver:
+class IPyDriver(collections.UserDict):
 
     """To run this driver, create an IPyDriver instance, and then
        its awaitable asyncrun method should be run in an async loop.
        """
 
     def __init__(self, devices, tx=None, rx=None):
+        super().__init__()
 
         # this is a dictionary of device name to device this driver owns
         self.devices = {d.devicename:d for d in devices}
 
-        # data is transmitted out on the writerque
+        self.data = self.devices
+
+        # self.data is used by UserDict, it is an alias of self.devices
+        # simply because 'devices' is more descriptive
+
+        # traffic is transmitted out on the writerque
         self.writerque = collections.deque()
         # and read in from the readerque
         self.readerque = collections.deque()
@@ -63,23 +69,8 @@ class IPyDriver:
         self._tx = tx
         self._tx.writerque = self.writerque
 
-    def __getitem__(self, devicename):
-        return self.devices[devicename]
-
-    def __contains__(self, devicename):
-        return devicename in self.devices
-
-    def __iter__(self):
-        return iter(self.devices)
-
-    def keys(self):
-        return self.devices.keys()
-
-    def items(self):
-        return self.devices.items()
-
-    def values(self):
-        return self.devices.values()
+    def __setitem__(self, devicename):
+        raise KeyError
 
     async def _read_readerque(self):
         while True:
@@ -128,6 +119,21 @@ class IPyDriver:
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
+        self.writerque.append(xmldata)
+
+    def send_getProperties(self, devicename=None, vectorname=None):
+        "sends getproperties, if devicename given, it must not be a device of this driver"
+        xmldata = ET.Element('getProperties')
+        if devicename is None:
+            self.writerque.append(xmldata)
+            return
+        if devicename in self.devices:
+            raise ValueError("Cannot snoop on a device already belonging to this driver")
+        xmldata.set("device", devicename)
+        if vectorname is None:
+            self.writerque.append(xmldata)
+            return
+        xmldata.set("name", vectorname)
         self.writerque.append(xmldata)
 
     async def hardware(self):
@@ -182,9 +188,10 @@ class IPyDriver:
                             )
 
 
-class Device:
+class Device(collections.UserDict):
 
     def __init__(self, devicename, properties, tx=None, rx=None):
+        super().__init__()
 
         # This device name
         self.devicename = devicename
@@ -208,6 +215,11 @@ class Device:
         for p in properties:
             p.devicename = self.devicename
             self.propertyvectors[p.name] = p
+
+        self.data = self.propertyvectors
+        # self.data is used by UserDict, it is an alias of self.propertyvectors
+        # simply because 'propertyvectors' is more descriptive
+
 
     def send_device_message(self, message="", timestamp=None):
         "Send message associated with this device"
@@ -246,23 +258,8 @@ class Device:
         self.driver.writerque.append(xmldata)
         self.enable = False
 
-    def __getitem__(self, vectorname):
-        return self.propertyvectors[vectorname]
-
-    def __contains__(self, vectorname):
-        return vectorname in self.propertyvectors
-
-    def __iter__(self):
-        return iter(self.propertyvectors)
-
-    def keys(self):
-        return self.propertyvectors.keys()
-
-    def items(self):
-        return self.propertyvectors.items()
-
-    def values(self):
-        return self.propertyvectors.values()
+    def __setitem__(self, vectorname):
+        raise KeyError
 
 
     async def handler(self):
