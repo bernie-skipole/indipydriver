@@ -324,7 +324,7 @@ class TextVector(PropertyVector):
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
-                continue
+                pass
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         """Sets defTextVector into writerque for transmission"""

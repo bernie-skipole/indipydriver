@@ -40,9 +40,8 @@ class enableBLOB(Event):
             raise EventException
 
 
-class newSwitchVector(Event, UserDict):
-    "defines an event with self.timestamp"
-
+class newVector(Event, UserDict):
+    "Parent to new vectors, adds dictionary and self.timestamp"
     def __init__(self, devicename, vectorname, vector, root):
         Event.__init__(self, devicename, vectorname, vector, root)
         UserDict.__init__(self)
@@ -54,6 +53,15 @@ class newSwitchVector(Event, UserDict):
                 raise EventException
         else:
             self.timestamp = datetime.utcnow()
+
+    def __setitem__(self, membername):
+        raise KeyError
+
+
+class newSwitchVector(newVector):
+
+    def __init__(self, devicename, vectorname, vector, root):
+        newVector.__init__(self, devicename, vectorname, vector, root)
         # create a dictionary of member name to value
         for member in root:
             if member.tag == "oneSwitch":
@@ -73,24 +81,10 @@ class newSwitchVector(Event, UserDict):
         if not self.data:
             raise EventException
 
-    def __setitem__(self, membername):
-        raise KeyError
-
-
-class newTextVector(Event, UserDict):
-    "defines an event with self.timestamp"
+class newTextVector(newVector):
 
     def __init__(self, devicename, vectorname, vector, root):
-        Event.__init__(self, devicename, vectorname, vector, root)
-        UserDict.__init__(self)
-        timestamp_string = root.get("timestamp")
-        if timestamp_string:
-            try:
-                self.timestamp = datetime.fromisoformat(timestamp_string)
-            except:
-                raise EventException
-        else:
-            self.timestamp = datetime.utcnow()
+        newVector.__init__(self, devicename, vectorname, vector, root)
         # create a dictionary of member name to value
         for member in root:
             if member.tag == "oneText":
@@ -104,25 +98,11 @@ class newTextVector(Event, UserDict):
         if not self.data:
             raise EventException
 
-    def __setitem__(self, membername):
-        raise KeyError
 
-
-
-class newNumberVector(Event, UserDict):
-    "defines an event with self.timestamp"
+class newNumberVector(newVector):
 
     def __init__(self, devicename, vectorname, vector, root):
-        Event.__init__(self, devicename, vectorname, vector, root)
-        UserDict.__init__(self)
-        timestamp_string = root.get("timestamp")
-        if timestamp_string:
-            try:
-                self.timestamp = datetime.fromisoformat(timestamp_string)
-            except:
-                raise EventException
-        else:
-            self.timestamp = datetime.utcnow()
+        newVector.__init__(self, devicename, vectorname, vector, root)
         # create a dictionary of member name to value
         for member in root:
             if member.tag == "oneNumber":
@@ -136,27 +116,13 @@ class newNumberVector(Event, UserDict):
         if not self.data:
             raise EventException
 
-    def __setitem__(self, membername):
-        raise KeyError
 
-
-
-class newBLOBVector(Event, UserDict):
-    """defines an event with self._values, self.sizeformat and self.timestamp
-       The values of the self.sizeformat dictionary is a tuple of filesize, fileformat"""
+class newBLOBVector(newVector):
 
     def __init__(self, devicename, vectorname, vector, root):
-        Event.__init__(self, devicename, vectorname, vector, root)
-        UserDict.__init__(self)
-        timestamp_string = root.get("timestamp")
-        if timestamp_string:
-            try:
-                self.timestamp = datetime.fromisoformat(timestamp_string)
-            except:
-                raise EventException
-        else:
-            self.timestamp = datetime.utcnow()
-        # create a dictionary of member name to value
+        newVector.__init__(self, devicename, vectorname, vector, root)
+        # create a dictionary of member name to value, and sizeformat
+        # being a tuple of filesize, fileformat
         self.sizeformat = {}
         for member in root:
             if member.tag == "oneBLOB":
@@ -178,5 +144,93 @@ class newBLOBVector(Event, UserDict):
         if not self.data:
             raise EventException
 
+
+class SnoopEvent:
+    "Parent class for snoop events"
+    def __init__(self, root):
+        self.devicename = root.get("device")
+        self.root = root
+        timestamp_string = root.get("timestamp")
+        if timestamp_string:
+            try:
+                self.timestamp = datetime.fromisoformat(timestamp_string)
+            except:
+                raise EventException
+        else:
+            self.timestamp = datetime.utcnow()
+
+
+class message(SnoopEvent):
+
+    def __init__(self, root):
+        super().__init__(root)
+        self.message = root.get("message", "")
+
+
+class delProperty(SnoopEvent):
+
+    def __init__(self, root):
+        super().__init__(root)
+        if self.devicename is None:
+            raise EventException
+        self.vectorname = root.get("name")
+        self.message = root.get("message", "")
+
+
+class defVector(SnoopEvent, UserDict):
+    "Parent to def vectors, adds dictionary"
+    def __init__(self, root):
+        SnoopEvent.__init__(self, root)
+        UserDict.__init__(self)
+        if self.devicename is None:
+            raise EventException
+        self.vectorname = root.get("name")
+        if self.vectorname is None:
+            raise EventException
+        self.label = root.get("label", self.vectorname)
+        self.group = root.get("group")
+        state = root.get("state")
+        if not state:
+            raise EventException
+        if not state in ('Idle','Ok','Busy','Alert')
+            raise EventException
+        self.state = state
+        self.message = root.get("message", "")
+
     def __setitem__(self, membername):
         raise KeyError
+
+
+class defSwitchVector(defVector):
+
+    def __init__(self, root):
+        defVector.__init__(self, root)
+        self.perm = root.get("perm")
+        if self.perm is None:
+            raise EventException
+        if self.perm not in ('ro', 'wo', 'rw'):
+            raise EventException
+        self.rule = root.get("rule")
+        if self.rule is None:
+            raise EventException
+        if self.rule not in ('OneOfMany', 'AtMostOne', 'AnyOfMany'):
+            raise EventException
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to (label,value)
+        for member in root:
+            if member.tag == "defSwitch":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                label = member.get("label", membername)
+                value = member.text
+                if value == "On":
+                    self.data[membername] = (label, "On")
+                elif value == "Off":
+                    self.data[membername] = (label, "Off")
+                else:
+                    raise EventException
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
