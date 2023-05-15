@@ -192,7 +192,7 @@ class defVector(SnoopEvent, UserDict):
         state = root.get("state")
         if not state:
             raise EventException
-        if not state in ('Idle','Ok','Busy','Alert')
+        if not state in ('Idle','Ok','Busy','Alert'):
             raise EventException
         self.state = state
         self.message = root.get("message", "")
