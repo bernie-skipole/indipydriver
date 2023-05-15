@@ -127,6 +127,13 @@ class IPyDriver(collections.UserDict):
                 root = self.snoopque.popleft()
             else:
                 continue
+            devicename = root.get("device")
+            if devicename is not None:
+                # if a device name is given, check
+                # it is not in this drivers devices
+                if devicename in self.devices:
+                    # cannnot snoop on self!!
+                    continue
             try:
                 if root.tag == "message":
                     # create event
