@@ -150,18 +150,8 @@ class IPyDriver(collections.UserDict):
            This should be replaced in child classes.
            event is an object describing the event, with attributes
            devicename, vectorname, vector,
-           where vector is the properties vector causing the event
-           set any attributes of vector required, and if a reply is to be sent
-           call event.send(timestamp, timeout, message)
-           timestamp is a datetime object, if not given will default to utcnow
-           timeout is seconds data is valid, if not given will default to zero which impies value not used
-           message is any message to be sent
-           to send the xml associated with the event."""
-        await asyncio.sleep(0)
-        match event:
-            case events.getProperties():
-                # on receiving a getProperties event, a reply should be sent
-                event.send()
+           where vector is the properties vector causing the event."""
+        pass
 
     async def snoopevent(self, event):
         pass
