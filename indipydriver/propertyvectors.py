@@ -128,7 +128,7 @@ class SwitchVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
                 elif root.tag == "newSwitchVector":
                     if self._perm == 'ro':
@@ -136,7 +136,7 @@ class SwitchVector(PropertyVector):
                         continue
                     # create event
                     event = newSwitchVector(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
@@ -221,7 +221,7 @@ class LightVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
@@ -312,7 +312,7 @@ class TextVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
                 elif root.tag == "newTextVector":
                     if self._perm == 'ro':
@@ -320,7 +320,7 @@ class TextVector(PropertyVector):
                         continue
                     # create event
                     event = newTextVector(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
@@ -412,7 +412,7 @@ class NumberVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
                 elif root.tag == "newNumberVector":
                     if self._perm == 'ro':
@@ -420,7 +420,7 @@ class NumberVector(PropertyVector):
                         continue
                     # create event
                     event = newNumberVector(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
@@ -511,12 +511,12 @@ class BLOBVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
                 elif root.tag == "enableBLOB":
                     # create event
                     event = enableBLOB(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
                 elif root.tag == "newBLOBVector":
                     if self._perm == 'ro':
@@ -524,7 +524,7 @@ class BLOBVector(PropertyVector):
                         continue
                     # create event
                     event = newBLOBVector(self.devicename, self.name, self, root)
-                    await self.driver.eventaction(event)
+                    await self.driver.clientevent(event)
                     continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue

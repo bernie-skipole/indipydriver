@@ -145,7 +145,7 @@ class IPyDriver(collections.UserDict):
         # methods to send data, then
         # await asyncio.gather(the co routines)
 
-    async def eventaction(self, event):
+    async def clientevent(self, event):
         """On receiving data, this is called, and should handle any necessary actions
            This should be replaced in child classes.
            event is an object describing the event, with attributes
@@ -162,6 +162,10 @@ class IPyDriver(collections.UserDict):
             case events.getProperties():
                 # on receiving a getProperties event, a reply should be sent
                 event.send()
+
+    async def snoopevent(self, event):
+        pass
+
 
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
