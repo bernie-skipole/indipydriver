@@ -34,6 +34,9 @@ class IPyDriver(collections.UserDict):
         self.writerque = collections.deque()
         # and read in from the readerque
         self.readerque = collections.deque()
+        # and snoop data is passed on to the snoopque
+        self.snoopque = collections.deque()
+        # data for each device is passed to each device dataque
 
         # the tx object needs the writerque to obtain outgoing data
         # which it then transmitts
@@ -49,7 +52,6 @@ class IPyDriver(collections.UserDict):
         else:
             self._rx = rx
         self._rx.readerque = self.readerque
-
 
     @property
     def rx(self):
@@ -73,6 +75,10 @@ class IPyDriver(collections.UserDict):
         raise KeyError
 
     async def _read_readerque(self):
+        client_tags = ("enableBLOB", "newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
+        snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
+                      'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
+                      'defBLOBVector', 'setBLOBVector')
         while True:
             await asyncio.sleep(0)
             # reads readerque, and sends xml data to the device via its dataque
@@ -95,8 +101,8 @@ class IPyDriver(collections.UserDict):
                     else:
                         # device not recognised
                         continue
-                else:
-                    # root.tag will be either newSwitchVector, newNumberVector,.. etc
+                elif root.tag in client_tags:
+                    # xml received from client
                     devicename = root.get("device")
                     if devicename is None:
                         # device not given, ignore this
@@ -107,6 +113,68 @@ class IPyDriver(collections.UserDict):
                     else:
                         # device not recognised
                         continue
+                elif root.tag in snoop_tags:
+                    # xml received from other devices
+                    self.snoopque.append(root)
+
+
+    async def _snoophandler(self):
+        """Creates events using data from self.snoopque"""
+        while True:
+            # get block of data from the self.snoopque
+            await asyncio.sleep(0)
+            if self.snoopque:
+                root = self.snoopque.popleft()
+            else:
+                continue
+            if root.tag == "message":
+                # create event
+                event = events.message(root)
+                await self.snoopevent(event)
+            elif root.tag == "delProperty":
+                # create event
+                event = events.delProperty(root)
+                await self.snoopevent(event)
+            elif root.tag == "defSwitchVector":
+                # create event
+                event = events.defSwitchVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "setSwitchVector":
+                # create event
+                event = events.setSwitchVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "defLightVector":
+                # create event
+                event = events.defLightVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "setLightVector":
+                # create event
+                event = events.setLightVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "defTextVector":
+                # create event
+                event = events.defTextVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "setTextVector":
+                # create event
+                event = events.setTextVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "defNumberVector":
+                # create event
+                event = events.defNumberVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "setNumberVector":
+                # create event
+                event = events.setNumberVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "defBLOBVector":
+                # create event
+                event = events.defBLOBVector(root)
+                await self.snoopevent(event)
+            elif root.tag == "setBLOBVector":
+                # create event
+                event = events.setBLOBVector(root)
+                await self.snoopevent(event)
 
     def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
@@ -146,14 +214,17 @@ class IPyDriver(collections.UserDict):
         # await asyncio.gather(the co routines)
 
     async def clientevent(self, event):
-        """On receiving data, this is called, and should handle any necessary actions
-           This should be replaced in child classes.
+        """On receiving data, this is called, and should handle any necessary actions.
            event is an object describing the event, with attributes
            devicename, vectorname, vector,
            where vector is the properties vector causing the event."""
         pass
 
     async def snoopevent(self, event):
+        """On receiving snoop data, this is called, and should handle any necessary actions.
+           event is an object describing the event, with attributes
+           devicename, vectorname, vector,
+           where vector is the properties vector causing the event."""
         pass
 
 
@@ -177,6 +248,7 @@ class IPyDriver(collections.UserDict):
                              self._tx.run_tx(),      # task in _tx object to transmit xml data
                              self.hardware(),        # task to operate device hardware, and transmit updates
                              self._read_readerque(), # task to handle received xml data
+                             self._snoophandler(),   # task to handle incoming snoop data
                              *device_handlers,       # each device handles its incoming data
                              *property_handlers      # each property handles its incoming data
                             )
