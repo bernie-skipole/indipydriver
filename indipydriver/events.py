@@ -234,3 +234,27 @@ class defSwitchVector(defVector):
                 raise EventException
         if not self.data:
             raise EventException
+
+
+class defTextVector(defVector):
+
+    def __init__(self, root):
+        defVector.__init__(self, root)
+        self.perm = root.get("perm")
+        if self.perm is None:
+            raise EventException
+        if self.perm not in ('ro', 'wo', 'rw'):
+            raise EventException
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to (label,value)
+        for member in root:
+            if member.tag == "defText":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                label = member.get("label", membername)
+                self.data[membername] = (label, member.text)
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
