@@ -307,7 +307,10 @@ class defLightVector(defVector):
                 if not membername:
                     raise EventException
                 label = member.get("label", membername)
-                self.data[membername] = (label, member.text)
+                value = member.text
+                if not value in ('Idle','Ok','Busy','Alert'):
+                    raise EventException
+                self.data[membername] = (label, value)
             else:
                 raise EventException
         if not self.data:
@@ -377,6 +380,61 @@ class setSwitchVector(setVector):
                     self.data[membername] = "Off"
                 else:
                     raise EventException
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class setTextVector(setVector):
+
+    def __init__(self, root):
+        setVector.__init__(self, root)
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to value
+        for member in root:
+            if member.tag == "oneText":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                self.data[membername] = member.text
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class setNumberVector(setVector):
+
+    def __init__(self, root):
+        setVector.__init__(self, root)
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to value
+        for member in root:
+            if member.tag == "oneNumber":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                self.data[membername] = member.text
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+class setLightVector(setVector):
+
+    def __init__(self, root):
+        setVector.__init__(self, root)
+        # create a dictionary of member name to value
+        for member in root:
+            if member.tag == "oneLight":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                value = member.text
+                if not value in ('Idle','Ok','Busy','Alert'):
+                    raise EventException
+                self.data[membername] = value
             else:
                 raise EventException
         if not self.data:
