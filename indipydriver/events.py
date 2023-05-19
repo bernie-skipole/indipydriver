@@ -188,7 +188,7 @@ class defVector(SnoopEvent, UserDict):
         if self.vectorname is None:
             raise EventException
         self.label = root.get("label", self.vectorname)
-        self.group = root.get("group")
+        self.group = root.get("group", "")
         state = root.get("state")
         if not state:
             raise EventException
@@ -249,6 +249,60 @@ class defTextVector(defVector):
         # create a dictionary of member name to (label,value)
         for member in root:
             if member.tag == "defText":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                label = member.get("label", membername)
+                self.data[membername] = (label, member.text)
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class defNumberVector(defVector):
+
+    def __init__(self, root):
+        defVector.__init__(self, root)
+        self.perm = root.get("perm")
+        if self.perm is None:
+            raise EventException
+        if self.perm not in ('ro', 'wo', 'rw'):
+            raise EventException
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to (label,value)
+        for member in root:
+            if member.tag == "defNumber":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                label = member.get("label", membername)
+                memberformat = member.get("format")
+                if not memberformat:
+                    raise EventException
+                membermin = member.get("min")
+                if not membermin:
+                    raise EventException
+                membermax = member.get("max")
+                if not membermax:
+                    raise EventException
+                memberstep = member.get("step")
+                if not memberstep:
+                    raise EventException
+                self.data[membername] = (label, memberformat, membermin, membermax, memberstep, member.text)
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class defLightVector(defVector):
+
+    def __init__(self, root):
+        defVector.__init__(self, root)
+        # create a dictionary of member name to (label,value)
+        for member in root:
+            if member.tag == "defLight":
                 membername = member.get("name")
                 if not membername:
                     raise EventException
