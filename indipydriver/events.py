@@ -270,7 +270,7 @@ class defNumberVector(defVector):
         if self.perm not in ('ro', 'wo', 'rw'):
             raise EventException
         self.timeout = root.get("timeout", "0")
-        # create a dictionary of member name to (label,value)
+        # create a dictionary of member name to (label,format, min, max, step, value)
         for member in root:
             if member.tag == "defNumber":
                 membername = member.get("name")
@@ -308,6 +308,75 @@ class defLightVector(defVector):
                     raise EventException
                 label = member.get("label", membername)
                 self.data[membername] = (label, member.text)
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class defBLOBVector(defVector):
+
+    def __init__(self, root):
+        defVector.__init__(self, root)
+        self.perm = root.get("perm")
+        if self.perm is None:
+            raise EventException
+        if self.perm not in ('ro', 'wo', 'rw'):
+            raise EventException
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to label
+        for member in root:
+            if member.tag == "defBLOB":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                label = member.get("label", membername)
+                self.data[membername] = label
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class setVector(SnoopEvent, UserDict):
+    "Parent to set vectors, adds dictionary"
+    def __init__(self, root):
+        SnoopEvent.__init__(self, root)
+        UserDict.__init__(self)
+        if self.devicename is None:
+            raise EventException
+        self.vectorname = root.get("name")
+        if self.vectorname is None:
+            raise EventException
+        state = root.get("state")
+        if state and (state in ('Idle','Ok','Busy','Alert')):
+            self.state = state
+        else:
+            self.state = None
+        self.message = root.get("message", "")
+
+    def __setitem__(self, membername):
+        raise KeyError
+
+
+class setSwitchVector(setVector):
+
+    def __init__(self, root):
+        setVector.__init__(self, root)
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to value
+        for member in root:
+            if member.tag == "oneSwitch":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                value = member.text
+                if value == "On":
+                    self.data[membername] = "On"
+                elif value == "Off":
+                    self.data[membername] = "Off"
+                else:
+                    raise EventException
             else:
                 raise EventException
         if not self.data:
