@@ -7,6 +7,8 @@ from datetime import datetime
 
 import xml.etree.ElementTree as ET
 
+from base64 import standard_b64encode
+
 class PropertyMember:
     "Parent class of SwitchMember etc"
 
@@ -264,7 +266,7 @@ class BLOBMember(PropertyMember):
 
     def __init__(self, name, label=None):
         super().__init__(name, label)
-        self.membervalue = ''
+        self.membervalue = b''
         self.blobsize = ''
         self.blobformat = ''
 
@@ -284,5 +286,5 @@ class BLOBMember(PropertyMember):
         xmldata.set("name", self.name)
         xmldata.set("size", str(self.blobsize))
         xmldata.set("format", self.blobformat)
-        xmldata.text = self.membervalue
+        xmldata.text = standard_b64encode(self.membervalue).decode('ascii')
         return xmldata

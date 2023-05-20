@@ -121,8 +121,9 @@ class newBLOBVector(newVector):
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
-        # create a dictionary of member name to value, and sizeformat
-        # being a tuple of filesize, fileformat
+        # create a dictionary of member name to value,
+        # and dictionary sizeformat
+        # with key member name and value being a tuple of size, format
         self.sizeformat = {}
         for member in root:
             if member.tag == "oneBLOB":
@@ -130,13 +131,13 @@ class newBLOBVector(newVector):
                 if membername in self.vector:
                     try:
                         self.data[membername] = standard_b64decode(member.text.encode('ascii'))
-                        filesize = int(member.get("size"))
+                        membersize = int(member.get("size"))
                     except:
                         raise EventException
-                    fileformat = member.get("format")
-                    if not fileformat:
+                    memberformat = member.get("format")
+                    if not memberformat:
                         raise EventException
-                    self.sizeformat[membername] = (filesize, fileformat)
+                    self.sizeformat[membername] = (membersize, memberformat)
                 else:
                     raise EventException
             else:
@@ -435,6 +436,38 @@ class setLightVector(setVector):
                 if not value in ('Idle','Ok','Busy','Alert'):
                     raise EventException
                 self.data[membername] = value
+            else:
+                raise EventException
+        if not self.data:
+            raise EventException
+
+
+class setBLOBVector(setVector):
+
+    def __init__(self, root):
+        setVector.__init__(self, root)
+        self.timeout = root.get("timeout", "0")
+        # create a dictionary of member name to value
+        # and dictionary sizeformat
+        # with key member name and value being a tuple of size, format
+        self.sizeformat = {}
+        for member in root:
+            if member.tag == "oneBLOB":
+                membername = member.get("name")
+                if not membername:
+                    raise EventException
+                membersize = member.get("size")
+                if not membersize:
+                    raise EventException
+                memberformat = member.get("format")
+                if not memberformat:
+                    raise EventException
+                try:
+                    self.data[membername] = standard_b64decode(member.text.encode('ascii'))
+                    memberize = int(member.get("size"))
+                except:
+                    raise EventException
+                self.sizeformat[membername] = (membersize, memberformat)
             else:
                 raise EventException
         if not self.data:
