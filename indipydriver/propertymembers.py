@@ -270,7 +270,7 @@ class BLOBMember(PropertyMember):
         self.blobsize = ''
         self.blobformat = ''
 
-   @property
+    @property
     def membervalue(self):
         return self._membervalue
 
