@@ -266,9 +266,19 @@ class BLOBMember(PropertyMember):
 
     def __init__(self, name, label=None):
         super().__init__(name, label)
-        self.membervalue = b''
+        self._membervalue = b''
         self.blobsize = ''
         self.blobformat = ''
+
+   @property
+    def membervalue(self):
+        return self._membervalue
+
+    @membervalue.setter
+    def membervalue(self, value):
+        if not isinstance(value, bytes):
+            raise ValueError("The given BLOB value must be a bytes object")
+        self._membervalue = value
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""
@@ -284,6 +294,8 @@ class BLOBMember(PropertyMember):
             self.membervalue = membervalue
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
+        if not self.blobsize:
+            self.blobsize = len(self.membervalue)
         xmldata.set("size", str(self.blobsize))
         xmldata.set("format", self.blobformat)
         xmldata.text = standard_b64encode(self.membervalue).decode('ascii')

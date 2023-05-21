@@ -217,18 +217,21 @@ class defSwitchVector(defVector):
         if self.rule not in ('OneOfMany', 'AtMostOne', 'AnyOfMany'):
             raise EventException
         self.timeout = root.get("timeout", "0")
-        # create a dictionary of member name to (label,value)
+        # create object dictionary of member name to value
+        # and another dictionary of self.memberlabels with key member name and value being label
+        self.memberlabels = {}
         for member in root:
             if member.tag == "defSwitch":
                 membername = member.get("name")
                 if not membername:
                     raise EventException
                 label = member.get("label", membername)
+                self.memberlabels[membername] = label
                 value = member.text
                 if value == "On":
-                    self.data[membername] = (label, "On")
+                    self.data[membername] = "On"
                 elif value == "Off":
-                    self.data[membername] = (label, "Off")
+                    self.data[membername] = "Off"
                 else:
                     raise EventException
             else:
@@ -247,14 +250,17 @@ class defTextVector(defVector):
         if self.perm not in ('ro', 'wo', 'rw'):
             raise EventException
         self.timeout = root.get("timeout", "0")
-        # create a dictionary of member name to (label,value)
+        # create object dictionary of member name to value
+        # and another dictionary of self.memberlabels with key member name and value being label
+        self.memberlabels = {}
         for member in root:
             if member.tag == "defText":
                 membername = member.get("name")
                 if not membername:
                     raise EventException
                 label = member.get("label", membername)
-                self.data[membername] = (label, member.text)
+                self.memberlabels[membername] = label
+                self.data[membername] = member.text
             else:
                 raise EventException
         if not self.data:
@@ -271,7 +277,10 @@ class defNumberVector(defVector):
         if self.perm not in ('ro', 'wo', 'rw'):
             raise EventException
         self.timeout = root.get("timeout", "0")
-        # create a dictionary of member name to (label,format, min, max, step, value)
+        # create object dictionary of member name to value
+        # and another dictionary of self.memberlabels with key member name and
+        # value being a tuple of (label, format, min, max, step)
+        self.memberlabels = {}
         for member in root:
             if member.tag == "defNumber":
                 membername = member.get("name")
@@ -290,7 +299,8 @@ class defNumberVector(defVector):
                 memberstep = member.get("step")
                 if not memberstep:
                     raise EventException
-                self.data[membername] = (label, memberformat, membermin, membermax, memberstep, member.text)
+                self.memberlabels[membername] = (label, memberformat, membermin, membermax, memberstep)
+                self.data[membername] = member.text
             else:
                 raise EventException
         if not self.data:
@@ -301,17 +311,20 @@ class defLightVector(defVector):
 
     def __init__(self, root):
         defVector.__init__(self, root)
-        # create a dictionary of member name to (label,value)
+        # create object dictionary of member name to value
+        # and another dictionary of self.memberlabels with key member name and value being label
+        self.memberlabels = {}
         for member in root:
             if member.tag == "defLight":
                 membername = member.get("name")
                 if not membername:
                     raise EventException
                 label = member.get("label", membername)
+                self.memberlabels[membername] = label
                 value = member.text
                 if not value in ('Idle','Ok','Busy','Alert'):
                     raise EventException
-                self.data[membername] = (label, value)
+                self.data[membername] = value
             else:
                 raise EventException
         if not self.data:
