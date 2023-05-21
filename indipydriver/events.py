@@ -331,27 +331,44 @@ class defLightVector(defVector):
             raise EventException
 
 
-class defBLOBVector(defVector):
+class defBLOBVector(SnoopEvent):
+
+    "This does not have an object mapping of member name to value, since values are not given in defBLOBVectors"
 
     def __init__(self, root):
-        defVector.__init__(self, root)
+        SnoopEvent.__init__(self, root)
+        if self.devicename is None:
+            raise EventException
+        self.vectorname = root.get("name")
+        if self.vectorname is None:
+            raise EventException
+        self.label = root.get("label", self.vectorname)
+        self.group = root.get("group", "")
+        state = root.get("state")
+        if not state:
+            raise EventException
+        if not state in ('Idle','Ok','Busy','Alert'):
+            raise EventException
+        self.state = state
+        self.message = root.get("message", "")
         self.perm = root.get("perm")
         if self.perm is None:
             raise EventException
         if self.perm not in ('ro', 'wo', 'rw'):
             raise EventException
         self.timeout = root.get("timeout", "0")
-        # create a dictionary of member name to label
+        # create a dictionary of self.memberlabels with key member name and value being label
+        self.memberlabels = {}
         for member in root:
             if member.tag == "defBLOB":
                 membername = member.get("name")
                 if not membername:
                     raise EventException
                 label = member.get("label", membername)
-                self.data[membername] = label
+                self.memberlabels[membername] = label
             else:
                 raise EventException
-        if not self.data:
+        if not self.memberlabels:
             raise EventException
 
 
