@@ -8,7 +8,7 @@ import datetime
 
 import xml.etree.ElementTree as ET
 
-from .comms import STDINOUT
+from .comms import STDINOUT, Portcomms
 from . import events
 
 
@@ -40,6 +40,9 @@ class IPyDriver(collections.UserDict):
         # set an object for communicating, as default this is stdin and stdout
         self.comms = STDINOUT()
 
+    def listen(self, host="localhost", port=7624):
+        "If called, overrides default STDINOUT and listens on the given host/port"
+        self.comms = Portcomms(host, port)
 
     def __setitem__(self, devicename):
         raise KeyError
