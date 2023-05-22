@@ -7,13 +7,26 @@ from datetime import datetime
 import xml.etree.ElementTree as ET
 
 
-# All xml data received from the client should be contained in one of the following tags
+# All xml data received from the client, or from snooped devices should be contained in one of the following tags
 TAGS = (b'getProperties',
         b'newTextVector',
         b'newNumberVector',
         b'newSwitchVector',
         b'newBLOBVector',
-        b'enableBLOB'
+        b'enableBLOB',
+        # below are tags from snooped devices
+        b'message',
+        b'delProperty',
+        b'defSwitchVector',
+        b'setSwitchVector',
+        b'defLightVector',
+        b'setLightVector',
+        b'defTextVector',
+        b'setTextVector',
+        b'defNumberVector',
+        b'setNumberVector',
+        b'defBLOBVector',
+        b'setBLOBVector'
        )
 
 
@@ -45,17 +58,6 @@ class RX:
             root = await anext(source)
             if root is not None:
                 self.readerque.append(root)
-    async def datasource(self):
-        """This is an iterator, which should be overridden in child classes to produce
-           xml.etree.ElementTree data blocks"""
-        while True:
-            yield None
-            await asyncio.sleep(0)
-
-
-class STDIN_RX(RX):
-
-    """Overrides datasource to produce xml.etree.ElementTree data from stdin"""
 
     async def datasource(self):
         # get received data, parse it, and yield it as xml.etree.ElementTree object
@@ -116,6 +118,18 @@ class STDIN_RX(RX):
 
 
     async def datainput(self):
+        "Generator producing binary string of data, override in child subclass"
+        while True:
+            await asyncio.sleep(0)
+            yield b""
+
+
+
+class STDIN_RX(RX):
+
+    """Produces xml.etree.ElementTree data from stdin"""
+
+    async def datainput(self):
         "Generator producing binary string of data from stdin"
         binarydata = b""
         while True:
@@ -127,6 +141,7 @@ class STDIN_RX(RX):
             if len(parts) == 1:
                 # no > found
                 binarydata += data
+                # could put a max value here to stop this increasing indefinetly
                 continue
             for part in parts[:-1]:
                 binarydata = binarydata + part + b">"
