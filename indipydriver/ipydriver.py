@@ -8,8 +8,7 @@ import datetime
 
 import xml.etree.ElementTree as ET
 
-from .receiver import STDIN_RX
-from .transmitter import STDOUT_TX
+from .comms import STDINOUT
 from . import events
 
 
@@ -38,38 +37,9 @@ class IPyDriver(collections.UserDict):
         self.snoopque = collections.deque()
         # data for each device is passed to each device dataque
 
-        # the tx object needs the writerque to obtain outgoing data
-        # which it then transmitts
-        if tx is None:
-            self._tx = STDOUT_TX()
-        else:
-            self._tx = tx
-        self._tx.writerque = self.writerque
+        # set an object for communicating, as default this is stdin and stdout
+        self.comms = STDINOUT()
 
-        # the rx object needs the readerque into which it sets incoming data
-        if rx is None:
-            self._rx = STDIN_RX()
-        else:
-            self._rx = rx
-        self._rx.readerque = self.readerque
-
-    @property
-    def rx(self):
-        return self._rx
-
-    @rx.setter
-    def rx(self, rx):
-        self._rx = rx
-        self._rx.readerque = self.readerque
-
-    @property
-    def tx(self):
-        return self._tx
-
-    @tx.setter
-    def tx(self, tx):
-        self._tx = tx
-        self._tx.writerque = self.writerque
 
     def __setitem__(self, devicename):
         raise KeyError
@@ -258,8 +228,7 @@ class IPyDriver(collections.UserDict):
                 # so it can call eventaction and have access to writerque
                 pv.driver = self
 
-        await asyncio.gather(self._rx.run_rx(),      # task in _rx object to get incoming xml data and pass to this driver
-                             self._tx.run_tx(),      # task in _tx object to transmit xml data
+        await asyncio.gather(self.comms.run(self.writerque, self.readerque),   # run communications
                              self.hardware(),        # task to operate device hardware, and transmit updates
                              self._read_readerque(), # task to handle received xml data
                              self._snoophandler(),   # task to handle incoming snoop data
@@ -270,7 +239,7 @@ class IPyDriver(collections.UserDict):
 
 class Device(collections.UserDict):
 
-    def __init__(self, devicename, properties, tx=None, rx=None):
+    def __init__(self, devicename, properties):
         super().__init__()
 
         # This device name
