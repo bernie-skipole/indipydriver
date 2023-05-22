@@ -89,6 +89,12 @@ class RX:
                     if data.startswith(st):
                         messagetagnumber = index
                         break
+                    elif st in data:
+                        # remove any data prior to a starttag
+                        positionofst = data.index(st)
+                        data = data[positionofst:]
+                        messagetagnumber = index
+                        break
                 else:
                     # data does not start with a recognised tag, so ignore it
                     # and continue waiting for a valid message start
@@ -231,7 +237,6 @@ class Portcomms():
         "Used by asyncio.start_server, called to handle a client connection"
         rx = Port_RX(reader)
         tx = Port_TX(writer)
-        print("start")
         txtask = asyncio.create_task(tx.run_tx(self.writerque))
         rxtask = asyncio.create_task(rx.run_rx(self.readerque))
         try:
@@ -239,4 +244,3 @@ class Portcomms():
         except Exception:
             txtask.cancel()
             rxtask.cancel()
-        print("end")
