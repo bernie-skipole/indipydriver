@@ -163,10 +163,80 @@ class STDIN_RX(RX):
 
 class STDINOUT():
 
-    async def run(self, writerque, readerque):
+    async def run(self, readerque, writerque):
 
         rx = STDIN_RX()
         tx = STDOUT_TX()
 
         await asyncio.gather(rx.run_rx(readerque),
                              tx.run_tx(writerque))   # run communications
+
+
+class Port_TX():
+
+    def __init__(self, writer):
+        self.writer = writer
+
+    async def run_tx(self, writerque):
+        """gets data from writerque, and transmits it"""
+        while True:
+            await asyncio.sleep(0)
+            if writerque:
+                txdata = writerque.popleft()
+                binarydata = ET.tostring(txdata)
+                # Send the next message to the port
+                self.writer.write(binarydata)
+                await self.writer.drain()
+
+
+class Port_RX(RX):
+
+    def __init__(self, reader):
+        self.reader = reader
+
+    async def datainput(self):
+        "Generator producing binary string of data from the port"
+        binarydata = b""
+        while True:
+            await asyncio.sleep(0)
+            try:
+                data = await self.reader.readuntil(separator=b'>')
+            except asyncio.LimitOverrunError:
+                data = await self.reader.read(n=32000)
+            if not data:
+                continue
+            if b">" in data:
+                binarydata = binarydata + data
+                yield binarydata
+                binarydata = b""
+            else:
+                # data has content but no > found
+                binarydata += data
+                # could put a max value here to stop this increasing indefinetly
+
+
+class Portcomms():
+
+    def __init__(self, host="localhost", port=7624):
+        self.host = host
+        self.port = port
+
+    async def run(self, readerque, writerque):
+        self.readerque = readerque
+        self.writerque = writerque
+        server = await asyncio.start_server(self.handle_data, self.host, self.port)
+        await server.serve_forever()
+
+    async def handle_data(self, reader, writer):
+        "Used by asyncio.start_server, called to handle a client connection"
+        rx = Port_RX(reader)
+        tx = Port_TX(writer)
+        print("start")
+        txtask = asyncio.create_task(tx.run_tx(self.writerque))
+        rxtask = asyncio.create_task(rx.run_rx(self.readerque))
+        try:
+            await asyncio.gather(txtask, rxtask)
+        except Exception:
+            txtask.cancel()
+            rxtask.cancel()
+        print("end")
