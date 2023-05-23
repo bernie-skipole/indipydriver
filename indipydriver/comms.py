@@ -209,6 +209,9 @@ class Port_RX(RX):
                 data = await self.reader.readuntil(separator=b'>')
             except asyncio.LimitOverrunError:
                 data = await self.reader.read(n=32000)
+            except Exception:
+                binarydata = b""
+                continue
             if not data:
                 continue
             if b">" in data:
