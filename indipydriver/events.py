@@ -161,7 +161,7 @@ class SnoopEvent:
             self.timestamp = datetime.utcnow()
 
 
-class message(SnoopEvent):
+class Message(SnoopEvent):
 
     def __init__(self, root):
         super().__init__(root)
