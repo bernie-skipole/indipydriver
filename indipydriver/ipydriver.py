@@ -17,6 +17,7 @@ class IPyDriver(collections.UserDict):
     """A subclass of this should be created with methods
        clientevent and hardware written to control your device.
        Its awaitable asyncrun method should be run in an async loop.
+       devices is a list of Device objects this driver handles.
        """
 
     def __init__(self, devices):
@@ -177,7 +178,9 @@ class IPyDriver(collections.UserDict):
         self.writerque.append(xmldata)
 
     def send_getProperties(self, devicename=None, vectorname=None):
-        "sends getproperties, if devicename given, it must not be a device of this driver"
+        """Sends a getProperties request - which is used to snoop data from other devices
+           on the network, if devicename given, it must not be a device of this driver as
+           the point of this is to snoop on remote devices."""
         xmldata = ET.Element('getProperties')
         if devicename is None:
             self.writerque.append(xmldata)
@@ -203,7 +206,8 @@ class IPyDriver(collections.UserDict):
 
 
     async def clientevent(self, event):
-        """On receiving data, this is called, and should handle any necessary actions.
+        """Override this. On receiving data, this is called, and should
+           handle any necessary actions.
            event is an object describing the event, with attributes
            devicename, vectorname, vector,
            where vector is the properties vector causing the event."""
@@ -211,8 +215,10 @@ class IPyDriver(collections.UserDict):
 
 
     async def snoopevent(self, event):
-        """On receiving snoop data, this is called, and should handle any necessary actions.
-           event is an object with attributes according to the event received."""
+        """Override this if this driver is snooping on other devices.
+           On receiving snoop data, this is called, and should handle
+           any necessary actions.
+           event is an object with attributes according to the data received."""
         pass
 
 
