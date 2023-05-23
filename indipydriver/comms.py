@@ -39,10 +39,10 @@ _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
 class STDOUT_TX:
-    "An object that transmits data on stdout"
+    "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
 
     async def run_tx(self, writerque):
-        """gets data from writerque, and transmits it"""
+        """Gets data from writerque, and transmits it out on stdout"""
         while True:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
@@ -56,7 +56,9 @@ class STDOUT_TX:
 
 class RX:
     """An object that receives data, parses it to ElementTree elements
-       and passes it to the driver by appending it to the driver's readerque"""
+       and passes it to the driver by appending it to the driver's readerque
+
+       This is a parent class to receiver objects, which overwrite the datainput method"""
 
     async def run_rx(self, readerque):
         "pass data to readerque"
@@ -144,7 +146,9 @@ class RX:
 
 
 class STDIN_RX(RX):
-    """Produces xml.etree.ElementTree data from stdin"""
+    """Produces xml.etree.ElementTree data from stdin, this is
+       used by STDINOUT as one half of the communications path.
+       This overwrites the datainput method of the RX parent class """
 
     async def datainput(self):
         "Generator producing binary string of data from stdin"
@@ -168,6 +172,7 @@ class STDIN_RX(RX):
 
 
 class STDINOUT():
+    "An instance of this class is used by the driver to implement communications via stdin and stdout"
 
     async def run(self, readerque, writerque):
 
@@ -179,6 +184,7 @@ class STDINOUT():
 
 
 class Port_TX():
+    "An object that transmits data on a port, used by Portcomms as one half of the communications path"
 
     def __init__(self, writer):
         self.writer = writer
@@ -196,6 +202,9 @@ class Port_TX():
 
 
 class Port_RX(RX):
+    """Produces xml.etree.ElementTree data from data received on the port,
+       this is used by Portcomms as one half of the communications path.
+       This overwrites the datainput method of the RX parent class """
 
     def __init__(self, reader):
         self.reader = reader
@@ -225,6 +234,7 @@ class Port_RX(RX):
 
 
 class Portcomms():
+    "An instance of this class is used by the driver to implement communications via a port"
 
     def __init__(self, host="localhost", port=7624):
         self.host = host

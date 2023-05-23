@@ -1,14 +1,18 @@
 # indipydriver
 
-This is a pure python package providing a set of classes which can be used to create an INDI driver.
+This is a pure python package, with no dependencies, providing a set of classes which can be used to create an INDI driver.
 
-Typically the driver created with this package would control an instrument, either an instrument connected to the computer, or interfaces, such as GPIO pins on the computer itself.
+INDI - Instrument Neutral Distributed Interface.
+
+See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
+
+Typically the driver created with this package would control an instrument, or interfaces, such as GPIO pins on the computer itself.
 
 The driver encapsulates data in the INDI protocol, which communicates to an INDI client. The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.
 
-INDI is normally used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control.
+INDI is normally used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control providing drivers are available.
 
-The python driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
+The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
 
 Typically you would create a subclass of IPyDriver.
 
@@ -20,9 +24,9 @@ This is called whenever data is received, the event object describes the receive
 
 async def hardware(self)
 
-This should be a contuously running awaitable which you can use to poll your instruments, and if required send updates to the client.
+This should be a contuously running coroutine which you can use to poll your instruments, and if required send updates to the client.
 
-Having created your IPyDriver subclass, you would create member objects, being instances of SwitchMember, LightMember, TextMember, BLOBMember or NumberMember which you create as needed to control your instrument.
+Having created your IPyDriver subclass, you would create member objects, being instances of SwitchMember, LightMember, TextMember, BLOBMember or NumberMember which provide attribute values to control your instrument.
 
 You would then create vector objects, being instances of SwitchVector, LightVector, TextVector, BLOBVector or NumberVector these containing the appropriate member objects.
 
@@ -30,6 +34,21 @@ You would then create one or more 'Device' instances, containing the vector obje
 
 And finally you would create an instance of your IPyDriver subclass, which in turn is set with the Devices.
 
-Finally you would run the driver asyncrun() method which runs the driver, typically called using the asyncio.run() command.
+Finally you would run the driver asyncrun() method which runs the driver, typically called using:
 
-The documentation gives the details of these classes, and methods which can be called to transmit and receive the control data.
+asyncio.run(driver.asyncrun())
+
+The driver can transmit/receive either by stdin/stdout, or by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects. If this is the only driver on the network, then the 'indiserver' (debian package indi-bin) software - which connects multiple drivers to a port - is not needed.
+
+An INDI web client is available on Pypi as project indiredis, and can connect to port 7624, and display the instrument controls.
+
+
+## Project status
+
+Functionality has been completed.
+
+To Do:
+
+Documentation - create full docs, and a tutorial.
+
+Testing - Test functionality and compatibility with indiserver and other indi clients.
