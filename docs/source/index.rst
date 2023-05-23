@@ -8,8 +8,9 @@ indipydriver = Python tools to create INDI drivers
 
    usage/introduction
    usage/example
-   usage/references.rst
-   usage/license.rst
+   usage/ipydriver
+   usage/references
+   usage/license
 
 
 

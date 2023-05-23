@@ -14,11 +14,12 @@ from . import events
 
 class IPyDriver(collections.UserDict):
 
-    """To run this driver, create an IPyDriver instance, and then
-       its awaitable asyncrun method should be run in an async loop.
+    """A subclass of this should be created with methods
+       clientevent and hardware written to control your device.
+       Its awaitable asyncrun method should be run in an async loop.
        """
 
-    def __init__(self, devices, tx=None, rx=None):
+    def __init__(self, devices):
         super().__init__()
 
         # this is a dictionary of device name to device this driver owns
