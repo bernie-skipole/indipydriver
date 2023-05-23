@@ -7,6 +7,9 @@ indipydriver = Python tools to create INDI drivers
    :maxdepth: 2
 
    usage/introduction
+   usage/example
+   usage/references.rst
+   usage/license.rst
 
 
 

@@ -9,6 +9,8 @@ This is a pure python package, with no dependencies, providing a set of classes 
 
 INDI - Instrument Neutral Distributed Interface.
 
+For further information on INDI, see :ref:`references`.
+
 Typically the driver created with this package would control an instrument, or interfaces, such as GPIO pins on the computer itself.
 
 The driver encapsulates data in the INDI protocol, which communicates to an INDI client. The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.
