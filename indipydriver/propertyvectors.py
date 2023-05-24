@@ -103,7 +103,7 @@ class SwitchVector(PropertyVector):
     def rule(self, value):
         self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
 
-    async def handler(self):
+    async def _handler(self):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
@@ -135,7 +135,11 @@ class SwitchVector(PropertyVector):
 
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defSwitchVector into writerque for transmission"""
+        """Transmits the vector definition (defSwitchVector) to the client
+           timestamp should be a datetime.datetime object or None,
+           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           timeout should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -196,7 +200,7 @@ class LightVector(PropertyVector):
                 raise TypeError("Members of a LightVector must all be LightMembers")
             self.data[light.name] = light
 
-    async def handler(self):
+    async def _handler(self):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
@@ -220,7 +224,11 @@ class LightVector(PropertyVector):
 
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defLightVector into writerque for transmission"""
+        """Transmits the vector definition (defLightVector) to the client
+           timestamp should be a datetime.datetime object or None,
+           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           timeout should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         # Note timeout is not used
         if not self.device.enable:
             return
@@ -287,7 +295,7 @@ class TextVector(PropertyVector):
     def perm(self, value):
         self._perm = self.checkvalue(value, ['ro','wo','rw'])
 
-    async def handler(self):
+    async def _handler(self):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
@@ -318,7 +326,11 @@ class TextVector(PropertyVector):
                 pass
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defTextVector into writerque for transmission"""
+        """Transmits the vector definition (defTextVector) to the client
+           timestamp should be a datetime.datetime object or None,
+           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           timeout should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -387,7 +399,7 @@ class NumberVector(PropertyVector):
     def perm(self, value):
         self._perm = self.checkvalue(value, ['ro','wo','rw'])
 
-    async def handler(self):
+    async def _handler(self):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
@@ -418,7 +430,11 @@ class NumberVector(PropertyVector):
                 continue
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defNumberVector into writerque for transmission"""
+        """Transmits the vector definition (defNumberVector) to the client
+           timestamp should be a datetime.datetime object or None,
+           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           timeout should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -486,7 +502,7 @@ class BLOBVector(PropertyVector):
     def perm(self, value):
         self._perm = self.checkvalue(value, ['ro','wo','rw'])
 
-    async def handler(self):
+    async def _handler(self):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
@@ -522,7 +538,11 @@ class BLOBVector(PropertyVector):
                 continue
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Sets defBLOBVector into writerque for transmission"""
+        """Transmits the vector definition (defBLOBVector) to the client
+           timestamp should be a datetime.datetime object or None,
+           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           timeout should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:

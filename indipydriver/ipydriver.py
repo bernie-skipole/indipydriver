@@ -227,7 +227,7 @@ class IPyDriver(collections.UserDict):
             device.driver = self
             device_handlers.append(device._handler())
             for pv in device.propertyvectors.values():
-                property_handlers.append(pv.handler())
+                property_handlers.append(pv._handler())
                 # also give the propertyvector a reference to this driver
                 # so it can call eventaction and have access to writerque
                 pv.driver = self
