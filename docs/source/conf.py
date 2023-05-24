@@ -31,6 +31,7 @@ release = '0.0.1'
 master_doc = 'index'
 # ---------------------- Added by BC to stop module names prepended to functions
 add_module_names = False
+toc_object_entries_show_parents = "hide"
 
 
 # -- General configuration ---------------------------------------------------
