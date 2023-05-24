@@ -221,7 +221,6 @@ class IPyDriver(collections.UserDict):
            event is an object with attributes according to the data received."""
         pass
 
-
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
 
@@ -250,7 +249,7 @@ class IPyDriver(collections.UserDict):
 class Device(collections.UserDict):
 
     """An instance of this should be created for each device controlled by this driver.
-       The properties argument is a list of vectors ciontrolling this device.
+       The properties argument is a list of vectors controlling this device.
     """
 
     def __init__(self, devicename, properties):
@@ -283,9 +282,10 @@ class Device(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.propertyvectors
         # simply because 'propertyvectors' is more descriptive
 
-
     def send_device_message(self, message="", timestamp=None):
-        "Send message associated with this device"
+        """Send a message associated with this device, which the client could display.
+           The timestamp should be either None or a datetime.datetime object. If the
+           timestamp is None a datetime.datetime.utcnow() value will be inserted."""
         if not self.enable:
             # messages only sent if self.enable is True
             return
@@ -301,13 +301,18 @@ class Device(collections.UserDict):
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
 
-
     def send_delProperty(self, message="", timestamp=None):
-        "Send delProperty with this device, set self.enable to False"
+        """Sending delProperty with this device method, (as opposed to the vector send_delProperty method)
+           informs the client this device is not available, it also sets a device.enable attribute to
+           False, which stops any data being transmitted between the client and this device.
+           Setting device.enable to True re-enables communications.
+           The message argument is any appropriate string which the client could display to the user.
+           The timestamp should be either None or a datetime.datetime object. If the timestamp is None
+           a datetime.datetime.utcnow() value will be inserted."""
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            raise TypeError("timestamp given in send_delProperty must be a datetime.datetime object")
+            raise TypeError("The timestamp given in send_delProperty must be a datetime.datetime object")
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
@@ -319,7 +324,6 @@ class Device(collections.UserDict):
 
     def __setitem__(self, vectorname):
         raise KeyError
-
 
     async def _handler(self):
         """Handles data read from dataque"""
@@ -368,7 +372,6 @@ class Device(collections.UserDict):
                     else:
                         # property name not recognised
                         continue
-
 
 def indi_number_to_float(value):
     """The INDI spec allows a number of different number formats, given any, this returns a float"""

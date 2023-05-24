@@ -30,18 +30,9 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
-
     @property
     def device(self):
         return self.driver.devices[self.devicename]
-
-    def send_device_message(self, message="", timestamp=None):
-        "Send message associated with the device this vector belongs to"
-        self.device.send_device_message(message, timestamp)
-
-    def send_message(self, message="", timestamp=None):
-        "Send system wide message - without device name"
-        self.driver.send_message(message, timestamp)
 
     def send_delProperty(self, message="", timestamp=None):
         "Send delProperty with this device and property, set self.enable to False"
