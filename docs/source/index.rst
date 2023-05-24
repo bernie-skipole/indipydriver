@@ -4,7 +4,7 @@ indipydriver = Python tools to create INDI drivers
 ==================================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    usage/introduction
    usage/example
