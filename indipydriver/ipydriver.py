@@ -231,7 +231,7 @@ class IPyDriver(collections.UserDict):
             # also give the device a reference to this driver
             # so it can have access to writerque
             device.driver = self
-            device_handlers.append(device.handler())
+            device_handlers.append(device._handler())
             for pv in device.propertyvectors.values():
                 property_handlers.append(pv.handler())
                 # also give the propertyvector a reference to this driver
@@ -248,6 +248,10 @@ class IPyDriver(collections.UserDict):
 
 
 class Device(collections.UserDict):
+
+    """An instance of this should be created for each device controlled by this driver.
+       The properties argument is a list of vectors ciontrolling this device.
+    """
 
     def __init__(self, devicename, properties):
         super().__init__()
@@ -297,10 +301,6 @@ class Device(collections.UserDict):
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
 
-    def send_message(self, message="", timestamp=None):
-        "Send system wide message - without device name"
-        self.driver.send_message(message, timestamp)
-
 
     def send_delProperty(self, message="", timestamp=None):
         "Send delProperty with this device, set self.enable to False"
@@ -321,7 +321,7 @@ class Device(collections.UserDict):
         raise KeyError
 
 
-    async def handler(self):
+    async def _handler(self):
         """Handles data read from dataque"""
         while True:
             # get block of data from the self.dataque
