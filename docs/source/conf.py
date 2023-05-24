@@ -29,6 +29,8 @@ release = '0.0.1'
 
 # ---------------------- Added to get readthedocs to build, by BC
 master_doc = 'index'
+# ---------------------- Added by BC to stop module names prepended to functions
+add_module_names = False
 
 
 # -- General configuration ---------------------------------------------------
