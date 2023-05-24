@@ -5,10 +5,10 @@ An example driver - controlling a simulated thermostat is shown::
 
     import asyncio
 
-    from indipydriver import (IPyDriver, Device,                        # these classes create the driver
-                              NumberVector, NumberMember,               # these populate the driver with vectors and members
-                              getProperties, newNumberVector,           # instances of these are expected events from the client
-                              indi_number_to_float                      # a utility function, converting an INDI string to a float
+    from indipydriver import (IPyDriver, Device,
+                              NumberVector, NumberMember,
+                              getProperties, newNumberVector,
+                              indi_number_to_float
                              )
 
 
@@ -201,4 +201,4 @@ An example driver - controlling a simulated thermostat is shown::
         # temperature changing towards the target.
 
 
-The above gives a feeling of how a driver can be created, the classes available are described further within this documentation.
+The above sets two vectors into a single device, and each vector only has one member. The 'vector' is the unit of data transmitted, so if a vector has multiple members, this ensures all those member values are updated together.
