@@ -10,6 +10,7 @@ indipydriver = Python tools to create INDI drivers
    usage/example
    usage/ipydriver
    usage/device
+   usage/propertyvectors
    usage/references
    usage/license
 

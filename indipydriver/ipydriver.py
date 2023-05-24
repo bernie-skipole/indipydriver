@@ -163,7 +163,6 @@ class IPyDriver(collections.UserDict):
                 # so ignore it, and just pass
                 pass
 
-
     def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
         if not timestamp:
@@ -194,7 +193,6 @@ class IPyDriver(collections.UserDict):
         xmldata.set("name", vectorname)
         self.writerque.append(xmldata)
 
-
     async def hardware(self):
         "Override this, operate device hardware, and transmit updates"
         await asyncio.sleep(0)
@@ -204,7 +202,6 @@ class IPyDriver(collections.UserDict):
         # methods to send data, then
         # await asyncio.gather(the co routines)
 
-
     async def clientevent(self, event):
         """Override this. On receiving data, this is called, and should
            handle any necessary actions.
@@ -212,7 +209,6 @@ class IPyDriver(collections.UserDict):
            devicename, vectorname, vector,
            where vector is the properties vector causing the event."""
         pass
-
 
     async def snoopevent(self, event):
         """Override this if this driver is snooping on other devices.
@@ -223,7 +219,6 @@ class IPyDriver(collections.UserDict):
 
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
-
         device_handlers = []
         property_handlers = []
         for device in self.devices.values():
