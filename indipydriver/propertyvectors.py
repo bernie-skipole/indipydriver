@@ -35,7 +35,12 @@ class PropertyVector(collections.UserDict):
         return self.driver.devices[self.devicename]
 
     def send_delProperty(self, message="", timestamp=None):
-        "Send delProperty with this device and property, set self.enable to False"
+        """informs the client this vector is not available, it also sets a vector.enable attribute to
+           False, which stops any data being transmitted between the client and this property vector.
+           Setting vector.enable to True re-enables communications.
+           The message argument is any appropriate string which the client could display to the user.
+           The timestamp should be either None or a datetime.datetime object. If the timestamp is None
+           a datetime.datetime.utcnow() value will be inserted."""
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
@@ -134,10 +139,10 @@ class SwitchVector(PropertyVector):
                 continue
 
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
-        """Transmits the vector definition (defSwitchVector) to the client
+    def send_defVector(self, message='', timestamp=None, timeout=0):
+        """Transmits the vector definition (defSwitchVector) to the client,
            timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted.
+           in which case a  a datetime.datetime.utcnow() value will be inserted,
            timeout should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
@@ -165,7 +170,7 @@ class SwitchVector(PropertyVector):
             xmldata.append(switch.defswitch())
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, timestamp=None, timeout=0, message=''):
+    def send_setVector(self, message='', timestamp=None, timeout=0):
         """Sets setSwitchVector into writerque for transmission"""
         if not self.device.enable:
             return
@@ -223,7 +228,7 @@ class LightVector(PropertyVector):
                 continue
 
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
+    def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defLightVector) to the client
            timestamp should be a datetime.datetime object or None,
            in which case a  a datetime.datetime.utcnow() value will be inserted.
@@ -252,7 +257,7 @@ class LightVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
-    def send_setVector(self, timestamp=None, timeout=0, message=''):
+    def send_setVector(self, message='', timestamp=None, timeout=0):
         """Sets setLightVector into writerque for transmission"""
         # Note timeout is not used
         if not self.device.enable:
@@ -325,7 +330,7 @@ class TextVector(PropertyVector):
                 # if an error is raised parsing the incoming data, just continue
                 pass
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
+    def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defTextVector) to the client
            timestamp should be a datetime.datetime object or None,
            in which case a  a datetime.datetime.utcnow() value will be inserted.
@@ -355,7 +360,7 @@ class TextVector(PropertyVector):
             xmldata.append(text.deftext())
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, timestamp=None, timeout=0, message=''):
+    def send_setVector(self, message='', timestamp=None, timeout=0):
         """Sets setTextVector into writerque for transmission"""
         if not self.device.enable:
             return
@@ -429,7 +434,7 @@ class NumberVector(PropertyVector):
                 # if an error is raised parsing the incoming data, just continue
                 continue
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
+    def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defNumberVector) to the client
            timestamp should be a datetime.datetime object or None,
            in which case a  a datetime.datetime.utcnow() value will be inserted.
@@ -459,7 +464,7 @@ class NumberVector(PropertyVector):
             xmldata.append(number.defnumber())
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, timestamp=None, timeout=0, message=''):
+    def send_setVector(self, message='', timestamp=None, timeout=0):
         """Sets setNumberVector into writerque for transmission"""
         if not self.device.enable:
             return
@@ -537,7 +542,7 @@ class BLOBVector(PropertyVector):
                 # if an error is raised parsing the incoming data, just continue
                 continue
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
+    def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defBLOBVector) to the client
            timestamp should be a datetime.datetime object or None,
            in which case a  a datetime.datetime.utcnow() value will be inserted.
@@ -567,7 +572,7 @@ class BLOBVector(PropertyVector):
             xmldata.append(blob.defblob())
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, timestamp=None, timeout=0, message=''):
+    def send_setVector(self, message='', timestamp=None, timeout=0):
         """Sets setBLOBVector into writerque for transmission"""
         if not self.device.enable:
             return

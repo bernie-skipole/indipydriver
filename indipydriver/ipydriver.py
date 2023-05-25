@@ -44,6 +44,8 @@ class IPyDriver(collections.UserDict):
 
     def listen(self, host="localhost", port=7624):
         "If called, overrides default STDINOUT and listens on the given host/port"
+        if not isinstance(self.comms, STDINOUT):
+             raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(host, port)
 
     def __setitem__(self, devicename):
