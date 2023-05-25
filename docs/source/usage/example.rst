@@ -133,7 +133,7 @@ An example driver - controlling a simulated thermostat is shown::
         "Creates the driver"
 
         # create a vector with one number 'temperature' as its member
-        temperature = NumberMember(name="temperature", format='%3.1f', min='-50', max='99')
+        temperature = NumberMember(name="temperature", format='%3.1f', min=-50, max=99)
         # set this member into a vector
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",

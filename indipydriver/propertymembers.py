@@ -124,7 +124,7 @@ class TextMember(PropertyMember):
 
 class NumberMember(PropertyMember):
 
-    def __init__(self, name, label=None, format='', min='', max='', step='0'):
+    def __init__(self, name, label=None, format='', min=0, max=0, step=0):
         super().__init__(name, label)
         self.format = format
         self.min = min
