@@ -35,7 +35,7 @@ class PropertyVector(collections.UserDict):
         return self.driver.devices[self.devicename]
 
     def send_delProperty(self, message="", timestamp=None):
-        """informs the client this vector is not available, it also sets a vector.enable attribute to
+        """Informs the client this vector is not available, it also sets an 'enable' attribute to
            False, which stops any data being transmitted between the client and this property vector.
            Setting vector.enable to True re-enables communications.
            The message argument is any appropriate string which the client could display to the user.
@@ -140,10 +140,10 @@ class SwitchVector(PropertyVector):
 
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
-        """Transmits the vector definition (defSwitchVector) to the client,
-           timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted,
-           timeout should be zero if not used, or a value indicating to the
+        """Transmits the vector definition (defSwitchVector) to the client.
+           Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
@@ -171,7 +171,12 @@ class SwitchVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
-        """Sets setSwitchVector into writerque for transmission"""
+        """Transmits the vector (setSwitchVector) and members with their values to the client.
+           Typically the vector 'state' should be set, and any changed member value prior to
+           transmission. Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -196,6 +201,10 @@ class SwitchVector(PropertyVector):
 
 
 class LightVector(PropertyVector):
+
+    """A LightVector is an instrument indicator, and sends one or more members
+       with values 'Idle', 'Ok', 'Busy' or 'Alert'. In general a client will
+       indicate this state with different colours."""
 
     def __init__(self, name, label, group, state, lightmembers):
         super().__init__(name, label, group, state)
@@ -229,10 +238,10 @@ class LightVector(PropertyVector):
 
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
-        """Transmits the vector definition (defLightVector) to the client
-           timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted.
-           timeout should be zero if not used, or a value indicating to the
+        """Transmits the vector definition (defLightVector) to the client.
+           Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         # Note timeout is not used
         if not self.device.enable:
@@ -258,7 +267,12 @@ class LightVector(PropertyVector):
 
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
-        """Sets setLightVector into writerque for transmission"""
+        """Transmits the vector (setLightVector) and members with their values to the client.
+           Typically the vector 'state' should be set, and any changed member value prior to
+           transmission. Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         # Note timeout is not used
         if not self.device.enable:
             return
@@ -282,6 +296,8 @@ class LightVector(PropertyVector):
 
 
 class TextVector(PropertyVector):
+
+    """A TextVector is used to send and receive text between instrument and client."""
 
     def __init__(self, name, label, group, perm, state, textmembers):
         super().__init__(name, label, group, state)
@@ -331,10 +347,10 @@ class TextVector(PropertyVector):
                 pass
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
-        """Transmits the vector definition (defTextVector) to the client
-           timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted.
-           timeout should be zero if not used, or a value indicating to the
+        """Transmits the vector definition (defTextVector) to the client.
+           Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
@@ -361,7 +377,12 @@ class TextVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
-        """Sets setTextVector into writerque for transmission"""
+        """Transmits the vector (setTextVector) and members with their values to the client.
+           Typically the vector 'state' should be set, and any changed member value prior to
+           transmission. Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -435,10 +456,10 @@ class NumberVector(PropertyVector):
                 continue
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
-        """Transmits the vector definition (defNumberVector) to the client
-           timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted.
-           timeout should be zero if not used, or a value indicating to the
+        """Transmits the vector definition (defNumberVector) to the client.
+           Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
@@ -465,7 +486,12 @@ class NumberVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
-        """Sets setNumberVector into writerque for transmission"""
+        """Transmits the vector (setNumberVector) and members with their values to the client.
+           Typically the vector 'state' should be set, and any changed member value prior to
+           transmission. Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:
@@ -543,10 +569,10 @@ class BLOBVector(PropertyVector):
                 continue
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
-        """Transmits the vector definition (defBLOBVector) to the client
-           timestamp should be a datetime.datetime object or None,
-           in which case a  a datetime.datetime.utcnow() value will be inserted.
-           timeout should be zero if not used, or a value indicating to the
+        """Transmits the vector definition (defBLOBVector) to the client.
+           Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
@@ -573,7 +599,12 @@ class BLOBVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
-        """Sets setBLOBVector into writerque for transmission"""
+        """Transmits the vector (setBLOBVector) and members with their values to the client.
+           Typically the vector 'state' should be set, and any changed member value prior to
+           transmission. Argument timestamp should be a datetime.datetime object or None,
+           in which case a datetime.datetime.utcnow() value will be inserted.
+           The timeout value should be zero if not used, or a value indicating to the
+           client how long this data is valid, and message is any suitable string for the client."""
         if not self.device.enable:
             return
         if not self.enable:

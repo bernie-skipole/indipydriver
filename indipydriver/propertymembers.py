@@ -64,9 +64,10 @@ class SwitchMember(PropertyMember):
 
 class LightMember(PropertyMember):
 
+    """A LightMember can only have one of 'Idle', 'Ok', 'Busy' or 'Alert' values"""
+
     def __init__(self, name, label=None):
         super().__init__(name, label)
-        # membervalue should be one of Idle|Ok|Busy|Alert
         self._membervalue = 'Idle'
 
     @property
@@ -78,7 +79,7 @@ class LightMember(PropertyMember):
         self._membervalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
 
     def deflight(self):
-        """Returns a defLight"""
+        """Returns xml of a defLight"""
         xmldata = ET.Element('defLight')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)

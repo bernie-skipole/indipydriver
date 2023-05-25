@@ -30,42 +30,24 @@ Each member has a name and label, again label is a string which can be used by t
 TextVector
 ^^^^^^^^^^
 
-A TextVector is used to send and receive text between instrument and client.
-
 .. autoclass:: indipydriver.TextVector
-   :members:
+   :members: send_delProperty, send_defVector, send_setVector
 
-   .. method:: send_delProperty(message="", timestamp=None)
-
-      Informs the client this vector is not available, it also sets a vector.enable attribute to
-      False, which stops any data being transmitted between the client and this property vector.
-      Setting vector.enable to True re-enables communications.
-      The message argument is any appropriate string which the client could display to the user.
-      The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-      a datetime.datetime.utcnow() value will be inserted.
+A TextVector takes one or more TextMember objects.
 
 .. autoclass:: indipydriver.TextMember
 
 LightVector
 ^^^^^^^^^^^
 
-A LightVector is an instrument indicator, and sends one or more members with values 'Idle', 'Ok', 'Busy' or 'Alert'. In general a client will indicate this state with different colours.
-
 .. autoclass:: indipydriver.LightVector
-   :members:
+   :members: send_delProperty, send_defVector, send_setVector
 
-   .. method:: send_delProperty(message="", timestamp=None)
-
-      Informs the client this vector is not available, it also sets a vector.enable attribute to
-      False, which stops any data being transmitted between the client and this property vector.
-      Setting vector.enable to True re-enables communications.
-      The message argument is any appropriate string which the client could display to the user.
-      The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-      a datetime.datetime.utcnow() value will be inserted.
+A LightVector takes one or more LightMember objects.
 
 .. autoclass:: indipydriver.LightMember
 
-A LightMember can only have one of 'Idle', 'Ok', 'Busy' or 'Alert' values, so if a LightMember name is 'Indicator' it could be set with:
+For example, if a LightMember name is 'Indicator' it could be set with:
 
 vector['Indicator'] = 'Ok'
 
@@ -77,16 +59,7 @@ SwitchVector
 ^^^^^^^^^^^^
 
 .. autoclass:: indipydriver.SwitchVector
-   :members:
-
-   .. method:: send_delProperty(message="", timestamp=None)
-
-      Informs the client this vector is not available, it also sets a vector.enable attribute to
-      False, which stops any data being transmitted between the client and this property vector.
-      Setting vector.enable to True re-enables communications.
-      The message argument is any appropriate string which the client could display to the user.
-      The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-      a datetime.datetime.utcnow() value will be inserted.
+   :members: send_delProperty, send_defVector, send_setVector
 
 A SwitchVector takes one or more SwitchMember objects.
 
@@ -96,16 +69,9 @@ NumberVector
 ^^^^^^^^^^^^
 
 .. autoclass:: indipydriver.NumberVector
-   :members:
+   :members: send_delProperty, send_defVector, send_setVector
 
-   .. method:: send_delProperty(message="", timestamp=None)
-
-      Informs the client this vector is not available, it also sets a vector.enable attribute to
-      False, which stops any data being transmitted between the client and this property vector.
-      Setting vector.enable to True re-enables communications.
-      The message argument is any appropriate string which the client could display to the user.
-      The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-      a datetime.datetime.utcnow() value will be inserted.
+A NumberVector takes one or more NumberMember objects.
 
 .. autoclass:: indipydriver.NumberMember
 
@@ -114,15 +80,8 @@ BLOBVector
 ^^^^^^^^^^
 
 .. autoclass:: indipydriver.BLOBVector
-   :members:
+   :members: send_delProperty, send_defVector, send_setVector
 
-   .. method:: send_delProperty(message="", timestamp=None)
-
-      Informs the client this vector is not available, it also sets a vector.enable attribute to
-      False, which stops any data being transmitted between the client and this property vector.
-      Setting vector.enable to True re-enables communications.
-      The message argument is any appropriate string which the client could display to the user.
-      The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-      a datetime.datetime.utcnow() value will be inserted.
+A BLOBVector takes one or more BLOBMember objects.
 
 .. autoclass:: indipydriver.BLOBMember
