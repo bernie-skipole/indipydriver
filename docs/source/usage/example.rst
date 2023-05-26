@@ -7,8 +7,7 @@ An example driver - controlling a simulated thermostat is shown::
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
-                              getProperties, newNumberVector,
-                              indi_number_to_float
+                              getProperties, newNumberVector
                              )
 
 
@@ -78,11 +77,11 @@ An example driver - controlling a simulated thermostat is shown::
                     # so this new target can be displayed by the client
                     if 'target' in event:
                         newtarget = event['target']
-                        # The indi_number_to_float function converts the received string,
+                        # The self.indi_number_to_float method converts the received string,
                         # which may be in a number of formats to a Python float value. This
                         # is set into global value TARGET, which, in this simulation, is
                         # used by the control function to control the heater
-                        TARGET = indi_number_to_float(newtarget)
+                        TARGET = self.indi_number_to_float(newtarget)
                         # and set the new target value into the vector member, then
                         # transmits the vector back to client, with vector state ok
                         event.vector['target'] = newtarget

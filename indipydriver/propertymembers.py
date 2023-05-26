@@ -19,6 +19,9 @@ class PropertyMember:
         else:
             self.label = name
         self._membervalue = None
+        # self._changed is a flag to indicate the value has changed
+        # initially start with all values have changed
+        self._changed = True
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -28,6 +31,8 @@ class PropertyMember:
 
 
 class SwitchMember(PropertyMember):
+
+    """A SwitchMember can only have one of 'On' or 'Off' values"""
 
     def __init__(self, name, label=None):
         super().__init__(name, label)
@@ -40,7 +45,10 @@ class SwitchMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
-        self._membervalue = self.checkvalue(value, ['On', 'Off'])
+        newvalue = self.checkvalue(value, ['On', 'Off'])
+        if self._membervalue != newvalue:
+            self._changed = True
+            self._membervalue = newvalue
 
     def defswitch(self):
         """Returns a defSwitch"""
@@ -50,11 +58,8 @@ class SwitchMember(PropertyMember):
         xmldata.text = self._membervalue
         return xmldata
 
-    def oneswitch(self, membervalue=None):
-        """Returns xml of a oneSwitch, sets membervalue
-           or if None the current value is unchanged"""
-        if membervalue:
-            self.membervalue = membervalue
+    def oneswitch(self):
+        """Returns xml of a oneSwitch"""
         xmldata = ET.Element('oneSwitch')
         xmldata.set("name", self.name)
         xmldata.text = self._membervalue
@@ -76,7 +81,10 @@ class LightMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
-        self._membervalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
+        newvalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
+        if self._membervalue != newvalue:
+            self._changed = True
+            self._membervalue = newvalue
 
     def deflight(self):
         """Returns xml of a defLight"""
@@ -86,11 +94,8 @@ class LightMember(PropertyMember):
         xmldata.text = self._membervalue
         return xmldata
 
-    def onelight(self, membervalue=None):
-        """Returns xml of a oneLight, sets membervalue
-           or if None the current value is unchanged"""
-        if membervalue:
-            self.membervalue = membervalue
+    def onelight(self):
+        """Returns xml of a oneLight"""
         xmldata = ET.Element('oneLight')
         xmldata.set("name", self.name)
         xmldata.text = self._membervalue
@@ -101,7 +106,17 @@ class TextMember(PropertyMember):
 
     def __init__(self, name, label=None):
         super().__init__(name, label)
-        self.membervalue = ''
+        self._membervalue = ''
+
+    @property
+    def membervalue(self):
+        return self._membervalue
+
+    @membervalue.setter
+    def membervalue(self, value):
+        if self._membervalue != value:
+            self._changed = True
+            self._membervalue = value
 
     def deftext(self):
         """Returns a defText"""
@@ -111,11 +126,8 @@ class TextMember(PropertyMember):
         xmldata.text = self.membervalue
         return xmldata
 
-    def onetext(self, membervalue=None):
-        """Returns xml of a oneText, sets membervalue
-           or if None the current value is unchanged"""
-        if membervalue:
-            self.membervalue = membervalue
+    def onetext(self):
+        """Returns xml of a oneText"""
         xmldata = ET.Element('oneText')
         xmldata.set("name", self.name)
         xmldata.text = self.membervalue
@@ -136,7 +148,6 @@ class NumberMember(PropertyMember):
         # be correctly formatted and used in the xml directly.
         # if given as integers or floats, they are formatted using the format string
 
-
     @property
     def membervalue(self):
         return self._membervalue
@@ -144,9 +155,12 @@ class NumberMember(PropertyMember):
     @membervalue.setter
     def membervalue(self, value):
         if isinstance(value, str):
-            self._membervalue = value
+            newvalue = value
         else:
-            self._membervalue = self.format_number(value)
+            newvalue = self.format_number(value)
+        if self._membervalue != newvalue:
+            self._changed = True
+            self._membervalue = newvalue
 
     @property
     def min(self):
@@ -252,11 +266,8 @@ class NumberMember(PropertyMember):
         xmldata.text = self._membervalue
         return xmldata
 
-    def onenumber(self, membervalue=None):
-        """Returns xml of a oneNumber, sets membervalue
-           or if None the current value is unchanged"""
-        if not membervalue is None:
-            self.membervalue = membervalue
+    def onenumber(self):
+        """Returns xml of a oneNumber"""
         xmldata = ET.Element('oneNumber')
         xmldata.set("name", self.name)
         xmldata.text = self._membervalue
@@ -279,7 +290,9 @@ class BLOBMember(PropertyMember):
     def membervalue(self, value):
         if not isinstance(value, bytes):
             raise ValueError("The given BLOB value must be a bytes object")
-        self._membervalue = value
+        if self._membervalue != value:
+            self._changed = True
+            self._membervalue = value
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""
@@ -288,11 +301,8 @@ class BLOBMember(PropertyMember):
         xmldata.set("label", self.label)
         return xmldata
 
-    def oneblob(self, membervalue=None):
-        """Returns xml of a oneBLOB, sets membervalue
-           or if None the current value is unchanged"""
-        if membervalue:
-            self.membervalue = membervalue
+    def oneblob(self):
+        """Returns xml of a oneBLOB"""
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
         if not self.blobsize:

@@ -82,6 +82,17 @@ class PropertyVector(collections.UserDict):
 
 class SwitchVector(PropertyVector):
 
+    """A SwitchVector sends and receives one or more members with values 'On' or 'Off'. It
+       also has the extra attribute 'rule' which can be one of 'OneOfMany', 'AtMostOne', 'AnyOfMany'.
+       These are hints to the client how to display the switches in the vector.
+
+       OneOfMany - of the SwitchMembers in this vector, one (and only one) must be On.
+
+       AtMostOne - of the SwitchMembers in this vector, one or none can be On.
+
+       AnyOfMany - multiple switch members can be On.
+       """
+
     def __init__(self, name, label, group, perm, rule, state, switchmembers):
         super().__init__(name, label, group, state)
         self.perm = perm
@@ -194,10 +205,20 @@ class SwitchVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
-        for switch in self.data.values():
-            xmldata.append(switch.oneswitch())
+        # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
+        # so make all 'On' values last
+        Offlist = list(switch.oneswitch() for switch in self.data.values() if switch.membervalue == 'Off')
+        Onlist = list(switch.oneswitch() for switch in self.data.values() if switch.membervalue == 'On')
+        for oneswitchxml in Offlist:
+            xmldata.append(oneswitchxml)
+        for oneswitchxml in Onlist:
+            xmldata.append(oneswitchxml)
+        if len(Onlist) > 1:
+            if self._rule == 'OneOfMany' or self._rule == 'AtMostOne':
+                raise ValueError(f"Switch rule {self._rule} does not allow more than one On member")
+        if self._rule == 'OneOfMany' and (len(Offlist) < 1 or len(Onlist) < 1):
+            raise ValueError("Switch rule OneOfMany requires one switch member to turn Off, and one to turn On")
         self.driver.writerque.append(xmldata)
-
 
 
 class LightVector(PropertyVector):
