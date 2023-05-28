@@ -106,6 +106,8 @@ class LightMember(PropertyMember):
 
 class TextMember(PropertyMember):
 
+    """Contains a text string"""
+
     def __init__(self, name, label=None):
         super().__init__(name, label)
         self._membervalue = ''
@@ -280,11 +282,19 @@ class NumberMember(PropertyMember):
 
 class BLOBMember(PropertyMember):
 
-    def __init__(self, name, label=None):
+    """Contains a Binary object, the value should be a bytes object
+
+       blobsize is the size of the BLOB bafore any compression, if left at
+       zero, the length of the BLOB will be used.
+
+       The BLOB format should be a string describing the BLOB, such as .jpeg
+    """
+
+    def __init__(self, name, label=None, blobsize = 0, blobformat = ''):
         super().__init__(name, label)
         self._membervalue = b''
-        self.blobsize = ''
-        self.blobformat = ''
+        self.blobsize = blobsize
+        self.blobformat = blobformat
 
     @property
     def membervalue(self):
