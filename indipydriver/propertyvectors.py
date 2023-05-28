@@ -177,7 +177,7 @@ class SwitchVector(PropertyVector):
             switch.changed = True
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0):
+    def send_setVector(self, message='', timestamp=None, timeout=0, changed_only=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission. Argument timestamp should be a datetime.datetime object or None,
@@ -207,12 +207,12 @@ class SwitchVector(PropertyVector):
         Onswitches = (switch for switch in self.data.values() if switch.membervalue == 'On')
         for switch in Offswitches:
             # only send member if its value has changed
-            if switch.changed:
+            if switch.changed or (not changed_only):
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
         for switch in Onswitches:
             # only send member if its value has changed
-            if switch.changed:
+            if switch.changed or (not changed_only):
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
         self.driver.writerque.append(xmldata)
@@ -284,7 +284,7 @@ class LightVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
-    def send_setVector(self, message='', timestamp=None, timeout=0):
+    def send_setVector(self, message='', timestamp=None, timeout=0, changed_only=True):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission. Argument timestamp should be a datetime.datetime object or None,
@@ -310,10 +310,11 @@ class LightVector(PropertyVector):
             xmldata.set("message", message)
         for light in self.data.values():
             # only send member if its value has changed
-            if light.changed:
+            if light.changed or (not changed_only):
                 xmldata.append(light.onelight())
                 light.changed = False
         self.driver.writerque.append(xmldata)
+
 
 
 class TextVector(PropertyVector):
@@ -390,7 +391,7 @@ class TextVector(PropertyVector):
             text.changed = True
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0):
+    def send_setVector(self, message='', timestamp=None, timeout=0, changed_only=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission. Argument timestamp should be a datetime.datetime object or None,
@@ -416,11 +417,10 @@ class TextVector(PropertyVector):
             xmldata.set("message", message)
         for text in self.data.values():
             # only send member if its value has changed
-            if text.changed:
+            if text.changed or (not changed_only):
                 xmldata.append(text.onetext())
                 text.changed = False
         self.driver.writerque.append(xmldata)
-
 
 
 class NumberVector(PropertyVector):
@@ -495,7 +495,7 @@ class NumberVector(PropertyVector):
             number.changed = True
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0):
+    def send_setVector(self, message='', timestamp=None, timeout=0, changed_only=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission. Argument timestamp should be a datetime.datetime object or None,
@@ -521,7 +521,7 @@ class NumberVector(PropertyVector):
             xmldata.set("message", message)
         for number in self.data.values():
             # only send member if its value has changed
-            if number.changed:
+            if number.changed or (not changed_only):
                 xmldata.append(number.onenumber())
                 number.changed = False
         self.driver.writerque.append(xmldata)
@@ -603,7 +603,7 @@ class BLOBVector(PropertyVector):
             blob.changed = True
         self.driver.writerque.append(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0):
+    def send_setVector(self, message='', timestamp=None, timeout=0, changed_only=True):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission. Argument timestamp should be a datetime.datetime object or None,
@@ -629,7 +629,7 @@ class BLOBVector(PropertyVector):
             xmldata.set("message", message)
         for blob in self.data.values():
             # only send member if its value has changed
-            if blob.changed:
+            if blob.changed or (not changed_only):
                 xmldata.append(blob.oneblob())
                 blob.changed = False
         self.driver.writerque.append(xmldata)
