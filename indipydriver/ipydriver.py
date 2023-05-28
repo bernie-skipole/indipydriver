@@ -396,14 +396,20 @@ class Device(collections.UserDict):
                         # property name not recognised
                         continue
                 else:
-                    # root.tag will be either newSwitchVector, newNumberVector,.. etc
+                    # root.tag will be one of
+                    # newSwitchVector, newNumberVector, newTextVector, newBLOBVector
                     name = root.get("name")
                     if name is None:
                         # name not given, ignore this
                         continue
                     elif name in self.propertyvectors:
-                        if self.propertyvectors[name].enable:
-                            self.propertyvectors[name].dataque.append(root)
+                        pvector = self.propertyvectors[name]
+                        if pvector.perm == "ro":
+                            # read only property cannot accept a newVector
+                            continue
+                        if pvector.enable:
+                            # all ok, add to the vector dataque
+                            pvector.dataque.append(root)
                     else:
                         # property name not recognised
                         continue

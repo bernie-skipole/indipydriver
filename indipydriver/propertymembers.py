@@ -19,9 +19,9 @@ class PropertyMember:
         else:
             self.label = name
         self._membervalue = None
-        # self._changed is a flag to indicate the value has changed
+        # self.changed is a flag to indicate the value has changed
         # initially start with all values have changed
-        self._changed = True
+        self.changed = True
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -47,7 +47,8 @@ class SwitchMember(PropertyMember):
     def membervalue(self, value):
         newvalue = self.checkvalue(value, ['On', 'Off'])
         if self._membervalue != newvalue:
-            self._changed = True
+            # when a value has changed, set the changed flag
+            self.changed = True
             self._membervalue = newvalue
 
     def defswitch(self):
@@ -83,7 +84,8 @@ class LightMember(PropertyMember):
     def membervalue(self, value):
         newvalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
         if self._membervalue != newvalue:
-            self._changed = True
+            # when a value has changed, set the changed flag
+            self.changed = True
             self._membervalue = newvalue
 
     def deflight(self):
@@ -115,7 +117,8 @@ class TextMember(PropertyMember):
     @membervalue.setter
     def membervalue(self, value):
         if self._membervalue != value:
-            self._changed = True
+            # when a value has changed, set the changed flag
+            self.changed = True
             self._membervalue = value
 
     def deftext(self):
@@ -159,7 +162,8 @@ class NumberMember(PropertyMember):
         else:
             newvalue = self.format_number(value)
         if self._membervalue != newvalue:
-            self._changed = True
+            # when a value has changed, set the changed flag
+            self.changed = True
             self._membervalue = newvalue
 
     @property
@@ -291,7 +295,8 @@ class BLOBMember(PropertyMember):
         if not isinstance(value, bytes):
             raise ValueError("The given BLOB value must be a bytes object")
         if self._membervalue != value:
-            self._changed = True
+            # when a value has changed, set the changed flag
+            self.changed = True
             self._membervalue = value
 
     def defblob(self):

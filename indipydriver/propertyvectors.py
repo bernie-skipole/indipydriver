@@ -54,6 +54,9 @@ class PropertyVector(collections.UserDict):
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
         self.enable = False
+        for member in self.data.values():
+            # set all members as changed, so when re-enabled, all values are ready to be sent again
+            member.changed = True
 
     def checkvalue(self, value, allowed):
         "allowed is a list of values, checks if value is in it"
@@ -128,26 +131,17 @@ class SwitchVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
-                if not self.device.enable:
-                    continue
-                if not self.enable:
-                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
                 elif root.tag == "newSwitchVector":
-                    if self._perm == 'ro':
-                        # read only, cannot be changed
-                        continue
                     # create event
                     event = newSwitchVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
-                continue
+                pass
 
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
@@ -179,6 +173,8 @@ class SwitchVector(PropertyVector):
             xmldata.set("message", message)
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
+            # after a defswitch sent, assume new client connection, and set all members as changed
+            switch.changed = True
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
@@ -207,17 +203,18 @@ class SwitchVector(PropertyVector):
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
         # so make all 'On' values last
-        Offlist = list(switch.oneswitch() for switch in self.data.values() if switch.membervalue == 'Off')
-        Onlist = list(switch.oneswitch() for switch in self.data.values() if switch.membervalue == 'On')
-        for oneswitchxml in Offlist:
-            xmldata.append(oneswitchxml)
-        for oneswitchxml in Onlist:
-            xmldata.append(oneswitchxml)
-        if len(Onlist) > 1:
-            if self._rule == 'OneOfMany' or self._rule == 'AtMostOne':
-                raise ValueError(f"Switch rule {self._rule} does not allow more than one On member")
-        if self._rule == 'OneOfMany' and (len(Offlist) < 1 or len(Onlist) < 1):
-            raise ValueError("Switch rule OneOfMany requires one switch member to turn Off, and one to turn On")
+        Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off')
+        Onswitches = (switch for switch in self.data.values() if switch.membervalue == 'On')
+        for switch in Offswitches:
+            # only send member if its value has changed
+            if switch.changed:
+                xmldata.append(switch.oneswitch())
+                switch.changed = False
+        for switch in Onswitches:
+            # only send member if its value has changed
+            if switch.changed:
+                xmldata.append(switch.oneswitch())
+                switch.changed = False
         self.driver.writerque.append(xmldata)
 
 
@@ -244,19 +241,17 @@ class LightVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
-                if not self.device.enable:
-                    continue
-                if not self.enable:
-                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
-                continue
+                pass
 
+    @property
+    def perm(self):
+        return "ro"
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defLightVector) to the client.
@@ -284,6 +279,8 @@ class LightVector(PropertyVector):
             xmldata.set("message", message)
         for light in self.data.values():
             xmldata.append(light.deflight())
+            # after a deflight sent, assume new client connection, and set all members as changed
+            light.changed = True
         self.driver.writerque.append(xmldata)
 
 
@@ -312,7 +309,10 @@ class LightVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for light in self.data.values():
-            xmldata.append(light.onelight())
+            # only send member if its value has changed
+            if light.changed:
+                xmldata.append(light.onelight())
+                light.changed = False
         self.driver.writerque.append(xmldata)
 
 
@@ -346,23 +346,14 @@ class TextVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
-                if not self.device.enable:
-                    continue
-                if not self.enable:
-                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
                 elif root.tag == "newTextVector":
-                    if self._perm == 'ro':
-                        # read only, cannot be changed
-                        continue
                     # create event
                     event = newTextVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 pass
@@ -395,6 +386,8 @@ class TextVector(PropertyVector):
             xmldata.set("message", message)
         for text in self.data.values():
             xmldata.append(text.deftext())
+            # after a deftext sent, assume new client connection, and set all members as changed
+            text.changed = True
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
@@ -422,7 +415,10 @@ class TextVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for text in self.data.values():
-            xmldata.append(text.onetext())
+            # only send member if its value has changed
+            if text.changed:
+                xmldata.append(text.onetext())
+                text.changed = False
         self.driver.writerque.append(xmldata)
 
 
@@ -455,26 +451,17 @@ class NumberVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
-                if not self.device.enable:
-                    continue
-                if not self.enable:
-                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
                 elif root.tag == "newNumberVector":
-                    if self._perm == 'ro':
-                        # read only, cannot be changed
-                        continue
                     # create event
                     event = newNumberVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
-                continue
+                pass
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defNumberVector) to the client.
@@ -504,6 +491,8 @@ class NumberVector(PropertyVector):
             xmldata.set("message", message)
         for number in self.data.values():
             xmldata.append(number.defnumber())
+            # after a defnumber sent, assume new client connection, and set all members as changed
+            number.changed = True
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
@@ -531,7 +520,10 @@ class NumberVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for number in self.data.values():
-            xmldata.append(number.onenumber())
+            # only send member if its value has changed
+            if number.changed:
+                xmldata.append(number.onenumber())
+                number.changed = False
         self.driver.writerque.append(xmldata)
 
 
@@ -563,28 +555,18 @@ class BLOBVector(PropertyVector):
                 continue
             try:
                 root = self.dataque.popleft()
-                if not self.device.enable:
-                    continue
-                if not self.enable:
-                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
                 elif root.tag == "enableBLOB":
                     # create event
                     event = enableBLOB(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
                 elif root.tag == "newBLOBVector":
-                    if self._perm == 'ro':
-                        # read only, cannot be changed
-                        continue
                     # create event
                     event = newBLOBVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-                    continue
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 continue
@@ -617,6 +599,8 @@ class BLOBVector(PropertyVector):
             xmldata.set("message", message)
         for blob in self.data.values():
             xmldata.append(blob.defblob())
+            # after a defblob sent, assume new client connection, and set all members as changed
+            blob.changed = True
         self.driver.writerque.append(xmldata)
 
     def send_setVector(self, message='', timestamp=None, timeout=0):
@@ -644,5 +628,8 @@ class BLOBVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for blob in self.data.values():
-            xmldata.append(blob.oneblob())
+            # only send member if its value has changed
+            if blob.changed:
+                xmldata.append(blob.oneblob())
+                blob.changed = False
         self.driver.writerque.append(xmldata)
