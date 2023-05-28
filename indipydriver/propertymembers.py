@@ -31,7 +31,6 @@ class PropertyMember:
 
 
 class SwitchMember(PropertyMember):
-
     """A SwitchMember can only have one of 'On' or 'Off' values"""
 
     def __init__(self, name, label=None):
@@ -67,9 +66,7 @@ class SwitchMember(PropertyMember):
         return xmldata
 
 
-
 class LightMember(PropertyMember):
-
     """A LightMember can only have one of 'Idle', 'Ok', 'Busy' or 'Alert' values"""
 
     def __init__(self, name, label=None):
@@ -105,7 +102,6 @@ class LightMember(PropertyMember):
 
 
 class TextMember(PropertyMember):
-
     """Contains a text string"""
 
     def __init__(self, name, label=None):
@@ -140,6 +136,26 @@ class TextMember(PropertyMember):
 
 
 class NumberMember(PropertyMember):
+    """Contains a number, the attributes inform the client how the number should be
+       displayed.
+
+       format is a C printf style format, for example %7.2f means the number string will
+       have seven characters (including the decimal point as a character and leading
+       spaces will be inserted if necessary), and two decimal digits after the decimal point.
+
+       The format also accepts special characters for xxxx numbers, for example xxx
+
+       min is the minimum value
+
+       max is the maximum, if min is equal to max, the client should ignore these.
+
+       step is the step values, set to zero if not used.
+
+       If the member value is set as a string - that is how the number will be placed in the
+       xml protocol.
+
+       If set as a float, the string placed into the xml will be formatted according to the given format.
+    """
 
     def __init__(self, name, label=None, format='', min=0, max=0, step=0):
         super().__init__(name, label)
@@ -281,10 +297,9 @@ class NumberMember(PropertyMember):
 
 
 class BLOBMember(PropertyMember):
-
     """Contains a Binary object, the value should be a bytes object
 
-       blobsize is the size of the BLOB bafore any compression, if left at
+       blobsize is the size of the BLOB before any compression, if left at
        zero, the length of the BLOB will be used.
 
        The BLOB format should be a string describing the BLOB, such as .jpeg

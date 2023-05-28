@@ -37,8 +37,11 @@ class PropertyVector(collections.UserDict):
     def send_delProperty(self, message="", timestamp=None):
         """Informs the client this vector is not available, it also sets an 'enable' attribute to
            False, which stops any data being transmitted between the client and this property vector.
+
            Setting vector.enable to True re-enables communications.
+
            The message argument is any appropriate string which the client could display to the user.
+
            The timestamp should be either None or a datetime.datetime object. If the timestamp is None
            a datetime.datetime.utcnow() value will be inserted."""
         if not timestamp:
