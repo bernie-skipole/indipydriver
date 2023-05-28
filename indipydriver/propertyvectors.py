@@ -146,10 +146,15 @@ class SwitchVector(PropertyVector):
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defSwitchVector) to the client.
-           Argument timestamp should be a datetime.datetime object or None,
-           in which case a datetime.datetime.utcnow() value will be inserted.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid, and message is any suitable string for the client."""
+           client how long this data is valid.
+        """
         if not self.device.enable:
             return
         if not self.enable:
@@ -181,11 +186,15 @@ class SwitchVector(PropertyVector):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
+
            message is any suitable string for the client.
+
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
+
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
         """
@@ -260,10 +269,15 @@ class LightVector(PropertyVector):
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defLightVector) to the client.
-           Argument timestamp should be a datetime.datetime object or None,
-           in which case a datetime.datetime.utcnow() value will be inserted.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid, and message is any suitable string for the client."""
+           client how long this data is valid.
+        """
         # Note timeout is not used
         if not self.device.enable:
             return
@@ -293,11 +307,15 @@ class LightVector(PropertyVector):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
+
            message is any suitable string for the client.
+
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
+
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
         """
@@ -371,10 +389,15 @@ class TextVector(PropertyVector):
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defTextVector) to the client.
-           Argument timestamp should be a datetime.datetime object or None,
-           in which case a datetime.datetime.utcnow() value will be inserted.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid, and message is any suitable string for the client."""
+           client how long this data is valid.
+        """
         if not self.device.enable:
             return
         if not self.enable:
@@ -405,11 +428,15 @@ class TextVector(PropertyVector):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
+
            message is any suitable string for the client.
+
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
+
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
         """
@@ -480,10 +507,15 @@ class NumberVector(PropertyVector):
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defNumberVector) to the client.
-           Argument timestamp should be a datetime.datetime object or None,
-           in which case a datetime.datetime.utcnow() value will be inserted.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid, and message is any suitable string for the client."""
+           client how long this data is valid.
+        """
         if not self.device.enable:
             return
         if not self.enable:
@@ -514,11 +546,15 @@ class NumberVector(PropertyVector):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
+
            message is any suitable string for the client.
+
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
+
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
         """
@@ -593,10 +629,15 @@ class BLOBVector(PropertyVector):
 
     def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defBLOBVector) to the client.
-           Argument timestamp should be a datetime.datetime object or None,
-           in which case a datetime.datetime.utcnow() value will be inserted.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid, and message is any suitable string for the client."""
+           client how long this data is valid.
+        """
         if not self.device.enable:
             return
         if not self.enable:
@@ -627,11 +668,15 @@ class BLOBVector(PropertyVector):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
+
            message is any suitable string for the client.
+
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
+
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
+
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
         """
