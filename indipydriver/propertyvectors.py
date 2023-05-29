@@ -235,6 +235,45 @@ class SwitchVector(PropertyVector):
         self.driver.writerque.append(xmldata)
 
 
+    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+        """Transmits the vector (setSwitchVector) and members with their values to the client.
+           Similar to the send_setVector method however the members list specifies the
+           member names which will have their values sent.
+
+           This allows members to be explicitly specified. If the members list is empty
+           then a vector will still be sent, empty of members, which may be required if
+           just a state or message is to be sent.
+        """
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setSwitchVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
+        # so make all 'On' values last
+        Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off' and switch.name in members)
+        Onswitches = (switch for switch in self.data.values() if switch.membervalue == 'On' and switch.name in members)
+        for switch in Offswitches:
+            xmldata.append(switch.oneswitch())
+            switch.changed = False
+        for switch in Onswitches:
+            xmldata.append(switch.oneswitch())
+            switch.changed = False
+        self.driver.writerque.append(xmldata)
+
+
 class LightVector(PropertyVector):
 
     """A LightVector is an instrument indicator, and sends one or more members
@@ -316,8 +355,8 @@ class LightVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           For Light Vectors the timeout value is not used, but is included in the arguments
+           to match other send_vectors.
 
            If allvalues is True, all values are sent, if False, only values that have
            changed will be sent.
@@ -342,6 +381,38 @@ class LightVector(PropertyVector):
         for light in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or light.changed:
+                xmldata.append(light.onelight())
+                light.changed = False
+        self.driver.writerque.append(xmldata)
+
+    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+        """Transmits the vector (setLightVector) and members with their values to the client.
+           Similar to the send_setVector method however the members list specifies the
+           member names which will have their values sent.
+
+           This allows members to be explicitly specified. If the members list is empty
+           then a vector will still be sent, empty of members, which may be required if
+           just a state or message is to be sent.
+        """
+        # Note timeout is not used
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setLightVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        if message:
+            xmldata.set("message", message)
+        for light in self.data.values():
+            if light.name in  members:
                 xmldata.append(light.onelight())
                 light.changed = False
         self.driver.writerque.append(xmldata)
@@ -467,6 +538,38 @@ class TextVector(PropertyVector):
                 text.changed = False
         self.driver.writerque.append(xmldata)
 
+    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+        """Transmits the vector (setTextVector) and members with their values to the client.
+           Similar to the send_setVector method however the members list specifies the
+           member names which will have their values sent.
+
+           This allows members to be explicitly specified. If the members list is empty
+           then a vector will still be sent, empty of members, which may be required if
+           just a state or message is to be sent.
+        """
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setTextVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for text in self.data.values():
+            if text.name in members:
+                xmldata.append(text.onetext())
+                text.changed = False
+        self.driver.writerque.append(xmldata)
+
 
 class NumberVector(PropertyVector):
 
@@ -581,6 +684,38 @@ class NumberVector(PropertyVector):
         for number in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or number.changed:
+                xmldata.append(number.onenumber())
+                number.changed = False
+        self.driver.writerque.append(xmldata)
+
+    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+        """Transmits the vector (setNumberVector) and members with their values to the client.
+           Similar to the send_setVector method however the members list specifies the
+           member names which will have their values sent.
+
+           This allows members to be explicitly specified. If the members list is empty
+           then a vector will still be sent, empty of members, which may be required if
+           just a state or message is to be sent.
+        """
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setNumberVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for number in self.data.values():
+            if number.name in members:
                 xmldata.append(number.onenumber())
                 number.changed = False
         self.driver.writerque.append(xmldata)
@@ -703,6 +838,38 @@ class BLOBVector(PropertyVector):
         for blob in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or blob.changed:
+                xmldata.append(blob.oneblob())
+                blob.changed = False
+        self.driver.writerque.append(xmldata)
+
+    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+        """Transmits the vector (setBLOBVector) and members with their values to the client.
+           Similar to the send_setVector method however the members list specifies the
+           member names which will have their values sent.
+
+           This allows members to be explicitly specified. If the members list is empty
+           then a vector will still be sent, empty of members, which may be required if
+           just a state or message is to be sent.
+        """
+        if not self.device.enable:
+            return
+        if not self.enable:
+            return
+        if not timestamp:
+            timestamp = datetime.datetime.utcnow()
+        if not isinstance(timestamp, datetime.datetime):
+            raise TypeError("timestamp must be a datetime.datetime object")
+        xmldata = ET.Element('setBLOBVector')
+        xmldata.set("device", self.devicename)
+        xmldata.set("name", self.name)
+        xmldata.set("state", self.state)
+        # note - limit timestamp characters to :21 to avoid long fractions of a second
+        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timeout", str(timeout))
+        if message:
+            xmldata.set("message", message)
+        for blob in self.data.values():
+            if blob.name in members:
                 xmldata.append(blob.oneblob())
                 blob.changed = False
         self.driver.writerque.append(xmldata)

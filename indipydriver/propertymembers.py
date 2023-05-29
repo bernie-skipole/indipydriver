@@ -143,13 +143,11 @@ class NumberMember(PropertyMember):
        have seven characters (including the decimal point as a character and leading
        spaces will be inserted if necessary), and two decimal digits after the decimal point.
 
-       The format also accepts special characters for xxxx numbers, for example xxx
-
        min is the minimum value
 
        max is the maximum, if min is equal to max, the client should ignore these.
 
-       step is the step values, set to zero if not used.
+       step is incremental step values, set to zero if not used.
 
        If the member value is set as a string - that is how the number will be placed in the
        xml protocol.
@@ -297,7 +295,8 @@ class NumberMember(PropertyMember):
 
 
 class BLOBMember(PropertyMember):
-    """Contains a Binary object, the value should be a bytes object
+    """Contains a 'binary large object' such as an image, the value should be
+       a bytes object.
 
        blobsize is the size of the BLOB before any compression, if left at
        zero, the length of the BLOB will be used.
@@ -319,10 +318,10 @@ class BLOBMember(PropertyMember):
     def membervalue(self, value):
         if not isinstance(value, bytes):
             raise ValueError("The given BLOB value must be a bytes object")
-        if self._membervalue != value:
-            # when a value has changed, set the changed flag
-            self.changed = True
-            self._membervalue = value
+        # don't test for equality here since the byte data may be large
+        # just assume setting it implies a change
+        self.changed = True
+        self._membervalue = value
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""

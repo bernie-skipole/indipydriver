@@ -31,7 +31,7 @@ TextVector
 ^^^^^^^^^^
 
 .. autoclass:: indipydriver.TextVector
-   :members: send_delProperty, send_defVector, send_setVector
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
 
 A TextVector takes one or more TextMember objects.
 
@@ -41,7 +41,7 @@ LightVector
 ^^^^^^^^^^^
 
 .. autoclass:: indipydriver.LightVector
-   :members: send_delProperty, send_defVector, send_setVector
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
 
 A LightVector takes one or more LightMember objects.
 
@@ -59,7 +59,7 @@ SwitchVector
 ^^^^^^^^^^^^
 
 .. autoclass:: indipydriver.SwitchVector
-   :members: send_delProperty, send_defVector, send_setVector
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
 
 A SwitchVector takes one or more SwitchMember objects.
 
@@ -69,18 +69,36 @@ NumberVector
 ^^^^^^^^^^^^
 
 .. autoclass:: indipydriver.NumberVector
-   :members: send_delProperty, send_defVector, send_setVector
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
 
 A NumberVector takes one or more NumberMember objects.
 
 .. autoclass:: indipydriver.NumberMember
+
+The number format also accepts an INDI style "m" to specify sexagesimal in the form "%<w>.<f>m".
+
+From the INDI spec::
+
+   <w> is the total field width
+   <f> is the width of the fraction. valid values are:
+            9 -> :mm:ss.ss
+            8 -> :mm:ss.s
+            6 -> :mm:ss
+            5 -> :mm.m
+            3 -> :mm
+
+            For example:
+
+            to produce "-123:45" use %7.3m
+
+            to produce "  0:01:02" use %9.6m
 
 
 BLOBVector
 ^^^^^^^^^^
 
 .. autoclass:: indipydriver.BLOBVector
-   :members: send_delProperty, send_defVector, send_setVector
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
 
 A BLOBVector takes one or more BLOBMember objects.
 
