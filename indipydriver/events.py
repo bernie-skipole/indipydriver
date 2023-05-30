@@ -59,6 +59,8 @@ class newVector(Event, UserDict):
 
 
 class newSwitchVector(newVector):
+    """An event indicating a newSwitchVector has been received, this is a mapping
+       of membername:value, where each value is either On or Off"""
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
@@ -82,6 +84,9 @@ class newSwitchVector(newVector):
             raise EventException
 
 class newTextVector(newVector):
+    """An event indicating a newTextVector has been received, this is a mapping
+       of membername:value, where each value is a text string"""
+
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
@@ -100,6 +105,10 @@ class newTextVector(newVector):
 
 
 class newNumberVector(newVector):
+    """An event indicating a newNumberVector has been received, this is a mapping
+       of membername:value, where each value is a string number, which may be in
+       sexagesimal format. If desired, the driver method indi_number_to_float()
+       can be used to convert this to a float."""
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
@@ -118,6 +127,12 @@ class newNumberVector(newVector):
 
 
 class newBLOBVector(newVector):
+    """An event indicating a newBLOBVector has been received, this is a mapping
+       of membername:value, where each value is a bytes string.
+
+       This contains a further attribute 'sizeformat' which is a dictionary
+       of membername:(membersize, memberformat) these values are provided by the
+       client."""
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
