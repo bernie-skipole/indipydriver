@@ -33,6 +33,11 @@ Where vector is the vector object, and root is the received xml parsed as an xml
 
 .. autoclass:: indipydriver.enableBLOB
 
+The INDI specification describes enableBLOB as : Command to control whether setBLOBs should be sent to this channel from a given Device. They can be turned off completely by setting Never (the default), allowed to be intermixed with other INDI commands by setting Also or made the only command by setting Only.
+
+newVectors
+^^^^^^^^^^
+
 The following event objects indicate the client is trying to set new member values of a vector. The event has an attribute self.timestamp, being a datetime.datetime object, and is also a mapping of membername:value which the client is submitting.
 
 Typically, if you accept a new value, you would have code that controls your instrument, and you would then set the new value into the vector and transmit the update to the client::
