@@ -84,7 +84,7 @@ An example driver - controlling a simulated thermostat is shown::
                         TARGET = self.indi_number_to_float(newtarget)
                         # and set the new target value into the vector member, then
                         # transmits the vector back to client, with vector state ok
-                        event.vector['target'] = newtarget
+                        event.vector['target'] = TARGET
                         # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
                         # sending 'Ok' informs the client that the value has been received
                         event.vector.state = 'Ok'
@@ -94,18 +94,18 @@ An example driver - controlling a simulated thermostat is shown::
             """This coroutine controls and monitors the instrument, and if required
                sends updates to the client"""
             device = self['Thermostat']
-            temperaturevector = device['temperaturevector']
-            # and gather async functions which poll the hardware and
-            # sends updates to the client
-            await asyncio.gather(  poll_thermostat(temperaturevector),
-                                   send_update(temperaturevector)  )
+            # and gather async co-routines which poll the hardware and
+            # send updates to the client
+            await asyncio.gather(  poll_thermostat(device),
+                                   send_update(device)  )
 
 
     # the above driver calls on these two coroutines to control and
     # read the instrument hardware
 
-    async def poll_thermostat(vector):
-        "poll thermostat every second, places current value into the vector"
+    async def poll_thermostat(device):
+        "poll thermostat every second"
+        vector = device['temperaturevector']
         while True:
             await asyncio.sleep(1)
             # the control function turns on and off the heater to keep
@@ -119,9 +119,9 @@ An example driver - controlling a simulated thermostat is shown::
             # Client updates are done every 10 seconds by the
             # send_update coroutine.
 
-    async def send_update(vector):
-        """This sends the current temperature in
-           the given vector every ten seconds"""
+    async def send_update(device):
+        """Transmit the current temperature every ten seconds"""
+        vector = device['temperaturevector']
         while True:
             await asyncio.sleep(10)
             vector.send_setVector(timeout=10)
@@ -144,7 +144,7 @@ An example driver - controlling a simulated thermostat is shown::
         temperaturevector["temperature"] = TEMPERATURE
 
         # create a vector with one number 'target' as its member
-        target = NumberMember(name="target", format='%3.1f', min='7', max='40')
+        target = NumberMember(name="target", format='%3.1f', min='0', max='40')
         # set this member into a vector
         targetvector = NumberVector( name="targetvector",
                                      label="Target",

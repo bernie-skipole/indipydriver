@@ -182,6 +182,7 @@ class SwitchVector(PropertyVector):
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
             # after a defswitch sent, assume new client connection, and set all members as changed
+            # so they will all be included in the first 'send_setVector'
             switch.changed = True
         self.driver.writerque.append(xmldata)
 
@@ -198,8 +199,12 @@ class SwitchVector(PropertyVector):
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
 
-           If allvalues is True, all values are sent, if False, only values that have
-           changed will be sent.
+           If allvalues is True, all values are sent.
+
+           If allvalues is False, only values that have changed will be sent, saving bandwidth.
+           If no values have changed, the vector will not be sent, if you need to ensure the
+           vector message, state or time values are sent to the client, then use the more
+           explicit send_setVectorMembers method instead.
         """
         if not self.device.enable:
             return
@@ -222,17 +227,23 @@ class SwitchVector(PropertyVector):
         # so make all 'On' values last
         Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off')
         Onswitches = (switch for switch in self.data.values() if switch.membervalue == 'On')
+        # set a flag to test if at least one member is included
+        membersincluded = False
         for switch in Offswitches:
             # only send member if its value has changed or if allvalues is True
             if allvalues or switch.changed:
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
+                membersincluded = True
         for switch in Onswitches:
             # only send member if its value has changed or if allvalues is True
             if allvalues or switch.changed:
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
-        self.driver.writerque.append(xmldata)
+                membersincluded = True
+        if membersincluded:
+            # only send xmldata if a member is included in the vector
+            self.driver.writerque.append(xmldata)
 
 
     def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
@@ -341,6 +352,7 @@ class LightVector(PropertyVector):
         for light in self.data.values():
             xmldata.append(light.deflight())
             # after a deflight sent, assume new client connection, and set all members as changed
+            # so they will all be included in the first 'send_setVector'
             light.changed = True
         self.driver.writerque.append(xmldata)
 
@@ -358,8 +370,12 @@ class LightVector(PropertyVector):
            For Light Vectors the timeout value is not used, but is included in the arguments
            to match other send_vectors.
 
-           If allvalues is True, all values are sent, if False, only values that have
-           changed will be sent.
+           If allvalues is True, all values are sent.
+
+           If allvalues is False, only values that have changed will be sent, saving bandwidth.
+           If no values have changed, the vector will not be sent, if you need to ensure the
+           vector message, state or time values are sent to the client, then use the more
+           explicit send_setVectorMembers method instead.
         """
         # Note timeout is not used
         if not self.device.enable:
@@ -378,12 +394,17 @@ class LightVector(PropertyVector):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
+        # set a flag to test if at least one member is included
+        membersincluded = False
         for light in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or light.changed:
                 xmldata.append(light.onelight())
                 light.changed = False
-        self.driver.writerque.append(xmldata)
+                membersincluded = True
+        if membersincluded:
+            # only send xmldata if a member is included in the vector
+            self.driver.writerque.append(xmldata)
 
     def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setLightVector) and members with their values to the client.
@@ -495,6 +516,7 @@ class TextVector(PropertyVector):
         for text in self.data.values():
             xmldata.append(text.deftext())
             # after a deftext sent, assume new client connection, and set all members as changed
+            # so they will all be included in the first 'send_setVector'
             text.changed = True
         self.driver.writerque.append(xmldata)
 
@@ -511,8 +533,12 @@ class TextVector(PropertyVector):
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
 
-           If allvalues is True, all values are sent, if False, only values that have
-           changed will be sent.
+           If allvalues is True, all values are sent.
+
+           If allvalues is False, only values that have changed will be sent, saving bandwidth.
+           If no values have changed, the vector will not be sent, if you need to ensure the
+           vector message, state or time values are sent to the client, then use the more
+           explicit send_setVectorMembers method instead.
         """
         if not self.device.enable:
             return
@@ -531,12 +557,17 @@ class TextVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
+        # set a flag to test if at least one member is included
+        membersincluded = False
         for text in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or text.changed:
                 xmldata.append(text.onetext())
                 text.changed = False
-        self.driver.writerque.append(xmldata)
+                membersincluded = True
+        if membersincluded:
+            # only send xmldata if a member is included in the vector
+            self.driver.writerque.append(xmldata)
 
     def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setTextVector) and members with their values to the client.
@@ -645,6 +676,7 @@ class NumberVector(PropertyVector):
         for number in self.data.values():
             xmldata.append(number.defnumber())
             # after a defnumber sent, assume new client connection, and set all members as changed
+            # so they will all be included in the first 'send_setVector'
             number.changed = True
         self.driver.writerque.append(xmldata)
 
@@ -661,8 +693,12 @@ class NumberVector(PropertyVector):
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
 
-           If allvalues is True, all values are sent, if False, only values that have
-           changed will be sent.
+           If allvalues is True, all values are sent.
+
+           If allvalues is False, only values that have changed will be sent, saving bandwidth.
+           If no values have changed, the vector will not be sent, if you need to ensure the
+           vector message, state or time values are sent to the client, then use the more
+           explicit send_setVectorMembers method instead.
         """
         if not self.device.enable:
             return
@@ -681,12 +717,17 @@ class NumberVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
+        # set a flag to test if at least one member is included
+        membersincluded = False
         for number in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or number.changed:
                 xmldata.append(number.onenumber())
                 number.changed = False
-        self.driver.writerque.append(xmldata)
+                membersincluded = True
+        if membersincluded:
+            # only send xmldata if a member is included in the vector
+            self.driver.writerque.append(xmldata)
 
     def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setNumberVector) and members with their values to the client.
@@ -799,6 +840,7 @@ class BLOBVector(PropertyVector):
         for blob in self.data.values():
             xmldata.append(blob.defblob())
             # after a defblob sent, assume new client connection, and set all members as changed
+            # so they will all be included in the first 'send_setVector'
             blob.changed = True
         self.driver.writerque.append(xmldata)
 
@@ -815,8 +857,12 @@ class BLOBVector(PropertyVector):
            The timeout value should be zero if not used, or a value indicating to the
            client how long this data is valid.
 
-           If allvalues is True, all values are sent, if False, only values that have
-           changed will be sent.
+           If allvalues is True, all values are sent.
+
+           If allvalues is False, only values that have changed will be sent, saving bandwidth.
+           If no values have changed, the vector will not be sent, if you need to ensure the
+           vector message, state or time values are sent to the client, then use the more
+           explicit send_setVectorMembers method instead.
         """
         if not self.device.enable:
             return
@@ -835,12 +881,17 @@ class BLOBVector(PropertyVector):
         xmldata.set("timeout", str(timeout))
         if message:
             xmldata.set("message", message)
+        # set a flag to test if at least one member is included
+        membersincluded = False
         for blob in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or blob.changed:
                 xmldata.append(blob.oneblob())
                 blob.changed = False
-        self.driver.writerque.append(xmldata)
+                membersincluded = True
+        if membersincluded:
+            # only send xmldata if a member is included in the vector
+            self.driver.writerque.append(xmldata)
 
     def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
