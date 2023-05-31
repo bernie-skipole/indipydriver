@@ -161,7 +161,7 @@ class NumberMember(PropertyMember):
         self.min = min
         self.max = max
         self.step = step
-        self._membervalue = None
+        self._membervalue = min
 
         # If membervalue, min, max step are given as strings, they are assumed to
         # be correctly formatted and used in the xml directly.
@@ -173,47 +173,10 @@ class NumberMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
-        if isinstance(value, str):
-            newvalue = value
-        else:
-            newvalue = self.format_number(value)
-        if self._membervalue != newvalue:
+        if self._membervalue != value:
             # when a value has changed, set the changed flag
             self.changed = True
-            self._membervalue = newvalue
-
-    @property
-    def min(self):
-        return self._min
-
-    @min.setter
-    def min(self, value):
-        if isinstance(value, str):
-            self._min = value
-        else:
-            self._min = self.format_number(value)
-
-    @property
-    def max(self):
-        return self._max
-
-    @max.setter
-    def max(self, value):
-        if isinstance(value, str):
-            self._max = value
-        else:
-            self._max = self.format_number(value)
-
-    @property
-    def step(self):
-        return self._step
-
-    @step.setter
-    def step(self, value):
-        if isinstance(value, str):
-            self._step = value
-        else:
-            self._step = self.format_number(value)
+            self._membervalue = value
 
     def format_number(self, value):
         """This takes a float, and returns a formatted string
@@ -273,24 +236,42 @@ class NumberMember(PropertyMember):
             number = " "*(w-l) + number
         return number
 
-
     def defnumber(self):
         """Returns a defNumber"""
         xmldata = ET.Element('defNumber')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         xmldata.set("format", self.format)
-        xmldata.set("min", self._min)
-        xmldata.set("max", self._max)
-        xmldata.set("step", self._step)
-        xmldata.text = self._membervalue
+
+        if isinstance(self.min, str):
+            xmldata.set("min", self.min)
+        else:
+            xmldata.set("min", self.format_number(self.min))
+
+        if isinstance(self.max, str):
+            xmldata.set("max", self.max)
+        else:
+            xmldata.set("max", self.format_number(self.max))
+
+        if isinstance(self.step, str):
+            xmldata.set("step", self.step)
+        else:
+            xmldata.set("step", self.format_number(self.step))
+
+        if isinstance(self._membervalue, str):
+            xmldata.text = self._membervalue
+        else:
+            xmldata.text = self.format_number(self._membervalue)
         return xmldata
 
     def onenumber(self):
         """Returns xml of a oneNumber"""
         xmldata = ET.Element('oneNumber')
         xmldata.set("name", self.name)
-        xmldata.text = self._membervalue
+        if isinstance(self._membervalue, str):
+            xmldata.text = self._membervalue
+        else:
+            xmldata.text = self.format_number(self._membervalue)
         return xmldata
 
 
