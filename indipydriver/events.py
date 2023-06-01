@@ -177,6 +177,8 @@ class SnoopEvent:
 
 
 class Message(SnoopEvent):
+    """This contains attribute 'message' with the message string sent by the remote driver.
+       Attribute devicename could be None if the driver is sending a system wide message."""
 
     def __init__(self, root):
         super().__init__(root)
@@ -184,6 +186,9 @@ class Message(SnoopEvent):
 
 
 class delProperty(SnoopEvent):
+    """This contains attribute vectorname, which is to be deleted, vectorname could be None in which case
+       the remote driver is instructing the client to delete a device. A 'message' attribute contains any
+       message sent by the client with this instruction."""
 
     def __init__(self, root):
         super().__init__(root)
@@ -198,8 +203,6 @@ class defVector(SnoopEvent, UserDict):
     def __init__(self, root):
         SnoopEvent.__init__(self, root)
         UserDict.__init__(self)
-        if self.devicename is None:
-            raise EventException
         self.vectorname = root.get("name")
         if self.vectorname is None:
             raise EventException
