@@ -37,7 +37,7 @@ All snoop events have attributes devicename, root and timestamp.
 .. autoclass:: indipydriver.delProperty
 
 
-def Vector events also all have attributes vectorname, label, group, state and message. They are also a mapping of membername:value, which should contain all the vector member names.
+def Vector events also all have attributes vectorname, label, group, state and message. They are also a mapping of membername:value, which should contain all the vector member names, so for example event['membername'] would give the value of that member.
 
 .. autoclass:: indipydriver.defSwitchVector
 
@@ -50,7 +50,7 @@ def Vector events also all have attributes vectorname, label, group, state and m
 .. autoclass:: indipydriver.defBLOBVector
 
 
-set Vector events all have attributes vectorname, message and state (which could be None if not given due to no change of state). These events are also a mapping of membername:value, but may not include members if they have not changed.
+set Vector events all have attributes vectorname, message and state (which could be None if not given due to no change of state). These events are also a mapping of membername:value, so for example event['membername'] would give the value of that member. However this object may not include members if they have not changed.
 
 
 .. autoclass:: indipydriver.setSwitchVector

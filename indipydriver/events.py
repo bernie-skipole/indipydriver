@@ -186,9 +186,9 @@ class Message(SnoopEvent):
 
 
 class delProperty(SnoopEvent):
-    """This contains attribute vectorname, which is to be deleted, vectorname could be None in which case
-       the remote driver is instructing the client to delete a device. A 'message' attribute contains any
-       message sent by the client with this instruction."""
+    """The remote driver is instructing the client to delete either a device or a vector property.
+       This contains attribute vectorname, if it is None, then the whole device is to be deleted.
+       A 'message' attribute contains any message sent by the client with this instruction."""
 
     def __init__(self, root):
         super().__init__(root)
@@ -199,7 +199,7 @@ class delProperty(SnoopEvent):
 
 
 class defVector(SnoopEvent, UserDict):
-    "Parent to def vectors, adds dictionary"
+    "Parent to def vectors, adds a mapping of membername:value"
     def __init__(self, root):
         SnoopEvent.__init__(self, root)
         UserDict.__init__(self)
@@ -221,6 +221,10 @@ class defVector(SnoopEvent, UserDict):
 
 
 class defSwitchVector(defVector):
+
+    """The remote driver has sent this to define a switch vector property, it has further
+       attributes perm, rule, timeout, and memberlabels which is a dictionary of
+       membername:label."""
 
     def __init__(self, root):
         defVector.__init__(self, root)
@@ -260,6 +264,10 @@ class defSwitchVector(defVector):
 
 class defTextVector(defVector):
 
+    """The remote driver has sent this to define a text vector property, it has further
+       attributes perm, timeout, and memberlabels which is a dictionary of
+       membername:label."""
+
     def __init__(self, root):
         defVector.__init__(self, root)
         self.perm = root.get("perm")
@@ -286,6 +294,10 @@ class defTextVector(defVector):
 
 
 class defNumberVector(defVector):
+
+    """The remote driver has sent this to define a number vector property, it has further
+       attributes perm, timeout, and memberlabels which is a dictionary of
+       membername:(label, format, min, max, step)."""
 
     def __init__(self, root):
         defVector.__init__(self, root)
@@ -327,6 +339,9 @@ class defNumberVector(defVector):
 
 class defLightVector(defVector):
 
+    """The remote driver has sent this to define a light vector property, it has further
+       attribute memberlabels which is a dictionary of membername:label."""
+
     def __init__(self, root):
         defVector.__init__(self, root)
         # create object dictionary of member name to value
@@ -351,7 +366,12 @@ class defLightVector(defVector):
 
 class defBLOBVector(SnoopEvent):
 
-    "This does not have an object mapping of member name to value, since values are not given in defBLOBVectors"
+    """The remote driver has sent this to define a BLOB vector property, it has further
+       attributes perm, timeout, and memberlabels which is a dictionary of
+       membername:label.
+
+       However this class does not have an object mapping of member name to value, since
+       values are not given in defBLOBVectors"""
 
     def __init__(self, root):
         SnoopEvent.__init__(self, root)
@@ -412,6 +432,8 @@ class setVector(SnoopEvent, UserDict):
 
 
 class setSwitchVector(setVector):
+    """The remote driver is setting a Switch vector property, this
+       has further attribute timeout."""
 
     def __init__(self, root):
         setVector.__init__(self, root)
@@ -437,6 +459,9 @@ class setSwitchVector(setVector):
 
 class setTextVector(setVector):
 
+    """The remote driver is setting a Text vector property, this
+       has further attribute timeout."""
+
     def __init__(self, root):
         setVector.__init__(self, root)
         self.timeout = root.get("timeout", "0")
@@ -455,6 +480,10 @@ class setTextVector(setVector):
 
 class setNumberVector(setVector):
 
+    """The remote driver is setting a Number vector property, this
+       has further attribute timeout. The number values of the
+       membername:membervalue are string values."""
+
     def __init__(self, root):
         setVector.__init__(self, root)
         self.timeout = root.get("timeout", "0")
@@ -471,6 +500,8 @@ class setNumberVector(setVector):
             raise EventException
 
 class setLightVector(setVector):
+
+    """The remote driver is setting a Light vector property."""
 
     def __init__(self, root):
         setVector.__init__(self, root)
@@ -491,6 +522,10 @@ class setLightVector(setVector):
 
 
 class setBLOBVector(setVector):
+
+    """The remote driver is setting a BLOB vector property, this
+       has further attributes timeout and sizeformat which is a dictionary
+       of membername:(size, format)."""
 
     def __init__(self, root):
         setVector.__init__(self, root)
