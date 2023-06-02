@@ -362,9 +362,11 @@ class Device(collections.UserDict):
         self.enable = False
 
     async def devicecontrol(self, *args, **vargs):
-        """If required, override this, operate device hardware, and transmit updates,
+        """As default, does nothing and is not called.
+
+           If required, override this to operate device hardware, and transmit updates,
            at this point self.devicedata may be useful to contain required hardware parameters.
-           This should be called from the driver 'hardware' method if required."""
+           This should be called from the driver 'hardware' method if it is used."""
         pass
 
 
