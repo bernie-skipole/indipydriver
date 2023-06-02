@@ -285,9 +285,10 @@ class Device(collections.UserDict):
 
     """An instance of this should be created for each device controlled by this driver.
        The properties argument is a list of vectors controlling this device.
+       devicedata will be an attribute dictionary of any hardware data that may be usefull.
     """
 
-    def __init__(self, devicename, properties):
+    def __init__(self, devicename, properties, **devicedata):
         super().__init__()
 
         # This device name
@@ -303,6 +304,9 @@ class Device(collections.UserDict):
 
         # Every property of this device has a dataque, which is set into this dictionary
         self.propertyquedict = {p.name:p.dataque for p in properties}
+
+        # dictionary of optional data
+        self.devicedata = devicedata
 
         # this will be set when the driver asyncrun is run
         self.driver = None
@@ -356,6 +360,13 @@ class Device(collections.UserDict):
             xmldata.set("message", message)
         self.driver.writerque.append(xmldata)
         self.enable = False
+
+    async def devicecontrol(self, *args, **vargs):
+        """If required, override this, operate device hardware, and transmit updates,
+           at this point self.devicedata may be useful to contain required hardware parameters.
+           This should be called from the driver 'hardware' method if required."""
+        pass
+
 
     def __setitem__(self, vectorname):
         raise KeyError
