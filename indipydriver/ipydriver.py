@@ -64,6 +64,10 @@ class IPyDriver(collections.UserDict):
         # this is a dictionary of device name to device this driver owns
         self.devices = {d.devicename:d for d in devices}
 
+        for device in self.devices.values():
+            # set driver into devices
+            device.driver = self
+
         self.data = self.devices
 
         # self.data is used by UserDict, it is an alias of self.devices
@@ -234,7 +238,7 @@ class IPyDriver(collections.UserDict):
         self.writerque.append(xmldata)
 
     async def hardware(self):
-        "Override this, operate device hardware, and transmit updates"
+        "Override this to operate device hardware, and transmit updates"
         await asyncio.sleep(0)
         # for example: create a number of co routines - each having
         # a while True loop, and running continuously, and controlling
@@ -262,9 +266,6 @@ class IPyDriver(collections.UserDict):
         device_handlers = []
         property_handlers = []
         for device in self.devices.values():
-            # also give the device a reference to this driver
-            # so it can have access to writerque
-            device.driver = self
             device_handlers.append(device._handler())
             for pv in device.propertyvectors.values():
                 property_handlers.append(pv._handler())
@@ -361,12 +362,29 @@ class Device(collections.UserDict):
         self.driver.writerque.append(xmldata)
         self.enable = False
 
-    async def devicecontrol(self, *args, **vargs):
+
+    async def devhardware(self, *args, **kwargs):
         """As default, does nothing and is not called.
 
            If required, override this to operate device hardware, and transmit updates,
-           at this point self.devicedata may be useful to contain required hardware parameters.
+           the attribute self.devicedata may be useful to contain required hardware parameters.
            This should be called from the driver 'hardware' method if it is used."""
+        pass
+
+
+    async def devclientevent(self, event, *args, **kwargs):
+        """As default, does nothing and is not called.
+
+           If required, override this to handle any necessary device actions.
+           This should be called from the driver 'clientevent' method if it is used."""
+        pass
+
+
+    async def devsnoopevent(self, event, *args, **kwargs):
+        """As default, does nothing and is not called.
+
+           If required, override this to handle any necessary device actions.
+           This should be called from the driver 'snoopevent' method if it is used."""
         pass
 
 

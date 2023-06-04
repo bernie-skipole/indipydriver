@@ -15,14 +15,15 @@ This could be achieved by adding a new device to the thermostat driver, in which
 
     from indipydriver import (IPyDriver, Device,
                               LightVector, LightMember,
-                              getProperties, newLightVector
+                              getProperties, newLightVector,
+                              setNumberVector
                              )
 
 
     # Other vectors, members and events are available, this example only imports those used.
 
     # In this example, rather than simulating the control with global variables and top
-    # level functions, all the hardware control is put in a class.
+    # level functions, the hardware control is put in a class.
 
     class WindowControl:
 
@@ -31,13 +32,12 @@ This could be achieved by adding a new device to the thermostat driver, in which
             self.window = "Closed"
             self.updated = False
 
-        def close_window(self):
+        def set_window(self, temperature):
             # a real driver would set hardware control here"
-            self.window = "Closed"
-
-        def open_window(self):
-            # a real driver would set hardware control here"
-            self.window = "Open"
+            if temperature > 30:
+                self.window = "Open"
+            if temperature < 25:
+                self.window = "Closed"
 
 
     class WindowDriver(IPyDriver):
@@ -46,19 +46,54 @@ This could be achieved by adding a new device to the thermostat driver, in which
 
         async def clientevent(self, event):
             """On receiving data, this is called, and should handle any necessary actions"""
-               """
             await asyncio.sleep(0)
-            # note: using match - case is ideal for this situation,
-            # but requires Python v3.10 or later
             match event:
                 case getProperties():
                     event.vector.send_defVector()
 
-
         async def hardware(self):
+            "Start the Window device hardware"
+            # start by sending an initial getProperties to snoop on Thermostat
+            self.send_getProperties(devicename="Thermostat")
+            and then start the Window device hardware control
+            await self['Window'].devhardware()
+
+
+        async def snoopevent(self, event):
+            """On receiving an event from the Thermostat, delegate the
+               action to the Window device to handle it."""
+            match event:
+                case setNumberVector(devicename="Thermostat"):
+                    await self['Window'].devsnoopevent(event)
+
+
+    class WindowDevice(Device):
+
+        """Device is subclassed here"""
+
+        async def devhardware(self, *args, **kwargs):
             """Check that temperature is being received, if not, transmit a getProperties
                and also send an alarm to the client"""
-            device = self['Window']
+            # Every minute, check an updated flag from the control object, which is stored
+            # in dictionary attribute self.devicedata
+            control =  self.devicedata["control"]
             while True:
+                control.updated = False
                 asyncio.sleep(60)
-                await device.devicecontrol()
+                if not control.updated:
+                    # no data received, re-send a getProperties, and send an alarm
+                    self.driver.send_getProperties(devicename="Thermostat")
+                    ##### to do
+
+        async def devsnoopevent(self, event, *args, **kwargs):
+            """Open or close the window depending on snooped device"""
+            control =  self.devicedata["control"]
+            match event:
+                case setNumberVector(devicename="Thermostat", vectorname="temperaturevector"):
+                    # received a temperature value from the thermostat
+                    temperature = driver.indi_number_to_float(event["temperature"])
+                    # flag a temperature value has been received
+                    control.updated = True
+                    control.set_window(temperature)
+                    # and send window status light to the client
+                    ##### to do
