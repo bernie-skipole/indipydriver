@@ -3,7 +3,7 @@ Example2
 
 This example simulates a driver which snoops on the thermostat of the first example, and if the temperature becomes too hot, it opens a window, and closes it when the temperature drops.
 
-This could be achieved by adding a new device to the thermostat driver, in which case snooping would not be required, however to illustrate the full functionality, this example is a separate driver, connected to indiserver, and communicating on stdin aand stdout::
+This could be achieved by adding a new device to the thermostat driver, in which case snooping would not be required, however to illustrate the full functionality, this example is a separate driver, connected to indiserver, and communicating on stdin and stdout::
 
 
     #!/usr/bin/env python3
@@ -15,8 +15,8 @@ This could be achieved by adding a new device to the thermostat driver, in which
 
     from indipydriver import (IPyDriver, Device,
                               LightVector, LightMember,
-                              getProperties, newLightVector,
-                              setNumberVector
+                              TextVector, TextMember,
+                              getProperties, setNumberVector
                              )
 
 
@@ -26,6 +26,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
     # level functions, the hardware control is put in a class.
 
     class WindowControl:
+        "This is a simulation containing variables only"
 
         def __init__(self):
             "Set start up values"
@@ -33,7 +34,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
             self.updated = False
 
         def set_window(self, temperature):
-            # a real driver would set hardware control here"
+            "a real driver would set hardware control here"
             if temperature > 30:
                 self.window = "Open"
             if temperature < 25:
@@ -45,17 +46,18 @@ This could be achieved by adding a new device to the thermostat driver, in which
         """IPyDriver is subclassed here"""
 
         async def clientevent(self, event):
-            """On receiving data, this is called, and should handle any necessary actions"""
+            """On receiving data from the client, this is called,
+              Only a 'getProperties' is expected."""
             await asyncio.sleep(0)
             match event:
                 case getProperties():
                     event.vector.send_defVector()
 
         async def hardware(self):
-            "Start the Window device hardware"
-            # start by sending an initial getProperties to snoop on Thermostat
+            """Start the Window device hardware by sending an initial
+               getProperties to snoop on Thermostat, and then start
+               the Window device hardware control"""
             self.send_getProperties(devicename="Thermostat")
-            and then start the Window device hardware control
             await self['Window'].devhardware()
 
 
@@ -83,7 +85,8 @@ This could be achieved by adding a new device to the thermostat driver, in which
                 if not control.updated:
                     # no data received, re-send a getProperties, and send an alarm
                     self.driver.send_getProperties(devicename="Thermostat")
-                    ##### to do
+                    self["windowalarm"]["alarm"] = "Alert"
+                    self["windowalarm"].send_setVector()
 
         async def devsnoopevent(self, event, *args, **kwargs):
             """Open or close the window depending on snooped device"""
@@ -94,6 +97,57 @@ This could be achieved by adding a new device to the thermostat driver, in which
                     temperature = driver.indi_number_to_float(event["temperature"])
                     # flag a temperature value has been received
                     control.updated = True
+                    # open or close the widow
                     control.set_window(temperature)
-                    # and send window status light to the client
-                    ##### to do
+                    # send window status light to the client
+                    self["windowalarm"]["alarm"] = "Ok"
+                    self["windowalarm"].send_setVector()
+                    # and send text of window position to the client
+                    self["windowstatus"]["status"] = control.window
+                    self["windowstatus"].send_setVector()
+
+
+    def make_driver():
+        "Creates the driver"
+
+        # create hardware object
+        windowcontrol = WindowControl()
+
+        # create Light member
+        alarm = LightMember(name="alarm", label="Reading thermostat")
+
+        # set this member into a vector
+        windowalarm =  LightVector( name="windowalarm",
+                                    label="Thermostat Status",
+                                    group="Values",
+                                    state="Ok",
+                                    lightmembers=[alarm] )
+
+        status = TextMember(name="status", label="Window position")
+        windowstatus = TextVector(  name="windowstatus",
+                                    label="Window Status",
+                                    group="Values",
+                                    perm="ro",
+                                    state="Ok",
+                                    textmembers=[status] )
+
+
+
+        # create a WindowDevice (inherited from Device) with these vectors
+        # and also containing the windowcontrol, so it can call on its methods.
+        window = WindowDevice( devicename="Window", properties=[windowalarm, windowstatus], control=windowcontrol)
+
+        # the control object is placed into dictionary window.devicedata
+
+        # Create the WindowDriver (inherited from IPyDriver) containing this device
+        windowdriver = WindowDriver(devices=[window])
+
+        # and return the driver
+        return windowdriver
+
+
+    if __name__ == "__main__":
+
+        driver = make_driver()
+
+        asyncio.run(driver.asyncrun())
