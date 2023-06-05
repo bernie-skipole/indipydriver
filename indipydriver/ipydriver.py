@@ -27,40 +27,50 @@ class IPyDriver(collections.UserDict):
 
     @staticmethod
     def indi_number_to_float(value):
-        """The INDI spec allows a number of different number formats, given any number string, this returns a float"""
-        # negative is True, if the value is negative
-        negative = value.startswith("-")
-        if negative:
-            value = value.lstrip("-")
-        # Is the number provided in sexagesimal form?
-        if value == "":
-            parts = [0, 0, 0]
-        elif " " in value:
-            parts = value.split(" ")
-        elif ":" in value:
-            parts = value.split(":")
-        elif ";" in value:
-            parts = value.split(";")
-        else:
-            # not sexagesimal
-            parts = [value, "0", "0"]
-        # Any missing parts should have zero
-        if len(parts) == 2:
-            # assume seconds are missing, set to zero
-            parts.append("0")
-        assert len(parts) == 3
-        number_strings = list(x if x else "0" for x in parts)
-        # convert strings to integers or floats
-        number_list = []
-        for part in number_strings:
-            try:
-                num = int(part)
-            except ValueError:
-                num = float(part)
-            number_list.append(num)
-        floatvalue = number_list[0] + (number_list[1]/60) + (number_list[2]/360)
-        if negative:
-            floatvalue = -1 * floatvalue
+        """The INDI spec allows a number of different number formats, given any number string, this returns a float.
+           If an error occurs while parsing the number, a TypeError exception is raised."""
+        try:
+            if isinstance(value, float):
+                return value
+            if isinstance(value, int):
+                return float(value)
+            if not isinstance(value, str):
+                raise TypeError
+           # negative is True, if the value is negative
+            negative = value.startswith("-")
+            if negative:
+                value = value.lstrip("-")
+            # Is the number provided in sexagesimal form?
+            if value == "":
+                parts = [0, 0, 0]
+            elif " " in value:
+                parts = value.split(" ")
+            elif ":" in value:
+                parts = value.split(":")
+            elif ";" in value:
+                parts = value.split(";")
+            else:
+                # not sexagesimal
+                parts = [value, "0", "0"]
+            # Any missing parts should have zero
+            if len(parts) == 2:
+                # assume seconds are missing, set to zero
+                parts.append("0")
+            assert len(parts) == 3
+            number_strings = list(x if x else "0" for x in parts)
+            # convert strings to integers or floats
+            number_list = []
+            for part in number_strings:
+                try:
+                    num = int(part)
+                except ValueError:
+                    num = float(part)
+                number_list.append(num)
+            floatvalue = number_list[0] + (number_list[1]/60) + (number_list[2]/360)
+            if negative:
+                floatvalue = -1 * floatvalue
+        except:
+            raise TypeError("Unable to parse the value")
         return floatvalue
 
     def __init__(self, devices, **driverdata):
@@ -374,8 +384,7 @@ class Device(collections.UserDict):
     async def devhardware(self, *args, **kwargs):
         """As default, does nothing and is not called.
 
-           If required, override this to operate device hardware, and transmit updates,
-           the attribute self.devicedata may be useful to contain required hardware parameters.
+           If required, override this to handle any necessary device actions.
            This should be called from the driver 'hardware' method if it is used."""
         pass
 

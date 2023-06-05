@@ -18,7 +18,6 @@ class PropertyMember:
             self.label = label
         else:
             self.label = name
-        self._membervalue = None
         # self.changed is a flag to indicate the value has changed
         # initially start with all values have changed
         self.changed = True
@@ -33,10 +32,10 @@ class PropertyMember:
 class SwitchMember(PropertyMember):
     """A SwitchMember can only have one of 'On' or 'Off' values"""
 
-    def __init__(self, name, label=None):
+    def __init__(self, name, label=None, membervalue="Off"):
         super().__init__(name, label)
         # membervalue should be either 'Off' or 'On'
-        self._membervalue = 'Off'
+        self._membervalue = membervalue
 
     @property
     def membervalue(self):
@@ -69,9 +68,9 @@ class SwitchMember(PropertyMember):
 class LightMember(PropertyMember):
     """A LightMember can only have one of 'Idle', 'Ok', 'Busy' or 'Alert' values"""
 
-    def __init__(self, name, label=None):
+    def __init__(self, name, label=None, membervalue="Idle"):
         super().__init__(name, label)
-        self._membervalue = 'Idle'
+        self._membervalue = membervalue
 
     @property
     def membervalue(self):
@@ -104,9 +103,9 @@ class LightMember(PropertyMember):
 class TextMember(PropertyMember):
     """Contains a text string"""
 
-    def __init__(self, name, label=None):
+    def __init__(self, name, label=None, membervalue=""):
         super().__init__(name, label)
-        self._membervalue = ''
+        self._membervalue = membervalue
 
     @property
     def membervalue(self):
@@ -155,13 +154,13 @@ class NumberMember(PropertyMember):
        If set as a float, the string placed into the xml will be formatted according to the given format.
     """
 
-    def __init__(self, name, label=None, format='', min=0, max=0, step=0):
+    def __init__(self, name, label=None, format='', min=0, max=0, step=0, membervalue=0):
         super().__init__(name, label)
         self.format = format
         self.min = min
         self.max = max
         self.step = step
-        self._membervalue = min
+        self._membervalue = membervalue
 
         # If membervalue, min, max step are given as strings, they are assumed to
         # be correctly formatted and used in the xml directly.
@@ -285,9 +284,9 @@ class BLOBMember(PropertyMember):
        The BLOB format should be a string describing the BLOB, such as .jpeg
     """
 
-    def __init__(self, name, label=None, blobsize = 0, blobformat = ''):
+    def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=b''):
         super().__init__(name, label)
-        self._membervalue = b''
+        self._membervalue = membervalue
         self.blobsize = blobsize
         self.blobformat = blobformat
 
@@ -316,8 +315,8 @@ class BLOBMember(PropertyMember):
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
         if not self.blobsize:
-            self.blobsize = len(self.membervalue)
+            self.blobsize = len(self._membervalue)
         xmldata.set("size", str(self.blobsize))
         xmldata.set("format", self.blobformat)
-        xmldata.text = standard_b64encode(self.membervalue).decode('ascii')
+        xmldata.text = standard_b64encode(self._membervalue).decode('ascii')
         return xmldata
