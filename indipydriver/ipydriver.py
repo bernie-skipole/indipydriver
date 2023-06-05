@@ -14,10 +14,15 @@ from . import events
 
 class IPyDriver(collections.UserDict):
 
-    """A subclass of this should be created with methods
-       clientevent and hardware written to control your device.
+    """A subclass of this should be created with methods written
+       to control your device.
+
        Its awaitable asyncrun method should be run in an async loop.
+
        devices is a list of Device objects this driver handles.
+
+       driverdata will be an attribute dictionary of any hardware
+       data that may be usefull.
        """
 
     @staticmethod
@@ -58,7 +63,7 @@ class IPyDriver(collections.UserDict):
             floatvalue = -1 * floatvalue
         return floatvalue
 
-    def __init__(self, devices):
+    def __init__(self, devices, **driverdata):
         super().__init__()
 
         # this is a dictionary of device name to device this driver owns
@@ -72,6 +77,9 @@ class IPyDriver(collections.UserDict):
 
         # self.data is used by UserDict, it is an alias of self.devices
         # simply because 'devices' is more descriptive
+
+        # dictionary of optional data
+        self.driverdata = driverdata
 
         # traffic is transmitted out on the writerque
         self.writerque = collections.deque()
