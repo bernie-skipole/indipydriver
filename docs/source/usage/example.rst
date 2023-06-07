@@ -15,33 +15,43 @@ An example driver - controlling a simulated thermostat is shown::
 
     # Simulate a heater, temperature sensor, and a target temperature
 
-    TEMPERATURE = 20
+    class ThermalControl:
+        "This is a simulation containing variables only"
 
-    TARGET = 15
+        def __init__(self):
+            "Set start up values"
+            self.temperature = 20
+            self.target = 15
+            self.heater = "On"
 
-    HEATER = "On"
+        def control(self):
+            """This simulates temperature increasing/decreasing, and
+               turns on/off a heater if moving too far from the target temperature
+               Should be called at regular intervals"""
 
-    def control():
-        """this simulates temperature increasing/decreasing, and
-           turns on/off a heater if moving too far from the target temperature
-           Should be called at regular intervals"""
+            if self.heater == "On":
+                # increasing temperature if the heater is on
+                self.temperature += 0.2
+            else:
+                # decreasing temperature if the heater is off
+                self.temperature -= 0.2
 
-        global TEMPERATURE, HEATER
+            if self.temperature > self.target+0.5:
+                # too hot
+                self.heater = "Off"
 
-        if HEATER == "On":
-            # increasing temperature if the heater is on
-            TEMPERATURE += 0.2
-        else:
-            # decreasing temperature if the heater is off
-            TEMPERATURE -= 0.2
+            if self.temperature < self.target-0.5:
+                # too cold
+                self.heater = "On"
 
-        if TEMPERATURE > TARGET+0.5:
-            # too hot
-            HEATER = "Off"
+        async def poll_thermostat(self):
+            "poll thermostat every second"
+            while True:
+                await asyncio.sleep(1)
+                # the control function turns on and off the heater to keep
+                # the temperature near to the target.
+                self.control()
 
-        if TEMPERATURE < TARGET-0.5:
-            # too cold
-            HEATER = "On"
 
 
     class ThermoDriver(IPyDriver):
@@ -57,10 +67,13 @@ An example driver - controlling a simulated thermostat is shown::
                getProperties, in which the client is asking for driver information, and
                newNumberVector, in which case the client is setting a target temperature.
                """
-            global TARGET
             await asyncio.sleep(0)
             # note: using match - case is ideal for this situation,
             # but requires Python v3.10 or later
+
+            # The hardware control object is stored in the driverdata dictionary
+            control = self.driverdata["control"]
+
             match event:
                 case getProperties():
                     # this event is raised for each vector when a client wants to learn about
@@ -79,88 +92,74 @@ An example driver - controlling a simulated thermostat is shown::
                         newtarget = event['target']
                         # The self.indi_number_to_float method converts the received string,
                         # which may be in a number of formats to a Python float value. This
-                        # is set into global value TARGET, which, in this simulation, is
-                        # used by the control function to control the heater
-                        TARGET = self.indi_number_to_float(newtarget)
-                        # and set the new target value into the vector member, then
-                        # transmits the vector back to client, with vector state ok
-                        event.vector['target'] = TARGET
-                        # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
-                        # sending 'Ok' informs the client that the value has been received
-                        event.vector.state = 'Ok'
-                        event.vector.send_setVector()
+                        # is set into the ThermalControl object
+                        try:
+                            target = self.indi_number_to_float(newtarget)
+                        except TypeError:
+                            # ignore an incoming invalid number
+                            pass
+                        else:
+                            # set this new target into the ThermalControl object
+                            control.target = target
+                            # and set the new target value into the vector member, then
+                            # transmits the vector back to client, with vector state ok
+                            event.vector['target'] = target
+                            # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
+                            # sending 'Ok' informs the client that the value has been received
+                            event.vector.state = 'Ok'
+                            event.vector.send_setVector()
 
         async def hardware(self):
-            """This coroutine controls and monitors the instrument, and if required
-               sends updates to the client"""
+            "Run the hardware"
+            # run the thermostat polling task
+            control = self.driverdata["control"]
+            poll_task = asyncio.create_task(control.poll_thermostat())
+
+            # report temperature every ten seconds
             device = self['Thermostat']
-            # and gather async co-routines which poll the hardware and
-            # send updates to the client
-            await asyncio.gather(  poll_thermostat(device),
-                                   send_update(device)  )
+            vector = device['temperaturevector']
+            while True:
+                await asyncio.sleep(10)
+                # get the latest temperature, and set it into the vector
+                vector['temperature'] = control.temperature
+                vector.send_setVector(timeout=10)
+                # the 'timeout' argument informs the client that this
+                # value is only valid for ten seconds
 
-
-    # the above driver calls on these two coroutines to control and
-    # read the instrument hardware
-
-    async def poll_thermostat(device):
-        "poll thermostat every second"
-        vector = device['temperaturevector']
-        while True:
-            await asyncio.sleep(1)
-            # the control function turns on and off the heater to keep
-            # the temperature near to the target.
-            control()
-            # and as this measures the temperature, update the vector
-            # member with the current TEMPERATURE global value
-            vector["temperature"] = TEMPERATURE
-            # but no need to send this vector to the client at this point
-            # as client updates are not needed every second.
-            # Client updates are done every 10 seconds by the
-            # send_update coroutine.
-
-    async def send_update(device):
-        """Transmit the current temperature every ten seconds"""
-        vector = device['temperaturevector']
-        while True:
-            await asyncio.sleep(10)
-            vector.send_setVector(timeout=10)
-            # the 'timeout' argument informs the client that this
-            # value is only valid for ten seconds
 
     def make_driver():
         "Creates the driver"
 
+        # create hardware object
+        thermalcontrol = ThermalControl()
+
         # create a vector with one number 'temperature' as its member
-        temperature = NumberMember(name="temperature", format='%3.1f', min=-50, max=99)
-        # set this member into a vector
+        temperature = NumberMember(name="temperature", format='%3.1f', min=-50, max=99,
+                                   membervalue=thermalcontrol.temperature)
+        # set this member into a vector, this is read only
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",
                                           group="Values",
                                           perm="ro",
                                           state="Ok",
                                           numbermembers=[temperature] )
-        # and set the member value
-        temperaturevector["temperature"] = TEMPERATURE
 
         # create a vector with one number 'target' as its member
-        target = NumberMember(name="target", format='%3.1f', min='0', max='40')
-        # set this member into a vector
+        target = NumberMember(name="target", format='%3.1f', min=0, max=40, membervalue=thermalcontrol.target)
+        # set this member into a vector, this is read-write
         targetvector = NumberVector( name="targetvector",
                                      label="Target",
                                      group="Values",
                                      perm="rw",
                                      state="Ok",
                                      numbermembers=[target] )
-        # and set the member value
-        targetvector["target"] = TARGET
 
         # create a device with the above two vectors as its properties
         thermostat = Device( devicename="Thermostat",
                              properties=[temperaturevector, targetvector] )
 
-        # Create the Driver, containing this device
-        driver = ThermoDriver(devices=[thermostat])
+        # Create the Driver, containing this device, and the hardware control object
+        driver = ThermoDriver(devices=[thermostat],  control=thermalcontrol)
 
         # and return the driver
         return driver

@@ -47,7 +47,6 @@ This could be achieved by adding a new device to the thermostat driver, in which
         async def clientevent(self, event):
             """On receiving data from the client, this is called,
                Only a 'getProperties' is expected."""
-            await asyncio.sleep(0)
             match event:
                 case getProperties():
                     event.vector.send_defVector()
@@ -56,6 +55,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
             """Send an initial getProperties to snoop on Thermostat,
                and then start the Window device hardware control"""
             self.send_getProperties(devicename="Thermostat")
+            # delegate hardware control to the Window 'devhardware' method
             await self['Window'].devhardware()
 
         async def snoopevent(self, event):
@@ -76,6 +76,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
             # Every minute, check an updated flag from the control object, which is stored
             # in dictionary attribute self.devicedata
             control =  self.devicedata["control"]
+            alarmvector = self["windowalarm"]
             while True:
                 control.updated = False
                 asyncio.sleep(60)
@@ -84,17 +85,20 @@ This could be achieved by adding a new device to the thermostat driver, in which
                     # in case the thermostat was disconnected, and has hopefully restarted
                     self.driver.send_getProperties(devicename="Thermostat")
                     # and send an alarm to the client
-                    self["windowalarm"]["alarm"] = "Alert"
-                    self["windowalarm"].send_setVector()
+                    alarmvector["alarm"] = "Alert"
+                    alarmvector.send_setVector()
 
         async def devsnoopevent(self, event, *args, **kwargs):
             """Open or close the window depending on temperature received from snooped device"""
             # control is the 'hardware' object which has methods to operate the window
             control =  self.devicedata["control"]
+            alarmvector = self["windowalarm"]
+            statusvector = self["windowstatus"]
             match event:
                 case setNumberVector(devicename="Thermostat", vectorname="temperaturevector"):
+                    # A setNumberVector has been sent from the thermostat to the client
+                    # and this driver has received a copy, and so can read the temperature
                     if "temperature" in event:
-                        # received a temperature value from the thermostat
                         try:
                             temperature = self.driver.indi_number_to_float(event["temperature"])
                         except TypeError:
@@ -106,11 +110,11 @@ This could be achieved by adding a new device to the thermostat driver, in which
                             # open or close the widow
                             control.set_window(temperature)
                             # send window status light to the client
-                            self["windowalarm"]["alarm"] = "Ok"
-                            self["windowalarm"].send_setVector()
+                            alarmvector["alarm"] = "Ok"
+                            alarmvector.send_setVector()
                             # and send text of window position to the client
-                            self["windowstatus"]["status"] = control.window
-                            self["windowstatus"].send_setVector()
+                            statusvector["status"] = control.window
+                            statusvector.send_setVector()
 
 
     def make_driver():
@@ -128,7 +132,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
                                     state="Ok",
                                     lightmembers=[alarm] )
 
-        status = TextMember(name="status", label="Window position", membervalue="Unknown")
+        status = TextMember(name="status", label="Window position", membervalue=windowcontrol.window)
         windowstatus = TextVector(  name="windowstatus",
                                     label="Window Status",
                                     group="Values",

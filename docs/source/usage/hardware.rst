@@ -6,10 +6,7 @@ The driver has method::
 
     async def hardware(self)
 
-This  is started when the driver is run, and should be a long running co-routine. Typically you would create a number of co routines - each having
-a while True loop, and running continuously controlling whatever hardware is required, and calling appropriate vector methods to send data.
-
-This co-routine would contain an "await asyncio.gather(the co routines)", to run them in the eventloop.
+This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data.
 
 To expand on the thermostat example; the driver could contain a further 'lights' vector with several members::
 
@@ -33,48 +30,45 @@ This statusvector would be included in the 'Thermostat' device::
                                          targetvector,
                                          statusvector] )
 
-The poll_thermostat co-routine could be edited as::
 
-    async def poll_thermostat(device):
-        "poll thermostat every second"
-        temperaturevector = device['temperaturevector']
-        statusvector = device['statusvector']
-        while True:
-            await asyncio.sleep(1)
-            # the control function turns on and off the heater to keep
-            # the temperature near to the target.
-            control()
-            temperaturevector["temperature"] = TEMPERATURE
-            # the temperaturevector is set, but not sent, that is done
-            # by the send_update co-routine every ten seconds
-            # Now set the status lights.
-            if TEMPERATURE < 5.0:
-                statusvector["frost"] = "Alert"
-            elif TARGET < 5.0:
-                # frost is not emminent, but show Idle light as warning
-                # that the target is set too low, causing a risk of frost.
-                statusvector["frost"] = "Idle"
-            else:
-                statusvector["frost"] = "Ok"
-            if TEMPERATURE > 30.0:
-                statusvector["hot"] = "Alert"
-            else:
-                statusvector["hot"] = "Ok"
-            if HEATER == "On":
-                statusvector["heater"] = "Busy"
-            else:
-                statusvector["heater"] = "Ok"
-            # send this vector, but with allvalues=False so it
-            # is only sent as the values change
-            statusvector.send_setVector(allvalues=False)
-
-and as before, the hardware method is::
+The hardware method becomes::
 
         async def hardware(self):
-            """This coroutine controls and monitors the instrument, and if required
-               sends updates to the client"""
+            "Run the hardware"
+            # run the thermostat polling task
+            control = self.driverdata["control"]
+            poll_task = asyncio.create_task(control.poll_thermostat())
+
+            # report temperature and status every ten seconds
             device = self['Thermostat']
-            # and gather async co-routines which poll the hardware and
-            # send updates to the client
-            await asyncio.gather(  poll_thermostat(device),
-                                   send_update(device)  )
+            temperaturevector = device['temperaturevector']
+            statusvector = device['statusvector']
+            while True:
+                await asyncio.sleep(10)
+                 # get the latest temperature
+                temperature = control.temperature
+
+                # set it into the temperature vector
+                temperaturevector['temperature'] = temperature
+                temperaturevector.send_setVector(timeout=10)
+
+                # Now set the status lights.
+                if temperature < 5.0:
+                    statusvector["frost"] = "Alert"
+                elif control.target < 5.0:
+                    # frost is not emminent, but show Idle light as warning
+                    # that the target is set too low, causing a risk of frost.
+                    statusvector["frost"] = "Idle"
+                else:
+                    statusvector["frost"] = "Ok"
+                if temperature > 30.0:
+                    statusvector["hot"] = "Alert"
+                else:
+                    statusvector["hot"] = "Ok"
+                if control.heater == "On":
+                    statusvector["heater"] = "Busy"
+                else:
+                    statusvector["heater"] = "Ok"
+                # send this vector, but with allvalues=False so it
+                # is only sent as the values change
+                statusvector.send_setVector(allvalues=False)
