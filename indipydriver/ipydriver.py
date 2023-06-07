@@ -92,11 +92,11 @@ class IPyDriver(collections.UserDict):
         self.driverdata = driverdata
 
         # traffic is transmitted out on the writerque
-        self.writerque = collections.deque()
+        self.writerque = asyncio.Queue(4)
         # and read in from the readerque
-        self.readerque = collections.deque()
+        self.readerque = asyncio.Queue(4)
         # and snoop data is passed on to the snoopque
-        self.snoopque = collections.deque()
+        self.snoopque = asyncio.Queue(4)
         # data for each device is passed to each device dataque
 
         # set an object for communicating, as default this is stdin and stdout
@@ -119,40 +119,38 @@ class IPyDriver(collections.UserDict):
         while True:
             await asyncio.sleep(0)
             # reads readerque, and sends xml data to the device via its dataque
-            if self.readerque:
-                root = self.readerque.popleft()
-                if root.tag == "getProperties":
-                    version = root.get("version")
-                    if version != "1.7":
-                        continue
-                    # getProperties received with correct version
-                    devicename = root.get("device")
-                    # devicename is None (for all devices), or a named device
-                    if devicename is None:
-                        for d in self.devices.values():
-                            if d.enable:
-                                d.dataque.append(root)
-                    elif devicename in self.devices:
-                        if self.devices[devicename].enable:
-                            self.devices[devicename].dataque.append(root)
-                    else:
-                        # device not recognised
-                        continue
-                elif root.tag in client_tags:
-                    # xml received from client
-                    devicename = root.get("device")
-                    if devicename is None:
-                        # device not given, ignore this
-                        continue
-                    elif devicename in self.devices:
-                        if self.devices[devicename].enable:
-                            self.devices[devicename].dataque.append(root)
-                    else:
-                        # device not recognised
-                        continue
-                elif root.tag in snoop_tags:
-                    # xml received from other devices
-                    self.snoopque.append(root)
+            root = await self.readerque.get()
+            if root.tag == "getProperties":
+                version = root.get("version")
+                if version != "1.7":
+                    self.readerque.task_done()
+                    continue
+                # getProperties received with correct version
+                devicename = root.get("device")
+                # devicename is None (for all devices), or a named device
+                if devicename is None:
+                    for d in self.devices.values():
+                        if d.enable:
+                            await d.dataque.put(root)
+                elif devicename in self.devices:
+                    if self.devices[devicename].enable:
+                        await self.devices[devicename].dataque.put(root)
+                # else device not recognised
+            elif root.tag in client_tags:
+                # xml received from client
+                devicename = root.get("device")
+                if devicename is None:
+                    # device not given, ignore this
+                    self.readerque.task_done()
+                    continue
+                elif devicename in self.devices:
+                    if self.devices[devicename].enable:
+                        await self.devices[devicename].dataque.put(root)
+                # else device not recognised
+            elif root.tag in snoop_tags:
+                # xml received from other devices
+                await self.snoopque.put(root)
+            self.readerque.task_done()
 
 
     async def _snoophandler(self):
@@ -160,16 +158,14 @@ class IPyDriver(collections.UserDict):
         while True:
             # get block of data from the self.snoopque
             await asyncio.sleep(0)
-            if self.snoopque:
-                root = self.snoopque.popleft()
-            else:
-                continue
+            root = await self.snoopque.get()
             devicename = root.get("device")
             if devicename is not None:
                 # if a device name is given, check
                 # it is not in this drivers devices
                 if devicename in self.devices:
                     # cannnot snoop on self!!
+                    self.snoopque.task_done()
                     continue
             try:
                 if root.tag == "message":
@@ -224,8 +220,9 @@ class IPyDriver(collections.UserDict):
                 # if an EventException is raised, it is because received data is malformed
                 # so ignore it, and just pass
                 pass
+            self.snoopque.task_done()
 
-    def send_message(self, message="", timestamp=None):
+    async def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
@@ -236,24 +233,24 @@ class IPyDriver(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        self.writerque.append(xmldata)
+        await self.writerque.put(xmldata)
 
-    def send_getProperties(self, devicename=None, vectorname=None):
+    async def send_getProperties(self, devicename=None, vectorname=None):
         """Sends a getProperties request - which is used to snoop data from other devices
            on the network, if devicename given, it must not be a device of this driver as
            the point of this is to snoop on remote devices."""
         xmldata = ET.Element('getProperties')
         if devicename is None:
-            self.writerque.append(xmldata)
+            await self.writerque.put(xmldata)
             return
         if devicename in self.devices:
             raise ValueError("Cannot snoop on a device already belonging to this driver")
         xmldata.set("device", devicename)
         if vectorname is None:
-            self.writerque.append(xmldata)
+            await self.writerque.put(xmldata)
             return
         xmldata.set("name", vectorname)
-        self.writerque.append(xmldata)
+        await self.writerque.put(xmldata)
 
     async def hardware(self):
         "Override this to operate device hardware, and transmit updates"
@@ -319,7 +316,7 @@ class Device(collections.UserDict):
         self.enable = True
 
         # the driver places data in this que to send data to this device
-        self.dataque = collections.deque()
+        self.dataque = asyncio.Queue(4)
 
         # Every property of this device has a dataque, which is set into this dictionary
         self.propertyquedict = {p.name:p.dataque for p in properties}
@@ -340,7 +337,7 @@ class Device(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.propertyvectors
         # simply because 'propertyvectors' is more descriptive
 
-    def send_device_message(self, message="", timestamp=None):
+    async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
            timestamp is None a datetime.datetime.utcnow() value will be inserted."""
@@ -357,9 +354,9 @@ class Device(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
-    def send_delProperty(self, message="", timestamp=None):
+    async def send_delProperty(self, message="", timestamp=None):
         """Sending delProperty with this device method, (as opposed to the vector send_delProperty method)
            informs the client this device is not available, it also sets a device.enable attribute to
            False, which stops any data being transmitted between the client and this device.
@@ -377,7 +374,7 @@ class Device(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
         self.enable = False
 
 
@@ -411,53 +408,53 @@ class Device(collections.UserDict):
     async def _handler(self):
         """Handles data read from dataque"""
         while True:
-            # get block of data from the self.dataque
             await asyncio.sleep(0)
-            if self.dataque:
-                root = self.dataque.popleft()
-                if not self.enable:
-                    continue
-                if root.tag == "getProperties":
-                    name = root.get("name")
-                    # name is None (for all properties), or a named property
-                    if name is None:
-                        for pvector in self.propertyvectors.values():
-                            if pvector.enable:
-                                pvector.dataque.append(root)
-                    elif name in self.propertyvectors:
-                        if self.propertyvectors[name].enable:
-                            self.propertyvectors[name].dataque.append(root)
-                    else:
-                        # property name not recognised
-                        continue
-                elif root.tag == "enableBLOB":
-                    name = root.get("name")
-                    # name is None (for all properties), or a named property
-                    if name is None:
-                        for pvector in self.propertyvectors.values():
-                            if pvector.enable:
-                                pvector.dataque.append(root)
-                    elif name in self.propertyvectors:
-                        if self.propertyvectors[name].enable:
-                            self.propertyvectors[name].dataque.append(root)
-                    else:
-                        # property name not recognised
-                        continue
-                else:
-                    # root.tag will be one of
-                    # newSwitchVector, newNumberVector, newTextVector, newBLOBVector
-                    name = root.get("name")
-                    if name is None:
-                        # name not given, ignore this
-                        continue
-                    elif name in self.propertyvectors:
-                        pvector = self.propertyvectors[name]
-                        if pvector.perm == "ro":
-                            # read only property cannot accept a newVector
-                            continue
+            # get block of data from the self.dataque
+            root = await self.dataque.get()
+
+            if not self.enable:
+                self.dataque.task_done()
+                continue
+            if root.tag == "getProperties":
+                name = root.get("name")
+                # name is None (for all properties), or a named property
+                if name is None:
+                    for pvector in self.propertyvectors.values():
                         if pvector.enable:
-                            # all ok, add to the vector dataque
-                            pvector.dataque.append(root)
-                    else:
-                        # property name not recognised
-                        continue
+                            await pvector.dataque.put(root)
+                elif name in self.propertyvectors:
+                    if self.propertyvectors[name].enable:
+                        await self.propertyvectors[name].dataque.put(root)
+                else:
+                    # property name not recognised
+                    self.dataque.task_done()
+                    continue
+            elif root.tag == "enableBLOB":
+                name = root.get("name")
+                # name is None (for all properties), or a named property
+                if name is None:
+                    for pvector in self.propertyvectors.values():
+                        if pvector.enable:
+                            await pvector.dataque.put(root)
+                elif name in self.propertyvectors:
+                    if self.propertyvectors[name].enable:
+                        await self.propertyvectors[name].dataque.put(root)
+                else:
+                    # property name not recognised
+                    self.dataque.task_done()
+                    continue
+            else:
+                # root.tag will be one of
+                # newSwitchVector, newNumberVector, newTextVector, newBLOBVector
+                name = root.get("name")
+                if name is None:
+                    # name not given, ignore this
+                    self.dataque.task_done()
+                    continue
+                elif name in self.propertyvectors:
+                    pvector = self.propertyvectors[name]
+                    if pvector.perm != "ro" and pvector.enable:
+                        # all ok, add to the vector dataque
+                        await pvector.dataque.put(root)
+            # task completed
+            self.dataque.task_done()

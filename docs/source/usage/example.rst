@@ -82,7 +82,7 @@ An example driver - controlling a simulated thermostat is shown::
                     # as all clients normally start by requesting driver properties.
                     # vector.send_defVector() should be called, which sends the vector
                     # definition to the client
-                    event.vector.send_defVector()
+                    await event.vector.send_defVector()
                 case newNumberVector(devicename='Thermostat', vectorname='targetvector'):
                     # this event maps the member name to value as a number string
                     # So set the received value as the thermostat target
@@ -107,7 +107,7 @@ An example driver - controlling a simulated thermostat is shown::
                             # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
                             # sending 'Ok' informs the client that the value has been received
                             event.vector.state = 'Ok'
-                            event.vector.send_setVector()
+                            await event.vector.send_setVector()
 
         async def hardware(self):
             "Run the hardware"
@@ -122,7 +122,7 @@ An example driver - controlling a simulated thermostat is shown::
                 await asyncio.sleep(10)
                 # get the latest temperature, and set it into the vector
                 vector['temperature'] = control.temperature
-                vector.send_setVector(timeout=10)
+                await vector.send_setVector(timeout=10)
                 # the 'timeout' argument informs the client that this
                 # value is only valid for ten seconds
 

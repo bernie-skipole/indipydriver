@@ -50,7 +50,7 @@ The hardware method becomes::
 
                 # set it into the temperature vector
                 temperaturevector['temperature'] = temperature
-                temperaturevector.send_setVector(timeout=10)
+                await temperaturevector.send_setVector(timeout=10)
 
                 # Now set the status lights.
                 if temperature < 5.0:
@@ -71,4 +71,4 @@ The hardware method becomes::
                     statusvector["heater"] = "Ok"
                 # send this vector, but with allvalues=False so it
                 # is only sent as the values change
-                statusvector.send_setVector(allvalues=False)
+                await statusvector.send_setVector(allvalues=False)

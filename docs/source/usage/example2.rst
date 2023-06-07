@@ -49,12 +49,12 @@ This could be achieved by adding a new device to the thermostat driver, in which
                Only a 'getProperties' is expected."""
             match event:
                 case getProperties():
-                    event.vector.send_defVector()
+                    await event.vector.send_defVector()
 
         async def hardware(self):
             """Send an initial getProperties to snoop on Thermostat,
                and then start the Window device hardware control"""
-            self.send_getProperties(devicename="Thermostat")
+            await self.send_getProperties(devicename="Thermostat")
             # delegate hardware control to the Window 'devhardware' method
             await self['Window'].devhardware()
 
@@ -83,10 +83,10 @@ This could be achieved by adding a new device to the thermostat driver, in which
                 if not control.updated:
                     # no data received in the last minute, re-send a getProperties,
                     # in case the thermostat was disconnected, and has hopefully restarted
-                    self.driver.send_getProperties(devicename="Thermostat")
+                    await self.driver.send_getProperties(devicename="Thermostat")
                     # and send an alarm to the client
                     alarmvector["alarm"] = "Alert"
-                    alarmvector.send_setVector()
+                    await alarmvector.send_setVector()
 
         async def devsnoopevent(self, event, *args, **kwargs):
             """Open or close the window depending on temperature received from snooped device"""
@@ -111,10 +111,10 @@ This could be achieved by adding a new device to the thermostat driver, in which
                             control.set_window(temperature)
                             # send window status light to the client
                             alarmvector["alarm"] = "Ok"
-                            alarmvector.send_setVector()
+                            await alarmvector.send_setVector()
                             # and send text of window position to the client
                             statusvector["status"] = control.window
-                            statusvector.send_setVector()
+                            await statusvector.send_setVector()
 
 
     def make_driver():

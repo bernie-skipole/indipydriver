@@ -46,12 +46,12 @@ class STDOUT_TX:
         while True:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
-            if writerque:
-                txdata = writerque.popleft()
-                # and send it out on stdout
-                binarydata = ET.tostring(txdata)
-                sys.stdout.buffer.write(binarydata)
-                sys.stdout.buffer.flush()
+            txdata = await writerque.get()
+            # and send it out on stdout
+            binarydata = ET.tostring(txdata)
+            sys.stdout.buffer.write(binarydata)
+            sys.stdout.buffer.flush()
+            writerque.task_done()
 
 
 class RX:
@@ -71,7 +71,7 @@ class RX:
             # from source and append it to  readerque
             root = await anext(source)
             if root is not None:
-                readerque.append(root)
+                await readerque.put(root)
 
     async def datasource(self):
         # get received data, parse it, and yield it as xml.etree.ElementTree object
@@ -193,12 +193,12 @@ class Port_TX():
         """gets data from writerque, and transmits it"""
         while True:
             await asyncio.sleep(0)
-            if writerque:
-                txdata = writerque.popleft()
-                binarydata = ET.tostring(txdata)
-                # Send the next message to the port
-                self.writer.write(binarydata)
-                await self.writer.drain()
+            txdata = await writerque.get()
+            binarydata = ET.tostring(txdata)
+            # Send the next message to the port
+            self.writer.write(binarydata)
+            await self.writer.drain()
+            writerque.task_done()
 
 
 class Port_RX(RX):

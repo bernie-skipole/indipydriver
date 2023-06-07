@@ -22,7 +22,7 @@ class PropertyVector(collections.UserDict):
         self.enable = True
         # the device places data in this dataque
         # for the vector to act upon
-        self.dataque = collections.deque()
+        self.dataque = asyncio.Queue(4)
 
         # this will be set when the device is initialised
         self.devicename = None
@@ -34,7 +34,7 @@ class PropertyVector(collections.UserDict):
     def device(self):
         return self.driver.devices[self.devicename]
 
-    def send_delProperty(self, message="", timestamp=None):
+    async def send_delProperty(self, message="", timestamp=None):
         """Informs the client this vector is not available, it also sets an 'enable' attribute to
            False, which stops any data being transmitted between the client and this property vector.
 
@@ -55,7 +55,7 @@ class PropertyVector(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
         self.enable = False
         for member in self.data.values():
             # set all members as changed, so when re-enabled, all values are ready to be sent again
@@ -129,11 +129,8 @@ class SwitchVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            # test if any xml data has been received
-            if not self.dataque:
-                continue
             try:
-                root = self.dataque.popleft()
+                root = await self.dataque.get()
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -145,9 +142,10 @@ class SwitchVector(PropertyVector):
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 pass
+            self.dataque.task_done()
 
 
-    def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defSwitchVector) to the client.
 
            message is any suitable string for the client.
@@ -184,9 +182,9 @@ class SwitchVector(PropertyVector):
             # after a defswitch sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             switch.changed = True
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -243,10 +241,10 @@ class SwitchVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            self.driver.writerque.append(xmldata)
+            await self.driver.writerque.put(xmldata)
 
 
-    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -282,7 +280,7 @@ class SwitchVector(PropertyVector):
         for switch in Onswitches:
             xmldata.append(switch.oneswitch())
             switch.changed = False
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
 
 class LightVector(PropertyVector):
@@ -304,10 +302,8 @@ class LightVector(PropertyVector):
         while True:
             await asyncio.sleep(0)
             # test if any xml data has been received
-            if not self.dataque:
-                continue
             try:
-                root = self.dataque.popleft()
+                root = await self.dataque.get()
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -315,12 +311,13 @@ class LightVector(PropertyVector):
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 pass
+            self.dataque.task_done()
 
     @property
     def perm(self):
         return "ro"
 
-    def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defLightVector) to the client.
 
            message is any suitable string for the client.
@@ -354,10 +351,10 @@ class LightVector(PropertyVector):
             # after a deflight sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             light.changed = True
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
 
-    def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -404,9 +401,9 @@ class LightVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            self.driver.writerque.append(xmldata)
+            await self.driver.writerque.put(xmldata)
 
-    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -436,7 +433,7 @@ class LightVector(PropertyVector):
             if light.name in  members:
                 xmldata.append(light.onelight())
                 light.changed = False
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
 
 
@@ -465,11 +462,8 @@ class TextVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            # test if any xml data has been received
-            if not self.dataque:
-                continue
             try:
-                root = self.dataque.popleft()
+                root = await self.dataque.get()
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -481,8 +475,9 @@ class TextVector(PropertyVector):
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 pass
+            self.dataque.task_done()
 
-    def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defTextVector) to the client.
 
            message is any suitable string for the client.
@@ -518,9 +513,9 @@ class TextVector(PropertyVector):
             # after a deftext sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             text.changed = True
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -567,9 +562,9 @@ class TextVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            self.driver.writerque.append(xmldata)
+            await self.driver.writerque.put(xmldata)
 
-    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -599,7 +594,7 @@ class TextVector(PropertyVector):
             if text.name in members:
                 xmldata.append(text.onetext())
                 text.changed = False
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
 
 class NumberVector(PropertyVector):
@@ -625,11 +620,8 @@ class NumberVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            # test if any xml data has been received
-            if not self.dataque:
-                continue
             try:
-                root = self.dataque.popleft()
+                root = await self.dataque.get()
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -641,8 +633,9 @@ class NumberVector(PropertyVector):
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 pass
+            self.dataque.task_done()
 
-    def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defNumberVector) to the client.
 
            message is any suitable string for the client.
@@ -678,9 +671,9 @@ class NumberVector(PropertyVector):
             # after a defnumber sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             number.changed = True
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -727,9 +720,9 @@ class NumberVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            self.driver.writerque.append(xmldata)
+            await self.driver.writerque.put(xmldata)
 
-    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -759,7 +752,7 @@ class NumberVector(PropertyVector):
             if number.name in members:
                 xmldata.append(number.onenumber())
                 number.changed = False
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
 
 class BLOBVector(PropertyVector):
@@ -785,11 +778,8 @@ class BLOBVector(PropertyVector):
         """Check received data and take action"""
         while True:
             await asyncio.sleep(0)
-            # test if any xml data has been received
-            if not self.dataque:
-                continue
             try:
-                root = self.dataque.popleft()
+                root = await self.dataque.get()
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -804,9 +794,10 @@ class BLOBVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException:
                 # if an error is raised parsing the incoming data, just continue
-                continue
+                pass
+            self.dataque.task_done()
 
-    def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout=0):
         """Transmits the vector definition (defBLOBVector) to the client.
 
            message is any suitable string for the client.
@@ -842,9 +833,9 @@ class BLOBVector(PropertyVector):
             # after a defblob sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             blob.changed = True
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
 
-    def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -891,9 +882,9 @@ class BLOBVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            self.driver.writerque.append(xmldata)
+            await self.driver.writerque.put(xmldata)
 
-    def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -923,4 +914,4 @@ class BLOBVector(PropertyVector):
             if blob.name in members:
                 xmldata.append(blob.oneblob())
                 blob.changed = False
-        self.driver.writerque.append(xmldata)
+        await self.driver.writerque.put(xmldata)
