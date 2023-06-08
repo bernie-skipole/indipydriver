@@ -19,7 +19,7 @@ state is the state of the vector, and is an attribute which can be set before ca
 
 state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
 
-Each vector is also a mapping, of vectorname:memberVALUE  - note, not member object, rather it is the value held by the member. In the thermostat example, the temperature of the vector member is set by
+Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the thermostat example, the temperature of the vector member is set by
 
 vector['temperature'] = TEMPERATURE
 

@@ -42,7 +42,7 @@ Driver methods have access to the thermalcontrol object simply by using::
        control = self.driverdata["control"]
 
 
-The control object has coroutine method poll_thermostat(). When the hardware method is called, it can create a task from this co-routine, which is therefore immediatelt set running, and can then happily run in the background.
+The control object has coroutine method poll_thermostat(). When the hardware method is called, it can create a task from this co-routine, which is therefore immediately set running, and can then happily run in the background.
 
 
 The hardware method becomes::

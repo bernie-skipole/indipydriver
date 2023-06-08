@@ -78,15 +78,46 @@ Expanding the thermostat example with the "statusvector" set of lights introduce
     case newNumberVector(devicename='Thermostat', vectorname='targetvector'):
         if 'target' in event:
             newtarget = event['target']
-            TARGET = self.indi_number_to_float(newtarget)
-            event.vector['target'] = TARGET
-            event.vector.state = 'Ok'
-            event.vector.send_setVector()
-            # If the target is below 5C, warn of the danger of frost
-            statusvector = self['Thermostat']['statusvector']
-            if TARGET < 5.0:
-                statusvector["frost"] = 'Idle'
-                statusvector.send_setVector()
-                self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+            try:
+                target = self.indi_number_to_float(newtarget)
+            except TypeError:
+                # ignore an incoming invalid number
+                pass
+            else:
+                control.target = target
+                event.vector['target'] = target
+                event.vector.state = 'Ok'
+                await event.vector.send_setVector()
+                # If the target is below 5C, warn of the danger of frost
+                statusvector = self['Thermostat']['statusvector']
+                if target < 5.0:
+                    statusvector["frost"] = 'Idle'
+                    await statusvector.send_setVector()
+                    await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+
 
 So the target is set ok, but the client GUI displays a warning.
+
+
+devclientevent
+^^^^^^^^^^^^^^
+
+If your driver contains several devices, you may find it simpler to delegate the event control to each device.
+
+The Device class has method::
+
+    async def devclientevent(self, event, *args, **kwargs)
+
+If desired you could subclass Device, and overwrite this method to handle events pertaining to this device. You would then
+ensure devclientevent(event) is called using something like the code below in the driver::
+
+    async def clientevent(self, event):
+        await asyncio.sleep(0)
+        match event:
+            case getProperties():
+                event.vector.send_defVector()
+
+            case newNumberVector(devicename='Thermostat'):
+                await self['Thermostat'].devclientevent(event)
+
+The Thermostat device method devclientevent(event) then handles those events targeted at devicename Thermostat.

@@ -13,7 +13,7 @@ Your code should typically use match and case to determine the type of event, an
 Snooping
 ^^^^^^^^
 
-Snooping can occur on a network of INDI drivers, typically using the program 'indiserver' to connect multiple drivers to a client.  A driver can transmit a 'getProperties' command using driver method::
+Snooping can occur on a network of INDI drivers, typically using the program 'indiserver' to connect multiple drivers to a client.  A driver can transmit a 'getProperties' command using driver coroutine method::
 
     send_getProperties(devicename=None, vectorname=None)
 

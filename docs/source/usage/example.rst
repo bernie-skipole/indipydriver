@@ -145,7 +145,8 @@ An example driver - controlling a simulated thermostat is shown::
                                           numbermembers=[temperature] )
 
         # create a vector with one number 'target' as its member
-        target = NumberMember(name="target", format='%3.1f', min=0, max=40, membervalue=thermalcontrol.target)
+        target = NumberMember(name="target", format='%3.1f', min=0, max=40,
+                              membervalue=thermalcontrol.target)
         # set this member into a vector, this is read-write
         targetvector = NumberVector( name="targetvector",
                                      label="Target",
