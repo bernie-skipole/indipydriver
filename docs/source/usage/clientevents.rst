@@ -115,7 +115,7 @@ ensure devclientevent(event) is called using something like the code below in th
         await asyncio.sleep(0)
         match event:
             case getProperties():
-                event.vector.send_defVector()
+                await event.vector.send_defVector()
 
             case newNumberVector(devicename='Thermostat'):
                 await self['Thermostat'].devclientevent(event)
