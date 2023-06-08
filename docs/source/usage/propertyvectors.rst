@@ -51,7 +51,7 @@ For example, if a LightMember name is 'Indicator' it could be set with:
 
 vector['Indicator'] = 'Ok'
 
-vector.send_defVector()
+await vector.send_setVector()
 
 where vector is the vector object containing the Indicator.
 
