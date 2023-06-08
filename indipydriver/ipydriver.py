@@ -253,13 +253,14 @@ class IPyDriver(collections.UserDict):
         await self.writerque.put(xmldata)
 
     async def hardware(self):
-        "Override this to operate device hardware, and transmit updates"
+        """Override this to operate device hardware, and transmit updates
+
+        For example: call your own code to operate hardware
+        then update the appropriate vectors, and send updated
+        values to the client using
+        await vector.send_setVector()"""
         await asyncio.sleep(0)
-        # for example: create a number of co routines - each having
-        # a while True loop, and running continuously, and controlling
-        # whatever hardware is required, and calling appropriate vector
-        # methods to send data, then
-        # await asyncio.gather(the co routines)
+
 
     async def clientevent(self, event):
         """Override this. On receiving data, this is called, and should

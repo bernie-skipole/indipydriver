@@ -25,11 +25,17 @@ The driver has two methods which should be overwritten.
 
 async def clientevent(self, event)
 
-This is called whenever data is received, the event object describes the received data, and you provide the code which then controls your instrument.
+This is called whenever data is received from the client, typically to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
 
 async def hardware(self)
 
-This should be a contuously running coroutine which you can use to poll your instruments, and if required send updates to the client.
+This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
+
+A further method can be overwritten.
+
+async def snoopevent(self, event)
+
+This is only used if one device is monitoring (snooping) on other devices, an example is given further in this documentation.
 
 Having created your IPyDriver subclass, you would create member objects, being instances of SwitchMember, LightMember, TextMember, BLOBMember or NumberMember which provide attribute values to control your instrument.
 

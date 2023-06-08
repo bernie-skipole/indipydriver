@@ -49,8 +49,8 @@ Documentation at https://indipydriver.readthedocs.io
 
 Functionality has been completed.
 
-To Do:
+Documentation done.
 
-Documentation - create full docs, and a tutorial.
+To Do:
 
 Testing - Test functionality and compatibility with indiserver and other indi clients.
