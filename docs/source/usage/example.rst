@@ -24,6 +24,19 @@ An example driver - controlling a simulated thermostat is shown::
             self.target = 15
             self.heater = "On"
 
+        # Numbers need to be explicitly set in the indi protocol
+        # so the instrument needs to give a string version of numbers
+
+        @property
+        def stringtemperature(self)
+            "Gives temperature as a string to two decimal places"
+            return '{:.2f}'.format(self.temperature)
+
+        @property
+        def stringtarget(self)
+            "Gives target as a string to two decimal places"
+            return '{:.2f}'.format(self.target)
+
         def control(self):
             """This simulates temperature increasing/decreasing, and
                turns on/off a heater if moving too far from the target temperature
@@ -103,7 +116,7 @@ An example driver - controlling a simulated thermostat is shown::
                             control.target = target
                             # and set the new target value into the vector member, then
                             # transmits the vector back to client, with vector state ok
-                            event.vector['target'] = target
+                            event.vector['target'] = control.stringtarget
                             # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
                             # sending 'Ok' informs the client that the value has been received
                             event.vector.state = 'Ok'
@@ -121,8 +134,8 @@ An example driver - controlling a simulated thermostat is shown::
             while True:
                 await asyncio.sleep(10)
                 # get the latest temperature, and set it into the vector
-                vector['temperature'] = control.temperature
-                await vector.send_setVector(timeout=10)
+                vector['temperature'] = control.stringtemperature
+                await vector.send_setVector(timeout='10')
                 # the 'timeout' argument informs the client that this
                 # value is only valid for ten seconds
 
@@ -134,8 +147,9 @@ An example driver - controlling a simulated thermostat is shown::
         thermalcontrol = ThermalControl()
 
         # create a vector with one number 'temperature' as its member
-        temperature = NumberMember(name="temperature", format='%3.1f', min=-50, max=99,
-                                   membervalue=thermalcontrol.temperature)
+        # Note: vector members require numbers to be given as strings
+        temperature = NumberMember(name="temperature", format='%3.1f', min='-50', max='99',
+                                   membervalue=thermalcontrol.stringtemperature)
         # set this member into a vector, this is read only
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",
@@ -145,8 +159,8 @@ An example driver - controlling a simulated thermostat is shown::
                                           numbermembers=[temperature] )
 
         # create a vector with one number 'target' as its member
-        target = NumberMember(name="target", format='%3.1f', min=0, max=40,
-                              membervalue=thermalcontrol.target)
+        target = NumberMember(name="target", format='%3.1f', min='-50', max='99',
+                              membervalue=thermalcontrol.stringtarget)
         # set this member into a vector, this is read-write
         targetvector = NumberVector( name="targetvector",
                                      label="Target",

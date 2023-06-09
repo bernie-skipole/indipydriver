@@ -59,12 +59,12 @@ The hardware method becomes::
             statusvector = device['statusvector']
             while True:
                 await asyncio.sleep(10)
-                 # get the latest temperature
-                temperature = control.temperature
 
-                # set it into the temperature vector
-                temperaturevector['temperature'] = temperature
+                # set the string temperature into the temperature vector
+                temperaturevector['temperature'] = control.stringtemperature
                 await temperaturevector.send_setVector(timeout=10)
+
+                temperature = control.temperature
 
                 # Now set the status lights.
                 if temperature < 5.0:

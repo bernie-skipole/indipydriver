@@ -145,7 +145,7 @@ class SwitchVector(PropertyVector):
             self.dataque.task_done()
 
 
-    async def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
         """Transmits the vector definition (defSwitchVector) to the client.
 
            message is any suitable string for the client.
@@ -153,9 +153,11 @@ class SwitchVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which
            case a datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string of a
+           numeric value indicating to the client how long this data is valid.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -174,7 +176,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("rule", self.rule)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for switch in self.data.values():
@@ -184,7 +186,7 @@ class SwitchVector(PropertyVector):
             switch.changed = True
         await self.driver.writerque.put(xmldata)
 
-    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -194,8 +196,8 @@ class SwitchVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value indicating
+           to the client how long this data is valid.
 
            If allvalues is True, all values are sent.
 
@@ -204,6 +206,8 @@ class SwitchVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -218,7 +222,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
@@ -244,7 +248,7 @@ class SwitchVector(PropertyVector):
             await self.driver.writerque.put(xmldata)
 
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -253,6 +257,8 @@ class SwitchVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -267,7 +273,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
@@ -317,7 +323,7 @@ class LightVector(PropertyVector):
     def perm(self):
         return "ro"
 
-    async def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
         """Transmits the vector definition (defLightVector) to the client.
 
            message is any suitable string for the client.
@@ -325,10 +331,9 @@ class LightVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which
            case a datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           For Light Vectors the timeout value is not used, but is included
+           in the arguments to match other send_vectors.
         """
-        # Note timeout is not used
         if not self.device.enable:
             return
         if not self.enable:
@@ -354,7 +359,7 @@ class LightVector(PropertyVector):
         await self.driver.writerque.put(xmldata)
 
 
-    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -374,7 +379,6 @@ class LightVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
-        # Note timeout is not used
         if not self.device.enable:
             return
         if not self.enable:
@@ -403,7 +407,7 @@ class LightVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.writerque.put(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -477,7 +481,7 @@ class TextVector(PropertyVector):
                 pass
             self.dataque.task_done()
 
-    async def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
         """Transmits the vector definition (defTextVector) to the client.
 
            message is any suitable string for the client.
@@ -485,9 +489,11 @@ class TextVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which
            case a datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -505,7 +511,7 @@ class TextVector(PropertyVector):
         xmldata.set("perm", self.perm)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for text in self.data.values():
@@ -515,7 +521,7 @@ class TextVector(PropertyVector):
             text.changed = True
         await self.driver.writerque.put(xmldata)
 
-    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -525,8 +531,8 @@ class TextVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
 
            If allvalues is True, all values are sent.
 
@@ -535,6 +541,8 @@ class TextVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -549,7 +557,7 @@ class TextVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -564,7 +572,7 @@ class TextVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.writerque.put(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -573,6 +581,8 @@ class TextVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -587,7 +597,7 @@ class TextVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for text in self.data.values():
@@ -635,7 +645,7 @@ class NumberVector(PropertyVector):
                 pass
             self.dataque.task_done()
 
-    async def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
         """Transmits the vector definition (defNumberVector) to the client.
 
            message is any suitable string for the client.
@@ -643,9 +653,11 @@ class NumberVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which
            case a datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -663,7 +675,7 @@ class NumberVector(PropertyVector):
         xmldata.set("perm", self.perm)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for number in self.data.values():
@@ -673,7 +685,7 @@ class NumberVector(PropertyVector):
             number.changed = True
         await self.driver.writerque.put(xmldata)
 
-    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -683,8 +695,8 @@ class NumberVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
 
            If allvalues is True, all values are sent.
 
@@ -693,6 +705,8 @@ class NumberVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -707,7 +721,7 @@ class NumberVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -722,7 +736,7 @@ class NumberVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.writerque.put(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -731,6 +745,8 @@ class NumberVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -745,7 +761,7 @@ class NumberVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for number in self.data.values():
@@ -797,7 +813,7 @@ class BLOBVector(PropertyVector):
                 pass
             self.dataque.task_done()
 
-    async def send_defVector(self, message='', timestamp=None, timeout=0):
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
         """Transmits the vector definition (defBLOBVector) to the client.
 
            message is any suitable string for the client.
@@ -805,9 +821,11 @@ class BLOBVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which
            case a datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -825,7 +843,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("perm", self.perm)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for blob in self.data.values():
@@ -835,7 +853,7 @@ class BLOBVector(PropertyVector):
             blob.changed = True
         await self.driver.writerque.put(xmldata)
 
-    async def send_setVector(self, message='', timestamp=None, timeout=0, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -845,8 +863,8 @@ class BLOBVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            datetime.datetime.utcnow() value will be inserted.
 
-           The timeout value should be zero if not used, or a value indicating to the
-           client how long this data is valid.
+           The timeout value should be '0' if not used, or a string value
+           indicating to the client how long this data is valid.
 
            If allvalues is True, all values are sent.
 
@@ -855,6 +873,8 @@ class BLOBVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -869,7 +889,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -884,7 +904,7 @@ class BLOBVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.writerque.put(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=0, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -893,6 +913,8 @@ class BLOBVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
+        if not isinstance(timeout, str):
+            raise ValueError("The given timeout value must be a string object")
         if not self.device.enable:
             return
         if not self.enable:
@@ -907,7 +929,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", str(timeout))
+        xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
         for blob in self.data.values():

@@ -85,7 +85,7 @@ Expanding the thermostat example with the "statusvector" set of lights introduce
                 pass
             else:
                 control.target = target
-                event.vector['target'] = target
+                event.vector['target'] = control.stringtarget
                 event.vector.state = 'Ok'
                 await event.vector.send_setVector()
                 # If the target is below 5C, warn of the danger of frost

@@ -21,9 +21,11 @@ state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
 
 Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the thermostat example, the temperature of the vector member is set by
 
-vector['temperature'] = TEMPERATURE
+vector['temperature'] = control.stringtemperature
 
-Where 'temperature' is the name of the member object and TEMPERATURE is a numeric value.
+Where 'temperature' is the name of the member object and control.stringtemperature is a string of a numeric value.
+
+Numeric values are set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol, the only exception is blobsize, where the number should be an integer.
 
 Each member has a name and label, again label is a string which can be used by the client, if not given it will be set equal to the name.
 

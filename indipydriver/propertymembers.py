@@ -138,33 +138,37 @@ class NumberMember(PropertyMember):
     """Contains a number, the attributes inform the client how the number should be
        displayed.
 
-       format is a C printf style format, for example %7.2f means the number string will
-       have seven characters (including the decimal point as a character and leading
-       spaces will be inserted if necessary), and two decimal digits after the decimal point.
+       format is a C printf style format, for example %7.2f means the client should
+       display the number string with seven characters (including the decimal point
+       as a character and leading spaces should be inserted if necessary), and with
+       two decimal digits after the decimal point.
 
        min is the minimum value
 
        max is the maximum, if min is equal to max, the client should ignore these.
 
-       step is incremental step values, set to zero if not used.
+       step is incremental step values, set to string of zero if not used.
 
-       If the member value is set as a string - that is how the number will be placed in the
-       xml protocol.
-
-       If set as a float, the string placed into the xml will be formatted according to the given format.
+       The above numbers, and the member value must be set as a string, this explicitly
+       controls how numbers are placed in the xml protocol.
     """
 
-    def __init__(self, name, label=None, format='', min=0, max=0, step=0, membervalue=0):
+    def __init__(self, name, label=None, format='', min='0', max='0', step='0', membervalue='0'):
         super().__init__(name, label)
         self.format = format
+        if not isinstance(min, str):
+            raise ValueError("The given min value must be a string object")
         self.min = min
+        if not isinstance(max, str):
+            raise ValueError("The given max value must be a string object")
         self.max = max
+        if not isinstance(step, str):
+            raise ValueError("The given step value must be a string object")
         self.step = step
+        if not isinstance(membervalue, str):
+            raise ValueError("The given membervalue value must be a string object")
         self._membervalue = membervalue
 
-        # If membervalue, min, max step are given as strings, they are assumed to
-        # be correctly formatted and used in the xml directly.
-        # if given as integers or floats, they are formatted using the format string
 
     @property
     def membervalue(self):
@@ -172,6 +176,8 @@ class NumberMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
+        if not isinstance(value, str):
+            raise ValueError("The given number value must be a string object")
         if self._membervalue != value:
             # when a value has changed, set the changed flag
             self.changed = True
@@ -241,36 +247,17 @@ class NumberMember(PropertyMember):
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         xmldata.set("format", self.format)
-
-        if isinstance(self.min, str):
-            xmldata.set("min", self.min)
-        else:
-            xmldata.set("min", self.format_number(self.min))
-
-        if isinstance(self.max, str):
-            xmldata.set("max", self.max)
-        else:
-            xmldata.set("max", self.format_number(self.max))
-
-        if isinstance(self.step, str):
-            xmldata.set("step", self.step)
-        else:
-            xmldata.set("step", self.format_number(self.step))
-
-        if isinstance(self._membervalue, str):
-            xmldata.text = self._membervalue
-        else:
-            xmldata.text = self.format_number(self._membervalue)
+        xmldata.set("min", self.min)
+        xmldata.set("max", self.max)
+        xmldata.set("step", self.step)
+        xmldata.text = self._membervalue
         return xmldata
 
     def onenumber(self):
         """Returns xml of a oneNumber"""
         xmldata = ET.Element('oneNumber')
         xmldata.set("name", self.name)
-        if isinstance(self._membervalue, str):
-            xmldata.text = self._membervalue
-        else:
-            xmldata.text = self.format_number(self._membervalue)
+        xmldata.text = self._membervalue
         return xmldata
 
 
@@ -286,6 +273,10 @@ class BLOBMember(PropertyMember):
 
     def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=b''):
         super().__init__(name, label)
+        if not isinstance(blobsize, int):
+            raise ValueError("The given blobsize must be an integer object")
+        if not isinstance(membervalue, bytes):
+            raise ValueError("The given BLOB membervalue must be a bytes object")
         self._membervalue = membervalue
         self.blobsize = blobsize
         self.blobformat = blobformat
