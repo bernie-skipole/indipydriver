@@ -28,12 +28,12 @@ An example driver - controlling a simulated thermostat is shown::
         # so the instrument needs to give a string version of numbers
 
         @property
-        def stringtemperature(self)
+        def stringtemperature(self):
             "Gives temperature as a string to two decimal places"
             return '{:.2f}'.format(self.temperature)
 
         @property
-        def stringtarget(self)
+        def stringtarget(self):
             "Gives target as a string to two decimal places"
             return '{:.2f}'.format(self.target)
 
