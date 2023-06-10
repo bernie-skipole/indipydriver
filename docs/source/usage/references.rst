@@ -17,6 +17,8 @@ https://pypi.org/project/indiredis/
 
 Further relevant sites:
 
+Please note: indipydriver is an independently developed implementation, and the author has no relationship with indilib. However indipydriver was developed with reference to the INDI version 1.7 specification, and is intended to interwork with other implementations that also meets that spec.
+
 https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
 https://www.clearskyinstitute.com/INDI/INDI.pdf
