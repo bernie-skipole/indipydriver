@@ -1,10 +1,6 @@
 
 
-import collections
-
-import asyncio
-
-import datetime
+import sys, collections, asyncio, datetime
 
 import xml.etree.ElementTree as ET
 
@@ -36,7 +32,8 @@ class IPyDriver(collections.UserDict):
                 return float(value)
             if not isinstance(value, str):
                 raise TypeError
-           # negative is True, if the value is negative
+            # negative is True, if the value is negative
+            value = value.strip()
             negative = value.startswith("-")
             if negative:
                 value = value.lstrip("-")
