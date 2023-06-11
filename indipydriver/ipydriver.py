@@ -1,6 +1,6 @@
 
 
-import sys, collections, asyncio, datetime
+import collections, asyncio, datetime
 
 import xml.etree.ElementTree as ET
 

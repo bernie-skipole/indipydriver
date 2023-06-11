@@ -167,9 +167,7 @@ class STDIN_RX(RX):
                 await asyncio.sleep(0)
                 binarydata, data = data.split(b'>', maxsplit=1)
                 binarydata += b">"
-                #sys.stderr.write((binarydata+b'\n').decode("ascii"))
                 yield binarydata
-
 
 
 # useful test strings

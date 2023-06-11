@@ -107,8 +107,8 @@ class newTextVector(newVector):
 class newNumberVector(newVector):
     """An event indicating a newNumberVector has been received, this is a mapping
        of membername:value, where each value is a string number, which may be in
-       sexagesimal format. If desired, the driver method indi_number_to_float()
-       can be used to convert this to a float."""
+       sexagesimal format, and may have newlines appended or prepended. If desired,
+       the driver method indi_number_to_float() can be used to convert this to a float."""
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
