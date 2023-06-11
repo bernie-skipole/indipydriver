@@ -88,11 +88,12 @@ Expanding the thermostat example with the "statusvector" set of lights introduce
                 event.vector['target'] = control.stringtarget
                 event.vector.state = 'Ok'
                 await event.vector.send_setVector()
-                # If the target is below 5C, warn of the danger of frost
+                # If the target is below 5C, and if the temperature is still
+                # above 5.0, warn of the danger of frost due to the target being low
                 statusvector = self['Thermostat']['statusvector']
-                if target < 5.0:
+                if target < 5.0 and control.temperature > 5.0:
                     statusvector["frost"] = 'Idle'
-                    await statusvector.send_setVector()
+                    await statusvector.send_setVector(allvalues=False)
                     await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
 
 

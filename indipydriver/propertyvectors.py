@@ -347,6 +347,7 @@ class LightVector(PropertyVector):
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         xmldata.set("group", self.group)
+        xmldata.set("state", self.state)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:

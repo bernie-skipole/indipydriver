@@ -62,7 +62,7 @@ The hardware method becomes::
 
                 # set the string temperature into the temperature vector
                 temperaturevector['temperature'] = control.stringtemperature
-                await temperaturevector.send_setVector(timeout=10)
+                await temperaturevector.send_setVector(timeout='10')
 
                 temperature = control.temperature
 

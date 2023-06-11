@@ -1,7 +1,9 @@
 
-import asyncio, sys
+import asyncio, sys, os
 
 import xml.etree.ElementTree as ET
+
+import fcntl
 
 from datetime import datetime
 
@@ -49,10 +51,10 @@ class STDOUT_TX:
             txdata = await writerque.get()
             # and send it out on stdout
             binarydata = ET.tostring(txdata)
+            binarydata += b"\n"
             sys.stdout.buffer.write(binarydata)
             sys.stdout.buffer.flush()
             writerque.task_done()
-
 
 class RX:
     """An object that receives data, parses it to ElementTree elements
@@ -144,7 +146,6 @@ class RX:
             yield b""
 
 
-
 class STDIN_RX(RX):
     """Produces xml.etree.ElementTree data from stdin, this is
        used by STDINOUT as one half of the communications path.
@@ -152,23 +153,22 @@ class STDIN_RX(RX):
 
     async def datainput(self):
         "Generator producing binary string of data from stdin"
-        binarydata = b""
+        data = b""
         while True:
             await asyncio.sleep(0)
-            data = sys.stdin.buffer.read(100)
-            if not data:
+            indata = sys.stdin.buffer.read(100)
+            if indata is None:
                 continue
-            parts = data.split(b">")
-            if len(parts) == 1:
-                # no > found
-                binarydata += data
-                # could put a max value here to stop this increasing indefinetly
-                continue
-            for part in parts[:-1]:
-                binarydata = binarydata + part + b">"
+            data = data + indata
+            while b">" in data:
+                binarydata, data = data.split(b'>', maxsplit=1)
+                binarydata += b">"
                 yield binarydata
-                binarydata = b""
-            binarydata = parts[-1]
+
+# useful test strings
+# <getProperties version="1.7" />
+# <newNumberVector device="Thermostat" name="targetvector"><oneNumber name="target">40</oneNumber></newNumberVector>
+# sys.stderr.write(binarydata.decode("ascii"))
 
 
 class STDINOUT():
@@ -176,11 +176,16 @@ class STDINOUT():
 
     async def run(self, readerque, writerque):
 
+        # Set stdin to non-blocking mode
+        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
+        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
         rx = STDIN_RX()
         tx = STDOUT_TX()
 
         await asyncio.gather(rx.run_rx(readerque),
-                             tx.run_tx(writerque))   # run communications
+                             tx.run_tx(writerque)
+                             )   # run communications
 
 
 class Port_TX():
