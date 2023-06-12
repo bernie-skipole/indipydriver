@@ -66,8 +66,8 @@ class RX:
         "pass data to readerque"
         source = self.datasource()
         while True:
+            await asyncio.sleep(0)
             if readerque is None:
-                await asyncio.sleep(0.1)
                 continue
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
