@@ -30,7 +30,7 @@ The event type passed into the method reflects the command sent by the remote de
 Events
 ^^^^^^
 
-All snoop events have attributes devicename, root and timestamp.
+All snoop events have attributes devicename, root and timestamp. The root is an xml.etree.ElementTree object. The timestamp is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, datetime.utcnow() is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
 
 .. autoclass:: indipydriver.Message
 

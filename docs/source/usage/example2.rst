@@ -34,6 +34,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
 
         def set_window(self, temperature):
             "a real driver would set hardware control here"
+            self.updated = True
             if temperature > 30:
                 self.window = "Open"
             if temperature < 25:
@@ -52,9 +53,9 @@ This could be achieved by adding a new device to the thermostat driver, in which
                     await event.vector.send_defVector()
 
         async def hardware(self):
-            """Send an initial getProperties to snoop on Thermostat,
-               and then start the Window device hardware control"""
-            await self.send_getProperties(devicename="Thermostat")
+            """Send an initial getProperties to snoop on Thermostat"""
+            await self.send_getProperties(devicename="Thermostat",
+                                          vectorname="temperaturevector")
             # delegate hardware control to the Window 'devhardware' method
             await self['Window'].devhardware()
 
@@ -83,7 +84,8 @@ This could be achieved by adding a new device to the thermostat driver, in which
                 if not control.updated:
                     # no data received in the last minute, re-send a getProperties,
                     # in case the thermostat was disconnected, and has hopefully restarted
-                    await self.driver.send_getProperties(devicename="Thermostat")
+                    await self.driver.send_getProperties(devicename="Thermostat",
+                                                         vectorname="temperaturevector")
                     # and send an alarm to the client
                     alarmvector["alarm"] = "Alert"
                     await alarmvector.send_setVector()
@@ -105,16 +107,14 @@ This could be achieved by adding a new device to the thermostat driver, in which
                             # ignore an incoming invalid number
                             pass
                         else:
-                            # flag a temperature value has been received
-                            control.updated = True
                             # open or close the widow
                             control.set_window(temperature)
                             # send window status light to the client
                             alarmvector["alarm"] = "Ok"
-                            await alarmvector.send_setVector()
+                            await alarmvector.send_setVector(allvalues=False)
                             # and send text of window position to the client
                             statusvector["status"] = control.window
-                            await statusvector.send_setVector()
+                            await statusvector.send_setVector(allvalues=False)
 
 
     def make_driver():

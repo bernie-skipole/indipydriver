@@ -28,7 +28,6 @@ All event objects have attributes devicename, vectorname, vector, root
 
 Where vector is the vector object, and root is the received xml parsed as an xml.etree.ElementTree element.
 
-
 .. autoclass:: indipydriver.getProperties
 
 .. autoclass:: indipydriver.enableBLOB
@@ -38,9 +37,13 @@ The INDI specification describes enableBLOB as : Command to control whether setB
 newVectors
 ^^^^^^^^^^
 
-The following event objects indicate the client is trying to set new member values of a vector. The event has an attribute self.timestamp, being a datetime.datetime object, and is also a mapping of membername:value which the client is submitting.
+The following event objects indicate the client is trying to set new member values of a vector.
 
-Typically, if you accept a new value, you would have code that controls your instrument, and you would then set the new value into the vector and transmit the update to the client::
+The event is a mapping of membername:value which the client is submitting.
+
+It also has a self.timestamp attribute which is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, datetime.utcnow() is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
+
+Typically, if you accept a new member value, you would have code that controls your instrument, and you would then set the new value into the vector and transmit the update to the client::
 
     # Match the event type, with devicename and vectorname
     # so event.vector is the vector belonging to this device
