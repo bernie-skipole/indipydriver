@@ -79,7 +79,7 @@ This could be achieved by adding a new device to the thermostat driver, in which
             alarmvector = self["windowalarm"]
             while True:
                 control.updated = False
-                asyncio.sleep(60)
+                await asyncio.sleep(60)
                 if not control.updated:
                     # no data received in the last minute, re-send a getProperties,
                     # in case the thermostat was disconnected, and has hopefully restarted

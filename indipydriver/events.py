@@ -249,7 +249,7 @@ class defSwitchVector(defVector):
                     raise EventException
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
-                value = member.text
+                value = member.text.strip()
                 if value == "On":
                     self.data[membername] = "On"
                 elif value == "Off":
@@ -330,7 +330,7 @@ class defNumberVector(defVector):
                 if not memberstep:
                     raise EventException
                 self.memberlabels[membername] = (label, memberformat, membermin, membermax, memberstep)
-                self.data[membername] = member.text
+                self.data[membername] = member.text.strip()
             else:
                 raise EventException
         if not self.data:
@@ -354,7 +354,7 @@ class defLightVector(defVector):
                     raise EventException
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
-                value = member.text
+                value = member.text.strip()
                 if not value in ('Idle','Ok','Busy','Alert'):
                     raise EventException
                 self.data[membername] = value
