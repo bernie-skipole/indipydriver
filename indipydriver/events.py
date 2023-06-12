@@ -32,7 +32,7 @@ class enableBLOB(Event):
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
-        value = root.text
+        value = root.text.strip()
         if value in ("Never", "Also", "Only"):
             self.value = value
         else:
@@ -69,7 +69,7 @@ class newSwitchVector(newVector):
             if member.tag == "oneSwitch":
                 membername = member.get("name")
                 if membername in self.vector:
-                    value = member.text
+                    value = member.text.strip()
                     if value == "On":
                         self.data[membername] = "On"
                     elif value == "Off":
@@ -117,7 +117,7 @@ class newNumberVector(newVector):
             if member.tag == "oneNumber":
                 membername = member.get("name")
                 if membername in self.vector:
-                    self.data[membername] = member.text
+                    self.data[membername] = member.text.strip()
                 else:
                     raise EventException
             else:
@@ -444,7 +444,7 @@ class setSwitchVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException
-                value = member.text
+                value = member.text.strip()
                 if value == "On":
                     self.data[membername] = "On"
                 elif value == "Off":
@@ -493,7 +493,7 @@ class setNumberVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException
-                self.data[membername] = member.text
+                self.data[membername] = member.text.strip()
             else:
                 raise EventException
         if not self.data:
@@ -511,7 +511,7 @@ class setLightVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException
-                value = member.text
+                value = member.text.strip()
                 if not value in ('Idle','Ok','Busy','Alert'):
                     raise EventException
                 self.data[membername] = value

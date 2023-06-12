@@ -84,7 +84,6 @@ class RX:
             await asyncio.sleep(0)
             # get blocks of data from stdin
             data = await anext(data_in)
-            #sys.stderr.write(data.decode("ascii"))
             if not data:
                 continue
             if not message:
@@ -112,7 +111,6 @@ class RX:
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
                     except Exception as e:
-                        sys.stderr.write(e)
                         message = b''
                         messagetagnumber = None
                         continue
@@ -131,7 +129,6 @@ class RX:
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
                 except Exception as e:
-                    sys.stderr.write(e)
                     message = b''
                     messagetagnumber = None
                     continue
@@ -173,7 +170,7 @@ class STDIN_RX(RX):
 # useful test strings
 # <getProperties version="1.7" />
 # <newNumberVector device="Thermostat" name="targetvector"><oneNumber name="target">40</oneNumber></newNumberVector>
-# sys.stderr.write((binarydata+b'\n').decode("ascii"))
+# sys.stderr.write((binarydata+b'\n').decode("ascii"))   - note, the + b'\n' is necessary to send this text.
 # telnet localhost 7624
 
 
