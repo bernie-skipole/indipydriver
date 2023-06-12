@@ -96,12 +96,13 @@ class IPyDriver(collections.UserDict):
         self.snoopque = asyncio.Queue(4)
         # data for each device is passed to each device dataque
 
-        # set an object for communicating, as default this is stdin and stdout
-        self.comms = STDINOUT()
+        # An object for communicating can be set, if not set, then
+        # self.comms = STDINOUT() will be set in the asyncrun call
+        self.comms = None
 
     def listen(self, host="localhost", port=7624):
-        "If called, overrides default STDINOUT and listens on the given host/port"
-        if not isinstance(self.comms, STDINOUT):
+        "If called, listens on the given host/port"
+        if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(host, port)
 
@@ -276,6 +277,10 @@ class IPyDriver(collections.UserDict):
 
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
+        # set an object for communicating, as default this is stdin and stdout
+        if self.comms is None:
+            self.comms = STDINOUT()
+
         device_handlers = []
         property_handlers = []
         for device in self.devices.values():
