@@ -52,3 +52,10 @@ asyncio.run(driver.asyncrun())
 The driver can transmit/receive either by stdin/stdout, or by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects. If this is the only driver on the network, then the 'indiserver' (debian package indi-bin) software - which connects multiple drivers to a port - is not needed.
 
 An INDI web client is available on Pypi as project indiredis, and can connect to port 7624, and display the instrument controls.
+
+Issues
+^^^^^^
+
+Using stdin/stdout has required some linux/unix specific commands, which will probably not work on Windows. However setting the driver to listen on a port should work on Windows, but is untested. (I don't have a Windows machine.)
+
+Transmitting and receiving BLOBS is untested in the early releases - any passing of large binary objects to a client should use some other method.
