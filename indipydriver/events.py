@@ -1,4 +1,5 @@
 
+import sys
 
 from datetime import datetime
 
@@ -169,6 +170,9 @@ class SnoopEvent:
         timestamp_string = root.get("timestamp")
         if timestamp_string:
             try:
+                if '.' in timestamp_string:
+                    # remove fractional part, not supported by datetime.fromisoformat
+                    timestamp_string, remainder = timestamp_string.rsplit('.', maxsplit=1)
                 self.timestamp = datetime.fromisoformat(timestamp_string)
             except:
                 raise EventException
