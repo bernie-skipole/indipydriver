@@ -56,11 +56,9 @@ class STDOUT_TX:
             sys.stdout.buffer.flush()
             writerque.task_done()
 
-class RX:
+class STDIN_RX:
     """An object that receives data, parses it to ElementTree elements
-       and passes it to the driver by appending it to the driver's readerque
-
-       This is a parent class to receiver objects, which overwrite the datainput method"""
+       and passes it to the driver by appending it to the driver's readerque"""
 
     async def run_rx(self, readerque):
         "pass data to readerque"
@@ -138,21 +136,9 @@ class RX:
                 message = b''
                 messagetagnumber = None
 
-
     async def datainput(self):
-        "Generator producing binary string of data, override in child subclass"
-        while True:
-            await asyncio.sleep(0)
-            yield b""
-
-
-class STDIN_RX(RX):
-    """Produces xml.etree.ElementTree data from stdin, this is
-       used by STDINOUT as one half of the communications path.
-       This overwrites the datainput method of the RX parent class """
-
-    async def datainput(self):
-        "Generator producing binary string of data from stdin"
+        """Generator producing binary string of data from stdin
+           this yields blocks of data whenever a ">" character is received."""
         data = b""
         while True:
             await asyncio.sleep(0)
@@ -175,10 +161,11 @@ class STDIN_RX(RX):
 
 
 class STDINOUT():
-    "An instance of this class is used by the driver to implement communications via stdin and stdout"
+    """If indipydriver.comms is set to an instance of this class it is
+       used to implement communications via stdin and stdout"""
 
-    async def run(self, readerque, writerque):
-
+    async def __call__(self, readerque, writerque):
+        "Called from indipydriver.asyncrun() to run the communications"
         # Set stdin to non-blocking mode
         flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -188,8 +175,7 @@ class STDINOUT():
 
         await asyncio.gather(rx.run_rx(readerque),
                              tx.run_tx(writerque)
-                             )   # run communications
-
+                             )
 
 class Port_TX():
     "An object that transmits data on a port, used by Portcomms as one half of the communications path"
@@ -209,10 +195,10 @@ class Port_TX():
             writerque.task_done()
 
 
-class Port_RX(RX):
+class Port_RX(STDIN_RX):
     """Produces xml.etree.ElementTree data from data received on the port,
        this is used by Portcomms as one half of the communications path.
-       This overwrites the datainput method of the RX parent class """
+       This overwrites the datainput method of the STDIN_RX parent class."""
 
     def __init__(self, reader):
         self.reader = reader
@@ -242,13 +228,15 @@ class Port_RX(RX):
 
 
 class Portcomms():
-    "An instance of this class is used by the driver to implement communications via a port"
+    """If indipydriver.comms is set to an instance of this class it is
+       used to implement communications via a port"""
 
     def __init__(self, host="localhost", port=7624):
         self.host = host
         self.port = port
 
-    async def run(self, readerque, writerque):
+    async def __call__(self, readerque, writerque):
+        "Called from indipydriver.asyncrun() to run the communications"
         self.readerque = readerque
         self.writerque = writerque
         server = await asyncio.start_server(self.handle_data, self.host, self.port)

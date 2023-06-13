@@ -291,7 +291,7 @@ class IPyDriver(collections.UserDict):
                 # so it can call eventaction and have access to writerque
                 pv.driver = self
 
-        await asyncio.gather(self.comms.run(self.readerque, self.writerque),   # run communications
+        await asyncio.gather(self.comms(self.readerque, self.writerque),   # run communications
                              self.hardware(),        # task to operate device hardware, and transmit updates
                              self._read_readerque(), # task to handle received xml data
                              self._snoophandler(),   # task to handle incoming snoop data
