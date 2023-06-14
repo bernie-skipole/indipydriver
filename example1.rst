@@ -207,3 +207,4 @@ The driver asyncrun() method gathers several tasks to receive, parse and transmi
 the INDI protocol, including the hardware coroutine which uses your objects to control
 your hardware.
 
+shutil.copyfileobj(fsrc, fdst[, length])
