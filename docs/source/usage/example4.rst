@@ -1,32 +1,24 @@
-Example2
+Example4
 ========
 
-This example simulates a driver which snoops on the thermostat of the first example, and if the temperature becomes too hot, it opens a window, and closes it when the temperature drops.
+A final example builds on the last, but adds a switch to either leave the window on Auto (temperature controlled) or sets the window to open or closed.
 
-This could be achieved by adding a new device to the thermostat driver, in which case snooping would not be required, however to illustrate the full functionality this example is a separate driver, with both this, and the thermostat driver, connected to indiserver.
-
-To run the thermostat with indiserver, it would need a shebang line adding, the script set as executable, and the 'listen' method removing so it will communicate by stdin and stdout.
-
-The indiserver program is run with the driver names as arguments, and executes them, communicating via stdin/stdout - so this driver script will need to be executable::
+This consists of three switches in a vector - with a OneOfMany rule, so only one switch can be active::
 
 
     #!/usr/bin/env python3
-
-    # indiserver 'runs' executable drivers, so the above shebang, together with giving this
-    # script executable permissions ensures the driver can be run.
 
     import asyncio
 
     from indipydriver import (IPyDriver, Device,
                               LightVector, LightMember,
                               TextVector, TextMember,
+                              SwitchVector, SwitchMember, newSwitchVector,
                               getProperties, setNumberVector
                              )
 
+    # Note that further Switch.... items have been imported.
 
-    # Other vectors, members and events are available, this example only imports those used.
-
-    # In this example the hardware control is put in a class.
 
     class WindowControl:
         "This is a simulation containing variables only"
@@ -35,14 +27,42 @@ The indiserver program is run with the driver names as arguments, and executes t
             "Set start up values"
             self.window = "Closed"
             self.updated = False
+            self.auto = True
 
         def set_window(self, temperature):
             "a real driver would set hardware control here"
             self.updated = True
-            if temperature > 30:
-                self.window = "Open"
-            if temperature < 25:
-                self.window = "Closed"
+            if self.auto:
+                if temperature > 30:
+                    self.window = "Open"
+                if temperature < 25:
+                    self.window = "Closed"
+
+        @property
+        def switch_auto(self):
+            "Return switch status"
+            if self.auto:
+                return "On"
+            else:
+                return "Off"
+
+        @property
+        def switch_open(self):
+            "Return switch status"
+            if self.auto:
+                return "Off"
+            if self.window == "Open":
+                return "On"
+            return "Off"
+
+        @property
+        def switch_close(self):
+            "Return switch status"
+            if self.auto:
+                return "Off"
+            if self.window == "Closed":
+                return "On"
+            return "Off"
 
 
     class WindowDriver(IPyDriver):
@@ -51,10 +71,13 @@ The indiserver program is run with the driver names as arguments, and executes t
 
         async def clientevent(self, event):
             """On receiving data from the client, this is called,
-               Only a 'getProperties' is expected."""
+               If a newSwitchVector is received, delegate the
+               action to the Window device to handle it.."""
             match event:
                 case getProperties():
                     await event.vector.send_defVector()
+                case newSwitchVector(devicename="Window"):
+                    await self['Window'].devclientevent(event)
 
         async def hardware(self):
             """Send an initial getProperties to snoop on Thermostat"""
@@ -75,11 +98,51 @@ The indiserver program is run with the driver names as arguments, and executes t
 
         """Device is subclassed here"""
 
+        async def devclientevent(self, *args, **kwargs):
+            """Accept newSwitchVector to set window controls
+               to either auto, open or close"""
+            control =  self.devicedata["control"]
+            statusvector = self["windowstatus"]
+            match event:
+                case newSwitchVector(devicename="Window", vectorname="windowswitches"):
+
+                    if "auto" in event:
+                        if event["auto"] == "On":
+                            control.auto = True
+                        elif event["auto"] == "Off":
+                            control.auto = False
+                    if not control.auto:
+                        # not on auto, so act on open or close commands
+                        if "open" in event:
+                            if event["open"] == "On":
+                                control.window = "Open"
+                            elif event["open"] == "Off":
+                                control.window = "Closed"
+                        if "close" in event:
+                            if event["close"] == "Off":
+                                control.window = "Open"
+                            elif event["close"] == "On":
+                                control.window = "Closed"
+
+                    # set any changes into the windowswitches vector members
+                    event.vector["auto"] = control.switch_auto
+                    event.vector["open"] = control.switch_open
+                    event.vector["close"] = control.switch_close
+
+                    # sending 'Ok' informs the client that the value has been received
+                    event.vector.state = 'Ok'
+                    await event.vector.send_setVector()
+
+                    # and send text of window position to the client
+                    statusvector["status"] = control.window
+                    await statusvector.send_setVector(allvalues=False)
+
+
+
         async def devhardware(self, *args, **kwargs):
             """Check that temperature is being received, if not, transmit a getProperties
                and also send an alarm to the client"""
-            # Every minute, check an updated flag from the control object, which is stored
-            # in dictionary attribute self.devicedata
+            # Every minute, check an updated flag from the control object
             control =  self.devicedata["control"]
             alarmvector = self["windowalarm"]
             while True:
@@ -87,16 +150,15 @@ The indiserver program is run with the driver names as arguments, and executes t
                 await asyncio.sleep(60)
                 if not control.updated:
                     # no data received in the last minute, re-send a getProperties,
-                    # in case the thermostat was disconnected, and has hopefully restarted
                     await self.driver.send_getProperties(devicename="Thermostat",
                                                          vectorname="temperaturevector")
                     # and send an alarm to the client
                     alarmvector["alarm"] = "Alert"
                     await alarmvector.send_setVector()
 
+
         async def devsnoopevent(self, event, *args, **kwargs):
             """Open or close the window depending on temperature received from snooped device"""
-            # control is the 'hardware' object which has methods to operate the window
             control =  self.devicedata["control"]
             alarmvector = self["windowalarm"]
             statusvector = self["windowstatus"]
@@ -111,7 +173,8 @@ The indiserver program is run with the driver names as arguments, and executes t
                             # ignore an incoming invalid number
                             pass
                         else:
-                            # open or close the widow
+                            # open or close the widow, this only takes action
+                            # if control.auto is True
                             control.set_window(temperature)
                             # send window status light to the client
                             alarmvector["alarm"] = "Ok"
@@ -127,9 +190,7 @@ The indiserver program is run with the driver names as arguments, and executes t
         # create hardware object
         windowcontrol = WindowControl()
 
-        # create Light member
         alarm = LightMember(name="alarm", label="Reading thermostat", membervalue="Idle")
-        # set this member into a vector
         windowalarm =  LightVector( name="windowalarm",
                                     label="Thermostat Status",
                                     group="Values",
@@ -144,9 +205,25 @@ The indiserver program is run with the driver names as arguments, and executes t
                                     state="Ok",
                                     textmembers=[status] )
 
+        # create switch members and vector
+
+        automember = SwitchMember(name="auto", label="Automatic", membervalue=windowcontrol.switch_auto)
+        openmember = SwitchMember(name="open", label="Open", membervalue=windowcontrol.switch_open)
+        closemember = SwitchMember(name="close", label="Close", membervalue=windowcontrol.switch_close)
+        windowswitches = SwitchVector(  name="windowswitches",
+                                        label="Window Control",
+                                        group="Control",
+                                        perm="rw",
+                                        rule = "OneOfMany",
+                                        state="Ok",
+                                        switchmembers=[automember, openmember, closemember] )
+
+
         # create a WindowDevice (inherited from Device) with these vectors
-        # and also containing the windowcontrol, so it can call on its methods.
-        window = WindowDevice( devicename="Window", properties=[windowalarm, windowstatus], control=windowcontrol)
+        # and also containing the windowcontrol object, so it can call on its methods.
+        window = WindowDevice( devicename="Window",
+                               properties=[windowalarm, windowstatus, windowswitches],
+                               control=windowcontrol )
 
         # the windowcontrol object is placed into dictionary window.devicedata with key 'control'
 

@@ -2,8 +2,8 @@ Example1
 ========
 
 Classes introduced here are described in further detail later
-in this documentation, but initially view the following example.
- 
+but initially view the following example.
+
 An example driver - a simulated thermostat and heater reports a
 temperature maintained at 15C::
 
@@ -206,5 +206,3 @@ Finally::
 The driver asyncrun() method gathers several tasks to receive, parse and transmit
 the INDI protocol, including the hardware coroutine which uses your objects to control
 your hardware.
-
-shutil.copyfileobj(fsrc, fdst[, length])

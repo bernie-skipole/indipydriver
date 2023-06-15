@@ -43,14 +43,3 @@ The driver can transmit/receive either by stdin/stdout, or by a port, typically 
 An INDI web client is available on Pypi as project indiredis, and can connect to port 7624, and display the instrument controls.
 
 Documentation at https://indipydriver.readthedocs.io
-
-
-## Project status
-
-Functionality has been completed.
-
-Documentation done.
-
-To Do:
-
-Testing - Test functionality and compatibility with indiserver and other indi clients.
