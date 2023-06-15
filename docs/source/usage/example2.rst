@@ -1,160 +1,217 @@
 Example2
 ========
 
-This example simulates a driver which snoops on the thermostat of the first example, and if the temperature becomes too hot, it opens a window, and closes it when the temperature drops.
-
-This could be achieved by adding a new device to the thermostat driver, in which case snooping would not be required, however to illustrate the full functionality, this example is a separate driver, connected to indiserver, and communicating on stdin and stdout::
-
-
-    #!/usr/bin/env python3
-
-    # indiserver 'runs' executable drivers, so the above shebang, together with giving this
-    # script executable permissions ensures the driver can be run.
+An example driver - controlling a simulated thermostat is shown::
 
     import asyncio
 
     from indipydriver import (IPyDriver, Device,
-                              LightVector, LightMember,
-                              TextVector, TextMember,
-                              getProperties, setNumberVector
+                              NumberVector, NumberMember,
+                              getProperties, newNumberVector
                              )
 
 
     # Other vectors, members and events are available, this example only imports those used.
 
-    # In this example the hardware control is put in a class.
+    # Simulate a heater, temperature sensor, and a target temperature
 
-    class WindowControl:
+    class ThermalControl:
         "This is a simulation containing variables only"
 
         def __init__(self):
             "Set start up values"
-            self.window = "Closed"
-            self.updated = False
+            self.temperature = 20
+            self.target = 15
+            self.heater = "On"
 
-        def set_window(self, temperature):
-            "a real driver would set hardware control here"
-            self.updated = True
-            if temperature > 30:
-                self.window = "Open"
-            if temperature < 25:
-                self.window = "Closed"
+        # Numbers need to be explicitly set in the indi protocol
+        # so the instrument needs to give a string version of numbers
+
+        @property
+        def stringtemperature(self):
+            "Gives temperature as a string to two decimal places"
+            return '{:.2f}'.format(self.temperature)
+
+        @property
+        def stringtarget(self):
+            "Gives target as a string to two decimal places"
+            return '{:.2f}'.format(self.target)
+
+        def control(self):
+            """This simulates temperature increasing/decreasing, and
+               turns on/off a heater if moving too far from the target temperature
+               Should be called at regular intervals"""
+
+            if self.heater == "On":
+                # increasing temperature if the heater is on
+                self.temperature += 0.2
+            else:
+                # decreasing temperature if the heater is off
+                self.temperature -= 0.2
+
+            if self.temperature > self.target+0.5:
+                # too hot
+                self.heater = "Off"
+
+            if self.temperature < self.target-0.5:
+                # too cold
+                self.heater = "On"
+
+        async def poll_thermostat(self):
+            "poll thermostat every second"
+            while True:
+                await asyncio.sleep(1)
+                # the control function turns on and off the heater to keep
+                # the temperature near to the target.
+                self.control()
 
 
-    class WindowDriver(IPyDriver):
 
-        """IPyDriver is subclassed here"""
+    class ThermoDriver(IPyDriver):
+
+        """IPyDriver is subclassed here, with two methods created to handle incoming events
+           and to control and monitor the instrument hardware"""
 
         async def clientevent(self, event):
-            """On receiving data from the client, this is called,
-               Only a 'getProperties' is expected."""
+            """On receiving data, this is called, and should handle any necessary actions
+               The event object has property 'vector' which is the propertyvector being
+               updated by the client.
+               Different types of event could be produced, in this case only two are expected,
+               getProperties, in which the client is asking for driver information, and
+               newNumberVector, in which case the client is setting a target temperature.
+               """
+            await asyncio.sleep(0)
+            # note: using match - case is ideal for this situation,
+            # but requires Python v3.10 or later
+
+            # The hardware control object is stored in the driverdata dictionary
+            control = self.driverdata["control"]
+
             match event:
                 case getProperties():
+                    # this event is raised for each vector when a client wants to learn about
+                    # the device and its properties. The event has attribute 'vector' which is
+                    # the vector object being requested. This event should always be handled
+                    # as all clients normally start by requesting driver properties.
+                    # vector.send_defVector() should be called, which sends the vector
+                    # definition to the client
                     await event.vector.send_defVector()
-
-        async def hardware(self):
-            """Send an initial getProperties to snoop on Thermostat"""
-            await self.send_getProperties(devicename="Thermostat",
-                                          vectorname="temperaturevector")
-            # delegate hardware control to the Window 'devhardware' method
-            await self['Window'].devhardware()
-
-        async def snoopevent(self, event):
-            """On receiving an event from the Thermostat, delegate the
-               action to the Window device to handle it."""
-            match event:
-                case setNumberVector(devicename="Thermostat"):
-                    await self['Window'].devsnoopevent(event)
-
-
-    class WindowDevice(Device):
-
-        """Device is subclassed here"""
-
-        async def devhardware(self, *args, **kwargs):
-            """Check that temperature is being received, if not, transmit a getProperties
-               and also send an alarm to the client"""
-            # Every minute, check an updated flag from the control object, which is stored
-            # in dictionary attribute self.devicedata
-            control =  self.devicedata["control"]
-            alarmvector = self["windowalarm"]
-            while True:
-                control.updated = False
-                await asyncio.sleep(60)
-                if not control.updated:
-                    # no data received in the last minute, re-send a getProperties,
-                    # in case the thermostat was disconnected, and has hopefully restarted
-                    await self.driver.send_getProperties(devicename="Thermostat",
-                                                         vectorname="temperaturevector")
-                    # and send an alarm to the client
-                    alarmvector["alarm"] = "Alert"
-                    await alarmvector.send_setVector()
-
-        async def devsnoopevent(self, event, *args, **kwargs):
-            """Open or close the window depending on temperature received from snooped device"""
-            # control is the 'hardware' object which has methods to operate the window
-            control =  self.devicedata["control"]
-            alarmvector = self["windowalarm"]
-            statusvector = self["windowstatus"]
-            match event:
-                case setNumberVector(devicename="Thermostat", vectorname="temperaturevector"):
-                    # A setNumberVector has been sent from the thermostat to the client
-                    # and this driver has received a copy, and so can read the temperature
-                    if "temperature" in event:
+                case newNumberVector(devicename='Thermostat', vectorname='targetvector'):
+                    # this event maps the member name to value as a number string
+                    # So set the received value as the thermostat target
+                    # and also set it into the vector, and send it back to the client
+                    # so this new target can be displayed by the client
+                    if 'target' in event:
+                        newtarget = event['target']
+                        # The self.indi_number_to_float method converts the received string,
+                        # which may be in a number of formats to a Python float value. This
+                        # is set into the ThermalControl object
                         try:
-                            temperature = self.driver.indi_number_to_float(event["temperature"])
+                            target = self.indi_number_to_float(newtarget)
                         except TypeError:
                             # ignore an incoming invalid number
                             pass
                         else:
-                            # open or close the widow
-                            control.set_window(temperature)
-                            # send window status light to the client
-                            alarmvector["alarm"] = "Ok"
-                            await alarmvector.send_setVector(allvalues=False)
-                            # and send text of window position to the client
-                            statusvector["status"] = control.window
-                            await statusvector.send_setVector(allvalues=False)
+                            # set this new target into the ThermalControl object
+                            control.target = target
+                            # and set the new target value into the vector member, then
+                            # transmits the vector back to client, with vector state ok
+                            event.vector['target'] = control.stringtarget
+                            # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
+                            # sending 'Ok' informs the client that the value has been received
+                            event.vector.state = 'Ok'
+                            await event.vector.send_setVector()
+
+        async def hardware(self):
+            "Run the hardware"
+            # run the thermostat polling task
+            control = self.driverdata["control"]
+            poll_task = asyncio.create_task(control.poll_thermostat())
+
+            # report temperature every ten seconds
+            device = self['Thermostat']
+            vector = device['temperaturevector']
+            while True:
+                await asyncio.sleep(10)
+                # get the latest temperature, and set it into the vector
+                vector['temperature'] = control.stringtemperature
+                await vector.send_setVector(timeout='10')
+                # the 'timeout' argument informs the client that this
+                # value is only valid for ten seconds
 
 
     def make_driver():
         "Creates the driver"
 
         # create hardware object
-        windowcontrol = WindowControl()
+        thermalcontrol = ThermalControl()
 
-        # create Light member
-        alarm = LightMember(name="alarm", label="Reading thermostat", membervalue="Idle")
-        # set this member into a vector
-        windowalarm =  LightVector( name="windowalarm",
-                                    label="Thermostat Status",
-                                    group="Values",
-                                    state="Ok",
-                                    lightmembers=[alarm] )
+        # create a vector with one number 'temperature' as its member
+        # Note: vector members require numbers to be given as strings
+        temperature = NumberMember(name="temperature", format='%3.1f', min='-50', max='99',
+                                   membervalue=thermalcontrol.stringtemperature)
+        # set this member into a vector, this is read only
+        temperaturevector = NumberVector( name="temperaturevector",
+                                          label="Temperature",
+                                          group="Values",
+                                          perm="ro",
+                                          state="Ok",
+                                          numbermembers=[temperature] )
 
-        status = TextMember(name="status", label="Window position", membervalue=windowcontrol.window)
-        windowstatus = TextVector(  name="windowstatus",
-                                    label="Window Status",
-                                    group="Values",
-                                    perm="ro",
-                                    state="Ok",
-                                    textmembers=[status] )
+        # create a vector with one number 'target' as its member
+        target = NumberMember(name="target", format='%3.1f', min='-50', max='99',
+                              membervalue=thermalcontrol.stringtarget)
+        # set this member into a vector, this is read-write
+        targetvector = NumberVector( name="targetvector",
+                                     label="Target",
+                                     group="Values",
+                                     perm="rw",
+                                     state="Ok",
+                                     numbermembers=[target] )
 
-        # create a WindowDevice (inherited from Device) with these vectors
-        # and also containing the windowcontrol, so it can call on its methods.
-        window = WindowDevice( devicename="Window", properties=[windowalarm, windowstatus], control=windowcontrol)
+        # create a device with the above two vectors as its properties
+        thermostat = Device( devicename="Thermostat",
+                             properties=[temperaturevector, targetvector] )
 
-        # the control object is placed into dictionary window.devicedata
-
-        # Create the WindowDriver (inherited from IPyDriver) containing this device
-        windowdriver = WindowDriver(devices=[window])
+        # Create the Driver, containing this device, and the hardware control object
+        driver = ThermoDriver(devices=[thermostat],  control=thermalcontrol)
 
         # and return the driver
-        return windowdriver
+        return driver
 
 
     if __name__ == "__main__":
 
         driver = make_driver()
 
+        # In this example, set the driver to listen on a host/port
+        # rather than stdin and stdout.
+        # If host and port are not specified in this method call,
+        # defaults of 'localhost' and 7624 are used
+        driver.listen()
+
+        # If the above line is not included, the driver will
+        # communicate via stdin and stdout.
+
+        # and finally the driver asyncrun() method is called which runs the driver
         asyncio.run(driver.asyncrun())
+
+        # to see this working, in another terminal try "telnet localhost 7624" and
+        # you should see the xml string of the temperature being reported every ten seconds.
+
+        # Copy and paste the following xml into the terminal:
+
+        # <getProperties version="1.7" />
+
+        # This simulates a client asking for the driver properties, their definitions should
+        # be returned by the driver.
+        # To set a new target temperature, paste the following:
+
+        # <newNumberVector device="Thermostat" name="targetvector"><oneNumber name="target">40</oneNumber></newNumberVector>
+
+        # this simulates a client setting a target temperature of 40 degrees.
+        # Every ten seconds you should see xml from the driver showing the
+        # temperature changing towards the target.
+
+
+The above sets two vectors into a single device, and each vector only has one member. The 'vector' is the unit of data transmitted, so if a vector has multiple members, this ensures all those member values are updated together.
