@@ -98,7 +98,7 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
 
         """Device is subclassed here"""
 
-        async def devclientevent(self, *args, **kwargs):
+        async def devclientevent(self, event, *args, **kwargs):
             """Accept newSwitchVector to set window controls
                to either auto, open or close"""
             control =  self.devicedata["control"]

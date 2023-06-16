@@ -130,7 +130,7 @@ temperature maintained at 15C::
         # Note: numbers must be given as strings
         temperature = NumberMember(name="temperature", format='%3.1f', min='-50', max='99',
                                    membervalue=thermalcontrol.stringtemperature)
-        # Create a NumbeVector instance, containing the member.
+        # Create a NumberVector instance, containing the member.
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",
                                           group="Values",

@@ -264,8 +264,9 @@ class IPyDriver(collections.UserDict):
         """Override this. On receiving data, this is called, and should
            handle any necessary actions.
            event is an object describing the event, with attributes
-           devicename, vectorname, vector,
-           where vector is the properties vector causing the event."""
+           devicename, vectorname, vector, root
+           where vector is the properties vector the event refers to, and
+           root is an xml.etree.ElementTree object of the received xml"""
         pass
 
     async def snoopevent(self, event):
