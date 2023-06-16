@@ -20,7 +20,7 @@ Typically you would start with::
 
 As this is a co-routine, starting with "await asyncio.sleep(0)" gives other tasks a chance to run.
 
-In all cases you will need to handle the "getProperties()" event - in which the client is requesting information.  All events have a 'vector' attribute - which is the vector object the event is targetted at, so normally, you would call the vector send_defVector() method to respond to the client with the vector definition.
+In all cases you will need to handle the "getProperties()" event - in which the client is requesting information.  All events have a 'vector' attribute - which is the vector object the event refers to, so normally, you would call the event.vector.send_defVector() method to respond to the client with the vector definition.
 
 The client event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
 
@@ -32,7 +32,19 @@ Where vector is the vector object, and root is the received xml parsed as an xml
 
 .. autoclass:: indipydriver.enableBLOB
 
-The INDI specification describes enableBLOB as : Command to control whether setBLOBs should be sent to this channel from a given Device. They can be turned off completely by setting Never (the default), allowed to be intermixed with other INDI commands by setting Also or made the only command by setting Only.
+The INDI specification describes enableBLOB when sent from a client::
+
+    Command to control whether setBLOBs should be sent to this channel from a
+    given Device. They can be turned off completely by setting Never (the default),
+    allowed to be intermixed with other INDI commands by setting Also or made the
+    only command by setting Only.
+
+    This behavior is only to be implemented in intermediate INDI server processes;
+    individual Device drivers shall disregard enableBLOB and send all elements at will.
+
+
+Your driver would normally ignore the enableBLOB event, however it is still presented as your application may wish to know about it, to log it for example.
+
 
 newVectors
 ^^^^^^^^^^
