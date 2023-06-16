@@ -11,7 +11,7 @@ temperature maintained at 15C::
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
-                              getProperties, newNumberVector
+                              getProperties
                              )
 
 
