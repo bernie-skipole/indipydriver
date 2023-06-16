@@ -6,11 +6,9 @@ INDI - Instrument Neutral Distributed Interface.
 
 See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
-Typically the driver created with this package would control an instrument, or interfaces, such as GPIO pins on the computer itself.
+Typically the driver created with this package interfaces between your code which controls an instrument, or GPIO pins on the computer itself, and the INDI protocol which communicates to an INDI client. The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.  The client can be general purpose - communicating with any INDI driver, and taking the format of switches, numbers etc., from the protocol.
 
-The driver encapsulates data in the INDI protocol, which communicates to an INDI client. The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.
-
-INDI is normally used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control providing drivers are available.
+INDI is normally used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control providing drivers are available. This package is aimed at making drivers easy to write.
 
 The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
 
