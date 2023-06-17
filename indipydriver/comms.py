@@ -234,6 +234,7 @@ class Portcomms():
     def __init__(self, host="localhost", port=7624):
         self.host = host
         self.port = port
+        self.connected = False
 
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
@@ -244,12 +245,20 @@ class Portcomms():
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
+        if self.connected:
+            # already connected, can only handle one connection
+            writer.close()
+            await writer.wait_closed()
+            return
+        self.connected = True
         rx = Port_RX(reader)
         tx = Port_TX(writer)
-        txtask = asyncio.create_task(tx.run_tx(self.writerque))
-        rxtask = asyncio.create_task(rx.run_rx(self.readerque))
         try:
-            await asyncio.gather(txtask, rxtask)
-        except Exception:
+            txtask = asyncio.create_task(tx.run_tx(self.writerque))
+            rxtask = asyncio.create_task(rx.run_rx(self.readerque))
+            await txtask
+            await rxtask
+        except ConnectionResetError:
+            self.connected = False
             txtask.cancel()
             rxtask.cancel()
