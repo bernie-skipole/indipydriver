@@ -195,6 +195,7 @@ class Port_TX():
             writerque.task_done()
 
 
+
 class Port_RX(STDIN_RX):
     """Produces xml.etree.ElementTree data from data received on the port,
        this is used by Portcomms as one half of the communications path.
@@ -241,7 +242,11 @@ class Portcomms():
         self.readerque = readerque
         self.writerque = writerque
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        await server.serve_forever()
+        try:
+            await server.serve_forever()
+        except KeyboardInterrupt as e:
+            server.close()
+            raise e
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
