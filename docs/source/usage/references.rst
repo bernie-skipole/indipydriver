@@ -7,6 +7,10 @@ indipydriver development site:
 
 https://github.com/bernie-skipole/indipydriver
 
+The package can be installed from:
+
+https://pypi.org/project/indipydriver
+
 The indiredis web client development site:
 
 https://github.com/bernie-skipole/indi

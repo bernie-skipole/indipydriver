@@ -17,6 +17,10 @@ INDI is normally used with astronomical instruments, but is a general purpose pr
 
 The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
 
+The package can be installed from:
+
+https://pypi.org/project/indipydriver
+
 Typically you would create a subclass of IPyDriver.
 
 The driver has two methods which should be overwritten.
