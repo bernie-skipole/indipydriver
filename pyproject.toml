@@ -1,0 +1,18 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "indipydriver"
+authors = [{name = "Bernard Czenkusz", email = "bernie@skipole.co.uk"}]
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License", "Operating System :: POSIX :: Linux","Topic :: Scientific/Engineering :: Astronomy", "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator"]
+version = "0.0.2"
+description="Pure python package, with no dependencies, providing a set of classes which can be used to create an INDI driver."
+readme = "README.md"
+requires-python = ">=3.10"
+keywords=['indi', 'driver', 'astronomy', 'instrument']
+
+[project.urls]
+Documentation = "htthttps://indipydriver.readthedocs.io"
+Source = "https://github.com/bernie-skipole/indipydriver"
