@@ -45,7 +45,7 @@ You would then create vector objects, being instances of SwitchVector, LightVect
 
 You would then create one or more 'Device' instances, containing the vector objects.
 
-And finally you would create an instance of your IPyDriver subclass, which in turn is set with the Devices.
+And then you would create an instance of your IPyDriver subclass, which in turn is set with the Devices.
 
 Finally you would run the driver asyncrun() method which runs the driver, typically called using:
 

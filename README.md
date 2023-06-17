@@ -24,20 +24,12 @@ async def hardware(self)
 
 This should be a contuously running coroutine which you can use to poll your instruments, and if required send updates to the client.
 
-Having created your IPyDriver subclass, you would create member objects, being instances of SwitchMember, LightMember, TextMember, BLOBMember or NumberMember which provide attribute values to control your instrument.
-
-You would then create vector objects, being instances of SwitchVector, LightVector, TextVector, BLOBVector or NumberVector these containing the appropriate member objects.
-
-You would then create one or more 'Device' instances, containing the vector objects.
-
-And finally you would create an instance of your IPyDriver subclass, which in turn is set with the Devices.
-
 Finally you would run the driver asyncrun() method which runs the driver, typically called using:
 
 asyncio.run(driver.asyncrun())
 
 The driver can transmit/receive either by stdin/stdout, or by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects. If this is the only driver on the network, then the 'indiserver' (debian package indi-bin) software - which connects multiple drivers to a port - is not needed.
 
-An INDI web client is available on Pypi as project indiredis, and can connect to port 7624, and display the instrument controls.
-
 Documentation at https://indipydriver.readthedocs.io
+
+Installation from https://pypi.org/project/indipydriver
