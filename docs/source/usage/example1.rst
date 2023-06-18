@@ -1,11 +1,39 @@
 Example1
 ========
 
-Classes introduced here are described in further detail later
-but initially view the following example.
+The following example shows a simulated thermostat and heater which
+maintains a temperature around 15C.
 
-An example driver - a simulated thermostat and heater reports a
-temperature maintained at 15C::
+Initially you would create any objects and functions needed to
+operate your hardware, and these can be inserted into the IPyDriver
+constructor which is::
+
+    IPyDriver(devices, **driverdata)
+
+devices will be a list of devices (instances of the Device class) and driverdata will
+be an attribute dictionary of the objects you have created to operate the instrument.
+
+So in the example below, a class 'ThermalControl' is defined to actually do the
+instrument control, with an instance 'thermalcontrol' created from it.
+
+An instance of the Device class, 'thermostat' is created.
+
+A subclass of IPyDriver is defined with class name ThermoDriver and a driver
+is then be made using::
+
+    driver = ThermoDriver(devices=[thermostat], control=thermalcontrol)
+
+The code in this subclass can access the thermalcontrol object with::
+
+    self.driverdata["control"]
+
+So the code added in the IPyDriver subclass has access to any objects and
+methods required to control and monitor the instrument.
+
+The thermostat device in this example uses a NumberVector, which is a class describing
+and containing one or more NumberMember objects. In this example a NumberMember
+contains the temperature which is reported to the client::
+
 
     import asyncio
 
@@ -14,10 +42,8 @@ temperature maintained at 15C::
                               getProperties
                              )
 
-
     # Other vectors, members and events are available,
     # this example only imports those used.
-
 
     class ThermalControl:
         """This is a simulation containing variables only, normally it
@@ -83,7 +109,6 @@ temperature maintained at 15C::
                is expected, in which the client is asking for driver information.
                """
 
-            await asyncio.sleep(0)
             # note: using match - case is ideal for this situation,
             # but requires Python v3.10 or later
 
@@ -174,7 +199,7 @@ temperature maintained at 15C::
         # temperature being reported every ten seconds.
 
 
-In summary. You create any objects, functions, variables needed to operate your
+In summary. You create any objects or functions needed to operate your
 hardware, and these can be inserted into the IPyDriver constructor.
 
 You would typically create your own child class of IPyDriver, overiding methods:
@@ -204,5 +229,5 @@ Finally::
         asyncio.run(driver.asyncrun())
 
 The driver asyncrun() method gathers several tasks to receive, parse and transmit
-the INDI protocol, including the hardware coroutine which uses your objects to control
-your hardware.
+the INDI protocol, including the hardware coroutine method which uses your
+objects to control your hardware.

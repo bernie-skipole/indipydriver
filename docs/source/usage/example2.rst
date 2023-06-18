@@ -71,7 +71,6 @@ Adding target temperature control set by the client::
                asking for driver information, and newNumberVector, in which case the client
                is setting a target temperature.
                """
-            await asyncio.sleep(0)
 
             # The hardware control object is stored in the driverdata dictionary
             control = self.driverdata["control"]
