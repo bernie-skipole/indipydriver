@@ -72,7 +72,7 @@ def blob_xml_bytes(xmldata):
         if bytescontent == b"":
             continue
         size = oneblob.get("size")
-        if not size:
+        if size == "0":
             oneblob.set("size", str(len(bytescontent)))
         # yield start of oneblob
         start = _makestart(oneblob)

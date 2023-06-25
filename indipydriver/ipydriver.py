@@ -101,7 +101,20 @@ class IPyDriver(collections.UserDict):
         self.comms = None
 
         # a path to a file used for error logging
-        self.errorfile = None
+        self._errorfile = None
+
+
+    @property
+    def errorfile(self):
+        return self._errorfile
+
+    @errorfile.setter
+    def errorfile(self, value):
+        "Opens errorfile to check it is writeable"
+        start = datetime.datetime.utcnow().isoformat(sep='T')[:21] + " Driver status Ok"
+        with open(value, "a") as ef:
+            print(start, file=ef)
+        self._errorfile = value
 
     def listen(self, host="localhost", port=7624):
         "If called, listens on the given host/port"
