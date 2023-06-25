@@ -1,5 +1,5 @@
 
-import collections, datetime
+import collections, datetime, sys
 
 import asyncio
 
@@ -783,6 +783,13 @@ class BLOBVector(PropertyVector):
                 raise TypeError("Members of a BLOBVector must all be BLOBMembers")
             self.data[blob.name] = blob
 
+    def set_blobsize(self, membername, blobsize):
+        "Sets the size attribute in the blob member"
+        member = self.data.get[membername]
+        if not member:
+            return
+        member.blobsize = blobsize
+
     @property
     def perm(self):
         return self._perm
@@ -849,61 +856,10 @@ class BLOBVector(PropertyVector):
             xmldata.set("message", message)
         for blob in self.data.values():
             xmldata.append(blob.defblob())
-            # after a defblob sent, assume new client connection, and set all members as changed
-            # so they will all be included in the first 'send_setVector'
-            blob.changed = True
         await self.driver.writerque.put(xmldata)
 
-    async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
-        """Transmits the vector (setBLOBVector) and members with their values to the client.
-           Typically the vector 'state' should be set, and any changed member value prior to
-           transmission.
-
-           message is any suitable string for the client.
-
-           timestamp should be a datetime.datetime object or None, in which case a
-           datetime.datetime.utcnow() value will be inserted.
-
-           The timeout value should be '0' if not used, or a string value
-           indicating to the client how long this data is valid.
-
-           If allvalues is True, all values are sent.
-
-           If allvalues is False, only values that have changed will be sent, saving bandwidth.
-           If no values have changed, the vector will not be sent, if you need to ensure the
-           vector message, state or time values are sent to the client, then use the more
-           explicit send_setVectorMembers method instead.
-        """
-        if not isinstance(timeout, str):
-            raise ValueError("The given timeout value must be a string object")
-        if not self.device.enable:
-            return
-        if not self.enable:
-            return
-        if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
-            raise TypeError("timestamp must be a datetime.datetime object")
-        xmldata = ET.Element('setBLOBVector')
-        xmldata.set("device", self.devicename)
-        xmldata.set("name", self.name)
-        xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
-        xmldata.set("timeout", timeout)
-        if message:
-            xmldata.set("message", message)
-        # set a flag to test if at least one member is included
-        membersincluded = False
-        for blob in self.data.values():
-            # only send member if its value has changed or if allvalues is True
-            if allvalues or blob.changed:
-                xmldata.append(blob.oneblob())
-                blob.changed = False
-                membersincluded = True
-        if membersincluded:
-            # only send xmldata if a member is included in the vector
-            await self.driver.writerque.put(xmldata)
+    # NOTE: BLOBVectors do not have a send_setVector method
+    #       only the more explicit send_setVectorMembers is available
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
@@ -934,7 +890,13 @@ class BLOBVector(PropertyVector):
         if message:
             xmldata.set("message", message)
         for blob in self.data.values():
-            if blob.name in members:
-                xmldata.append(blob.oneblob())
-                blob.changed = False
+            if (blob.name in members) and (blob.membervalue is not None):
+                try:
+                    xmldata.append(blob.oneblob())
+                except ValueError as ex:
+                    if self.driver.errorfile:
+                        with open(self.driver.errorfile, "a") as ef:
+                            print(ex, file=ef)
+                    else:
+                        print(ex, file=sys.stderr)
         await self.driver.writerque.put(xmldata)

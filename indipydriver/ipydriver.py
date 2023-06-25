@@ -100,6 +100,9 @@ class IPyDriver(collections.UserDict):
         # self.comms = STDINOUT() will be set in the asyncrun call
         self.comms = None
 
+        # a path to a file used for error logging
+        self.errorfile = None
+
     def listen(self, host="localhost", port=7624):
         "If called, listens on the given host/port"
         if not self.comms is None:

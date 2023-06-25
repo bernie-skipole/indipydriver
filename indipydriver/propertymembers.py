@@ -1,13 +1,10 @@
 
-import collections
-
-import asyncio
+import collections, io, asyncio
 
 from datetime import datetime
 
 import xml.etree.ElementTree as ET
 
-from base64 import standard_b64encode
 
 class PropertyMember:
     "Parent class of SwitchMember etc"
@@ -43,6 +40,8 @@ class SwitchMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
+        if not value:
+            raise ValueError(f"The SwitchMember {self.name} value cannot be empty")
         newvalue = self.checkvalue(value, ['On', 'Off'])
         if self._membervalue != newvalue:
             # when a value has changed, set the changed flag
@@ -78,6 +77,8 @@ class LightMember(PropertyMember):
 
     @membervalue.setter
     def membervalue(self, value):
+        if not value:
+            raise ValueError(f"The LightMember {self.name} value cannot be empty")
         newvalue = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
         if self._membervalue != newvalue:
             # when a value has changed, set the changed flag
@@ -177,7 +178,9 @@ class NumberMember(PropertyMember):
     @membervalue.setter
     def membervalue(self, value):
         if not isinstance(value, str):
-            raise ValueError("The given number value must be a string object")
+            raise ValueError("The NumberMember {self.name} value must be a string object")
+        if not value:
+            raise ValueError(f"The NumberMember {self.name} value cannot be empty")
         if self._membervalue != value:
             # when a value has changed, set the changed flag
             self.changed = True
@@ -263,7 +266,7 @@ class NumberMember(PropertyMember):
 
 class BLOBMember(PropertyMember):
     """Contains a 'binary large object' such as an image, the value should be
-       a bytes object.
+       either a bytes object, a file-like object, or a path to a file.
 
        blobsize is the size of the BLOB before any compression, if left at
        zero, the length of the BLOB will be used.
@@ -271,28 +274,27 @@ class BLOBMember(PropertyMember):
        The BLOB format should be a string describing the BLOB, such as .jpeg
     """
 
-    def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=b''):
+    def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=None):
         super().__init__(name, label)
         if not isinstance(blobsize, int):
-            raise ValueError("The given blobsize must be an integer object")
-        if not isinstance(membervalue, bytes):
-            raise ValueError("The given BLOB membervalue must be a bytes object")
+            raise ValueError(f"The BLOBMember {self.name} blobsize must be an integer object")
+        # membervalue can be a byte string, path, string path or file like object
         self._membervalue = membervalue
         self.blobsize = blobsize
         self.blobformat = blobformat
+
 
     @property
     def membervalue(self):
         return self._membervalue
 
+
     @membervalue.setter
     def membervalue(self, value):
-        if not isinstance(value, bytes):
-            raise ValueError("The given BLOB value must be a bytes object")
-        # don't test for equality here since the byte data may be large
-        # just assume setting it implies a change
-        self.changed = True
+        if not value:
+            raise ValueError(f"The BLOBMember {self.name} value cannot be empty")
         self._membervalue = value
+
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""
@@ -301,13 +303,25 @@ class BLOBMember(PropertyMember):
         xmldata.set("label", self.label)
         return xmldata
 
+
     def oneblob(self):
         """Returns xml of a oneBLOB"""
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
-        if not self.blobsize:
-            self.blobsize = len(self._membervalue)
         xmldata.set("size", str(self.blobsize))
         xmldata.set("format", self.blobformat)
-        xmldata.text = standard_b64encode(self._membervalue).decode('ascii')
+        # the value set in the xmldata object should be a file-like object
+        if isinstance(self._membervalue, bytes):
+            xmldata.text = io.BytesIO(self._membervalue)
+        elif hasattr(self._membervalue, "read") and callable(self._membervalue.read):
+            # a file-like object
+            xmldata.text = self._membervalue
+        else:
+            # could be a path to a file
+            try:
+                xmldata.text = open(self._membervalue, "rb")
+            except:
+                raise ValueError(f"The BLOBMember {self.name} value cannot be openned")
+         # old value was
+        # xmldata.text = standard_b64encode(self._membervalue).decode('ascii')
         return xmldata

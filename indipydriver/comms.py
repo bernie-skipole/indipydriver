@@ -7,6 +7,8 @@ import fcntl
 
 from datetime import datetime
 
+from base64 import standard_b64encode
+
 
 # All xml data received from the client, or from snooped devices should be contained in one of the following tags
 TAGS = (b'getProperties',
@@ -40,6 +42,47 @@ _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
 
+def _makestart(element):
+    "Given an xml element, returns a string of its start, including < tag attributes >"
+    attriblist = ["<", element.tag]
+    for key,value in element.attrib.items():
+        attriblist.append(f" {key}=\"{value}\"")
+    attriblist.append(">")
+    return "".join(attriblist)
+
+
+def blob_xml_bytes(xmldata):
+    """A generator yielding blob xml byte strings
+       for a setBLOBVector.
+       reads member files, b64 encodes the data
+       closes the files, and yields the binary
+       string including tags."""
+
+    # yield initial setBLOBVector
+    setblobvector = _makestart(xmldata)
+    yield setblobvector.encode()
+
+    for oneblob in xmldata.iter('oneBLOB'):
+        # get the filepointer
+        fp = oneblob.text
+        # set seek(0) so is read from start of file
+        fp.seek(0)
+        bytescontent = fp.read()
+        fp.close()
+        if bytescontent == b"":
+            continue
+        size = oneblob.get("size")
+        if not size:
+            oneblob.set("size", str(len(bytescontent)))
+        # yield start of oneblob
+        start = _makestart(oneblob)
+        yield start.encode()
+        # yield body, b64 encoded
+        yield standard_b64encode(bytescontent)
+        yield b"</oneBLOB>"
+    yield b"</setBLOBVector>\n"
+
+
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
 
@@ -49,11 +92,20 @@ class STDOUT_TX:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
-            # and send it out on stdout
-            binarydata = ET.tostring(txdata)
-            binarydata += b"\n"
-            sys.stdout.buffer.write(binarydata)
-            sys.stdout.buffer.flush()
+            if (txdata.tag == "setBLOBVector") and len(txdata):
+                # txdata is a setBLOBVector containing blobs
+                # the generator blob_xml_bytes yields bytes
+                for binarydata in blob_xml_bytes(txdata):
+                    # transmit the data
+                    sys.stdout.buffer.write(binarydata)
+                    sys.stdout.buffer.flush()
+                    await asyncio.sleep(0)
+            else:
+                # its straight xml, send it out on stdout
+                binarydata = ET.tostring(txdata)
+                binarydata += b"\n"
+                sys.stdout.buffer.write(binarydata)
+                sys.stdout.buffer.flush()
             writerque.task_done()
 
 class STDIN_RX:
@@ -184,14 +236,24 @@ class Port_TX():
         self.writer = writer
 
     async def run_tx(self, writerque):
-        """gets data from writerque, and transmits it"""
+        """Gets data from writerque, and transmits it out on stdout"""
         while True:
             await asyncio.sleep(0)
+            # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
-            binarydata = ET.tostring(txdata)
-            # Send the next message to the port
-            self.writer.write(binarydata)
-            await self.writer.drain()
+            if txdata.tag == "setBLOBVector" and len(txdata):
+                # txdata is a setBLOBVector containing blobs
+                # the generator blob_xml_bytes yields bytes
+                for binarydata in blob_xml_bytes(txdata):
+                    # Send to the port
+                    self.writer.write(binarydata)
+                    await self.writer.drain()
+            else:
+                # its straight xml, send it out on the port
+                binarydata = ET.tostring(txdata)
+                # Send to the port
+                self.writer.write(binarydata)
+                await self.writer.drain()
             writerque.task_done()
 
 
