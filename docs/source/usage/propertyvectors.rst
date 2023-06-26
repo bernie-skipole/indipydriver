@@ -100,7 +100,9 @@ BLOBVector
 ^^^^^^^^^^
 
 .. autoclass:: indipydriver.BLOBVector
-   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
+   :members: send_delProperty, send_defVector, send_setVectorMembers, set_blobsize
+
+Note that BLOBVectors do not have a send_setVector method, it is considered the more explicit send_setVectorMembers should always be used for BLOB's.
 
 A BLOBVector takes one or more BLOBMember objects.
 

@@ -1,7 +1,7 @@
 Example4
 ========
 
-A final example builds on the last, but adds a switch to either leave the window on Auto (temperature controlled) or sets the window to open or closed.
+This example builds on the last, but adds a switch to either leave the window on Auto (temperature controlled) or sets the window to open or closed.
 
 This consists of three switches in a vector - with a OneOfMany rule, so only one switch can be active::
 
