@@ -150,30 +150,17 @@ A io.BytesIO buffer is the value given to the BLOB member to download::
            and to control and monitor the instrument hardware"""
 
         async def clientevent(self, event):
-            """On receiving data, this is called, and should handle any necessary actions
-               The event object has property 'vector' which is the propertyvector being
-               updated by the client.
-               Different types of event could be produced, in this case only two are expected,
-               getProperties, in which the client is asking for driver information, and
-               newNumberVector, in which case the client is setting a target temperature.
-               """
-            # note: using match - case is ideal for this situation,
-            # but requires Python v3.10 or later
+            """On receiving data, this is called, and should handle any necessary actions."""
 
             # The hardware control object is stored in the driverdata dictionary
             control = self.driverdata["control"]
 
             match event:
                 case getProperties():
-                    # this event is raised for each vector when a client wants to learn about
-                    # the device and its properties. The event has attribute 'vector' which is
-                    # the vector object being requested. This event should always be handled
-                    # as all clients normally start by requesting driver properties.
-                    # vector.send_defVector() should be called, which sends the vector
-                    # definition to the client
                     await event.vector.send_defVector()
 
-                case newNumberVector(devicename='Thermostat', vectorname='targetvector') if 'target' in event:
+                case newNumberVector(devicename='Thermostat',
+                                     vectorname='targetvector') if 'target' in event:
                     newtarget = event['target']
                     try:
                         target = self.indi_number_to_float(newtarget)
@@ -193,7 +180,8 @@ A io.BytesIO buffer is the value given to the BLOB member to download::
                             await statusvector.send_setVector(allvalues=False)
                             await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
 
-                case newSwitchVector(devicename='Thermostat', vectorname='switchvector') if "switchmember" in event:
+                case newSwitchVector(devicename='Thermostat',
+                                     vectorname='switchvector') if "switchmember" in event:
                     if event["switchmember"] == "On":
                         control.enablelogs = True
                     elif event["switchmember"] == "Off":

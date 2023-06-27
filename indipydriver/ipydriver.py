@@ -117,7 +117,8 @@ class IPyDriver(collections.UserDict):
         self._errorfile = value
 
     def listen(self, host="localhost", port=7624):
-        "If called, listens on the given host/port"
+        """If called, listens on the given host and port. Only one connection is accepted,
+           further connection attempts while a client is already connected will be refused."""
         if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(host, port)

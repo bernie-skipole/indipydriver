@@ -61,6 +61,7 @@ The indiserver program is run with the driver names as arguments, and executes t
             await self.send_getProperties(devicename="Thermostat",
                                           vectorname="temperaturevector")
             # delegate hardware control to the Window 'devhardware' method
+            # note self['Window'] is the Window device object,
             await self['Window'].devhardware()
 
         async def snoopevent(self, event):
@@ -101,24 +102,24 @@ The indiserver program is run with the driver names as arguments, and executes t
             alarmvector = self["windowalarm"]
             statusvector = self["windowstatus"]
             match event:
-                case setNumberVector(devicename="Thermostat", vectorname="temperaturevector"):
+                case setNumberVector(devicename="Thermostat",
+                                     vectorname="temperaturevector") if "temperature" in event:
                     # A setNumberVector has been sent from the thermostat to the client
                     # and this driver has received a copy, and so can read the temperature
-                    if "temperature" in event:
-                        try:
-                            temperature = self.driver.indi_number_to_float(event["temperature"])
-                        except TypeError:
-                            # ignore an incoming invalid number
-                            pass
-                        else:
-                            # open or close the widow
-                            control.set_window(temperature)
-                            # send window status light to the client
-                            alarmvector["alarm"] = "Ok"
-                            await alarmvector.send_setVector(allvalues=False)
-                            # and send text of window position to the client
-                            statusvector["status"] = control.window
-                            await statusvector.send_setVector(allvalues=False)
+                    try:
+                        temperature = self.driver.indi_number_to_float(event["temperature"])
+                    except TypeError:
+                        # ignore an incoming invalid number
+                        pass
+                    else:
+                        # open or close the widow
+                        control.set_window(temperature)
+                        # send window status light to the client
+                        alarmvector["alarm"] = "Ok"
+                        await alarmvector.send_setVector(allvalues=False)
+                        # and send text of window position to the client
+                        statusvector["status"] = control.window
+                        await statusvector.send_setVector(allvalues=False)
 
 
     def make_driver():
@@ -146,7 +147,9 @@ The indiserver program is run with the driver names as arguments, and executes t
 
         # create a WindowDevice (inherited from Device) with these vectors
         # and also containing the windowcontrol, so it can call on its methods.
-        window = WindowDevice( devicename="Window", properties=[windowalarm, windowstatus], control=windowcontrol)
+        window = WindowDevice( devicename="Window",
+                               properties=[windowalarm, windowstatus],
+                               control=windowcontrol)
 
         # the windowcontrol object is placed into dictionary window.devicedata with key 'control'
 

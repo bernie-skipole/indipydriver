@@ -1,7 +1,8 @@
 Example2
 ========
 
-Adding target temperature control set by the client::
+This example shows how the client can set a target temperature by sending
+a 'newNumberVector', which causes the clientevent method to be called::
 
     import asyncio
 
@@ -78,29 +79,29 @@ Adding target temperature control set by the client::
             match event:
                 case getProperties():
                     await event.vector.send_defVector()
-                case newNumberVector(devicename='Thermostat', vectorname='targetvector'):
+                case newNumberVector(devicename='Thermostat',
+                                     vectorname='targetvector') if 'target' in event:
                     # Set the received value as the thermostat target and also set
                     # it into the vector, and send it back to the client
-                    if 'target' in event:
-                        newtarget = event['target']
-                        # The self.indi_number_to_float method converts the received string,
-                        # which may be in a number of formats to a Python float value. This
-                        # is set into the ThermalControl object
-                        try:
-                            target = self.indi_number_to_float(newtarget)
-                        except TypeError:
-                            # ignore an incoming invalid number
-                            pass
-                        else:
-                            # set this new target into the ThermalControl object
-                            control.target = target
-                            # and set the new target value into the vector member, then
-                            # transmits the vector back to client, with vector state ok
-                            event.vector['target'] = control.stringtarget
-                            # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
-                            # sending 'Ok' informs the client that the value has been received
-                            event.vector.state = 'Ok'
-                            await event.vector.send_setVector()
+                    newtarget = event['target']
+                    # The self.indi_number_to_float method converts the received string,
+                    # which may be in a number of formats to a Python float value. This
+                    # is set into the ThermalControl object
+                    try:
+                        target = self.indi_number_to_float(newtarget)
+                    except TypeError:
+                        # ignore an incoming invalid number
+                        pass
+                    else:
+                        # set this new target into the ThermalControl object
+                        control.target = target
+                        # and set the new target value into the vector member, then
+                        # transmits the vector back to client, with vector state ok
+                        event.vector['target'] = control.stringtarget
+                        # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
+                        # sending 'Ok' informs the client that the value has been received
+                        event.vector.state = 'Ok'
+                        await event.vector.send_setVector()
 
         async def hardware(self):
             "Run the hardware"
