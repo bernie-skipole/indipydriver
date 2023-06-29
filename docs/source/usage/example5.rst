@@ -1,9 +1,9 @@
 Example5
 ========
 
-This example expands on the thermostat with a switch vector and a BLOB vector. A switch is added so the client can request logfiles are downloaded as BLOB's, and at regular intervals, if enabled, the driver downloads five minutes of log data.
+This example expands on the thermostat with a switch vector and a BLOB vector. A switch is added so the client can request logfiles which will be sent as BLOB's at regular intervals.
 
-A io.BytesIO buffer is the value given to the BLOB member to download::
+An io.BytesIO buffer is set with temperature logs every second. After five minutes a new buffer is started. Since buffers are started, completed and sent asynchronously, they are placed in a deque, which is tested frequently, and the oldest buffer sent when available.::
 
 
     import asyncio, io, collections, datetime
@@ -39,7 +39,8 @@ A io.BytesIO buffer is the value given to the BLOB member to download::
             # with the number limited to 4, so the latest is the current buffer
             # to which logs will be added, and the older buffers can be sent
             # to the client.
-            # Starting with enablelogs False, and no buffer in the deque.
+
+            # Start with enablelogs False, and no buffer in the deque.
 
 
         @property

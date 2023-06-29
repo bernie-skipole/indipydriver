@@ -11,16 +11,13 @@ When a request is received from the client, an event is produced, and this metho
 Typically you would start with::
 
     async def clientevent(self, event):
-        await asyncio.sleep(0)
         match event:
             case getProperties():
-                event.vector.send_defVector()
+                await event.vector.send_defVector()
             case ...
 
 
-As this is a co-routine, starting with "await asyncio.sleep(0)" gives other tasks a chance to run.
-
-In all cases you will need to handle the "getProperties()" event - in which the client is requesting information.  All events have a 'vector' attribute - which is the vector object the event refers to, so normally, you would call the event.vector.send_defVector() method to respond to the client with the vector definition.
+In all cases you will need to handle the "getProperties()" event - in which the client is requesting information.  All events have a 'vector' attribute - which is the vector object the event refers to, so normally you would await the event.vector.send_defVector() method to respond to the client with the vector definition.
 
 The client event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
 
@@ -61,16 +58,16 @@ Typically, if you accept a new member value, you would have code that controls y
     # so event.vector is the vector belonging to this device
     # and with this vectorname
 
-    case newXXXXXVector(devicename='AAA', vectorname='BBB'):
+    case newXXXXXVector(devicename='AAA',
+                        vectorname='BBB') if 'membername' in event:
 
-        if 'membername' in event:
-            newvalue = event['membername']
+        newvalue = event['membername']
 
-            # your code to act on this newvalue, followed by:
+        # your code to act on this newvalue, followed by:
 
-            event.vector['membername'] = newvalue
-            event.vector.state = 'Ok'
-            event.vector.send_setVector()
+        event.vector['membername'] = newvalue
+        event.vector.state = 'Ok'
+        await event.vector.send_setVector()
 
 Setting the state to Ok is necessary, as when the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed.
 
@@ -90,26 +87,27 @@ When handling an event, more than one 'send_setvector' can be sent, you are not 
 
 Expanding the thermostat example with the "statusvector" set of lights introduced in the last section. When a target temperature is received, if the target is below 5.0, then the frost light should give some warning, and the response could be::
 
-    case newNumberVector(devicename='Thermostat', vectorname='targetvector'):
-        if 'target' in event:
-            newtarget = event['target']
-            try:
-                target = self.indi_number_to_float(newtarget)
-            except TypeError:
-                # ignore an incoming invalid number
-                pass
-            else:
-                control.target = target
-                event.vector['target'] = control.stringtarget
-                event.vector.state = 'Ok'
-                await event.vector.send_setVector()
-                # If the target is below 5C, and if the temperature is still
-                # above 5.0, warn of the danger of frost due to the target being low
-                statusvector = self['Thermostat']['statusvector']
-                if target < 5.0 and control.temperature > 5.0:
-                    statusvector["frost"] = 'Idle'
-                    await statusvector.send_setVector(allvalues=False)
-                    await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+    case newNumberVector(devicename='Thermostat',
+                         vectorname='targetvector') if 'target' in event:
+
+        newtarget = event['target']
+        try:
+            target = self.indi_number_to_float(newtarget)
+        except TypeError:
+            # ignore an incoming invalid number
+            pass
+        else:
+            control.target = target
+            event.vector['target'] = control.stringtarget
+            event.vector.state = 'Ok'
+            await event.vector.send_setVector()
+            # If the target is below 5C, and if the temperature is still
+            # above 5.0, warn of the danger of frost due to the target being low
+            statusvector = self['Thermostat']['statusvector']
+            if target < 5.0 and control.temperature > 5.0:
+                statusvector["frost"] = 'Idle'
+                await statusvector.send_setVector(allvalues=False)
+                await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
 
 
 So the target is set ok, but the client GUI displays a warning.
