@@ -6,4 +6,4 @@ from .propertymembers import SwitchMember, LightMember, TextMember, BLOBMember, 
 from .events import getProperties, enableBLOB, newSwitchVector, newTextVector, newNumberVector, newBLOBVector, Message, delProperty, defSwitchVector, defTextVector, defNumberVector, defLightVector, defBLOBVector, setSwitchVector, setTextVector, setNumberVector, setLightVector, setBLOBVector
 
 
-version = "0.0.3"
+version = "0.0.4"
