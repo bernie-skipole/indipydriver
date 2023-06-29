@@ -30,6 +30,10 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
+    def _reporterror(self, message):
+        "Prints message to stderr"
+        print(message, file=sys.stderr)
+
     @property
     def device(self):
         return self.driver.devices[self.devicename]
@@ -47,7 +51,7 @@ class PropertyVector(collections.UserDict):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
@@ -77,7 +81,7 @@ class PropertyVector(collections.UserDict):
         try:
             self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     def send_defVector(self, timestamp=None, timeout=0, message=''):
         "overridden in child classes"
@@ -87,7 +91,7 @@ class PropertyVector(collections.UserDict):
         try:
             self.data[membername].membervalue = value
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     def __getitem__(self, membername):
         return self.data[membername].membervalue
@@ -125,7 +129,7 @@ class SwitchVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     @property
     def rule(self):
@@ -136,7 +140,7 @@ class SwitchVector(PropertyVector):
         try:
             self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     async def _handler(self):
         """Check received data and take action"""
@@ -170,7 +174,7 @@ class SwitchVector(PropertyVector):
            numeric value indicating to the client how long this data is valid.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending defSwitchVector: The given send_defVector timeout value must be a string object")
+            self._reporterror("Aborting sending defSwitchVector: The given send_defVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -179,7 +183,7 @@ class SwitchVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defSwitchVector')
         xmldata.set("device", self.devicename)
@@ -222,7 +226,7 @@ class SwitchVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setSwitchVector: The given send_setVector timeout value must be a string object")
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -231,7 +235,7 @@ class SwitchVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
@@ -275,7 +279,7 @@ class SwitchVector(PropertyVector):
            just a state or message is to be sent.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be a string object")
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -284,7 +288,7 @@ class SwitchVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
@@ -360,7 +364,7 @@ class LightVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defLightVector')
         xmldata.set("device", self.devicename)
@@ -407,7 +411,7 @@ class LightVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
@@ -446,7 +450,7 @@ class LightVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
@@ -486,7 +490,7 @@ class TextVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     async def _handler(self):
         """Check received data and take action"""
@@ -519,7 +523,7 @@ class TextVector(PropertyVector):
            indicating to the client how long this data is valid.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending defTextVector: The given send_defVector timeout value must be a string object")
+            self._reporterror("Aborting sending defTextVector: The given send_defVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -528,7 +532,7 @@ class TextVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defTextVector')
         xmldata.set("device", self.devicename)
@@ -570,7 +574,7 @@ class TextVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setTextVector: The given send_setVector timeout value must be a string object")
+            self._reporterror("Aborting sending setTextVector: The given send_setVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -579,7 +583,7 @@ class TextVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
@@ -612,7 +616,7 @@ class TextVector(PropertyVector):
            just a state or message is to be sent.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be a string object")
+            self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -621,7 +625,7 @@ class TextVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
@@ -659,7 +663,7 @@ class NumberVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     async def _handler(self):
         """Check received data and take action"""
@@ -692,7 +696,7 @@ class NumberVector(PropertyVector):
            indicating to the client how long this data is valid.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending defNumberVector: The given send_defVector timeout value must be a string object")
+            self._reporterror("Aborting sending defNumberVector: The given send_defVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -701,7 +705,7 @@ class NumberVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defNumberVector')
         xmldata.set("device", self.devicename)
@@ -743,7 +747,7 @@ class NumberVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setNumberVector: The given send_setVector timeout value must be a string object")
+            self._reporterror("Aborting sending setNumberVector: The given send_setVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -752,7 +756,7 @@ class NumberVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
@@ -785,7 +789,7 @@ class NumberVector(PropertyVector):
            just a state or message is to be sent.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be a string object")
+            self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -794,7 +798,7 @@ class NumberVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
@@ -820,7 +824,7 @@ class BLOBVector(PropertyVector):
         # self.data is a dictionary of blob name : blobmember
         for blob in blobmembers:
             if not isinstance(blob, BLOBMember):
-                self.driver.reporterror("Members of a BLOBVector must all be BLOBMembers")
+                self._reporterror("Members of a BLOBVector must all be BLOBMembers")
                 raise TypeError("Members of a BLOBVector must all be BLOBMembers")
             self.data[blob.name] = blob
 
@@ -831,7 +835,7 @@ class BLOBVector(PropertyVector):
            therefore if you are sending a compressed file, you should set the blobsize
            prior to compression with this method."""
         if not isinstance(blobsize, int):
-            self.driver.reporterror("blobsize rejected, must be an integer object")
+            self._reporterror("blobsize rejected, must be an integer object")
             return
         member = self.data.get[membername]
         if not member:
@@ -847,7 +851,7 @@ class BLOBVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self.driver.reporterror(ex)
+            self._reporterror(ex)
 
     async def _handler(self):
         """Check received data and take action"""
@@ -884,7 +888,7 @@ class BLOBVector(PropertyVector):
            indicating to the client how long this data is valid.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending defBLOBVector: The given send_defVector timeout value must be a string object")
+            self._reporterror("Aborting sending defBLOBVector: The given send_defVector timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -893,7 +897,7 @@ class BLOBVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defBLOBVector')
         xmldata.set("device", self.devicename)
@@ -923,7 +927,7 @@ class BLOBVector(PropertyVector):
            the BLOB is sent, so you do not have to close it.
         """
         if not isinstance(timeout, str):
-            self.driver.reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be a string object")
+            self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be a string object")
             return
         if not self.device.enable:
             return
@@ -932,7 +936,7 @@ class BLOBVector(PropertyVector):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            self.driver.reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+            self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setBLOBVector')
         xmldata.set("device", self.devicename)
@@ -948,5 +952,5 @@ class BLOBVector(PropertyVector):
                 try:
                     xmldata.append(blob.oneblob())
                 except ValueError as ex:
-                    self.driver.reporterror(ex)
+                    self._reporterror(ex)
         await self.driver.writerque.put(xmldata)

@@ -101,7 +101,7 @@ class IPyDriver(collections.UserDict):
         self.comms = None
 
 
-    def reporterror(self, message):
+    def _reporterror(self, message):
         "Prints message to stderr"
         print(message, file=sys.stderr)
 
@@ -168,7 +168,7 @@ class IPyDriver(collections.UserDict):
                 # if a device name is given, check
                 # it is not in this drivers devices
                 if devicename in self.devices:
-                    # cannnot snoop on self!!
+                    self._reporterror("Cannot snoop on a device already controlled by this driver")
                     self.snoopque.task_done()
                     continue
             try:
@@ -231,7 +231,8 @@ class IPyDriver(collections.UserDict):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            raise TypeError("timestamp given in send_message must be a datetime.datetime object")
+            self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
+            return
         xmldata = ET.Element('message')
         # note - limit timestamp characters to :21 to avoid long fractions of a second
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
@@ -248,7 +249,8 @@ class IPyDriver(collections.UserDict):
             await self.writerque.put(xmldata)
             return
         if devicename in self.devices:
-            raise ValueError("Cannot snoop on a device already belonging to this driver")
+            self._reporterror("Cannot snoop on a device already controlled by this driver")
+            return
         xmldata.set("device", devicename)
         if vectorname is None:
             await self.writerque.put(xmldata)
@@ -347,6 +349,10 @@ class Device(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.propertyvectors
         # simply because 'propertyvectors' is more descriptive
 
+    def _reporterror(self, message):
+        "Prints message to stderr"
+        print(message, file=sys.stderr)
+
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
@@ -357,7 +363,8 @@ class Device(collections.UserDict):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            raise TypeError("timestamp given in send_message must be a datetime.datetime object")
+            self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
+            return
         xmldata = ET.Element('message')
         xmldata.set("device", self.devicename)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
@@ -377,7 +384,8 @@ class Device(collections.UserDict):
         if not timestamp:
             timestamp = datetime.datetime.utcnow()
         if not isinstance(timestamp, datetime.datetime):
-            raise TypeError("The timestamp given in send_delProperty must be a datetime.datetime object")
+            self._reporterror("The timestamp given in send_delProperty must be a datetime.datetime object")
+            return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
         # note - limit timestamp characters to :21 to avoid long fractions of a second
