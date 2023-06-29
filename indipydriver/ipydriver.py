@@ -100,30 +100,10 @@ class IPyDriver(collections.UserDict):
         # self.comms = STDINOUT() will be set in the asyncrun call
         self.comms = None
 
-        # a path to a file used for logging
-        self._logfile = None
-
-
-    @property
-    def logfile(self):
-        return self._logfile
-
-    @logfile.setter
-    def logfile(self, value):
-        "Opens logfile to check it is writeable"
-        start = datetime.datetime.utcnow().isoformat(sep='T')[:21] + " Driver status Ok"
-        with open(value, "a") as ef:
-            print(start, file=ef)
-        self._logfile = value
 
     def reporterror(self, message):
-        "Prints message to logfile and to stderr"
+        "Prints message to stderr"
         print(message, file=sys.stderr)
-        if self._logfile:
-            nowtime = datetime.datetime.utcnow().isoformat(sep='T')[:21]
-            with open(self._logfile, "a") as ef:
-                print("====== " + nowtime + " ======", file=ef)
-                print(message, file=ef)
 
     def listen(self, host="localhost", port=7624):
         """If called, listens on the given host and port. Only one connection is accepted,
