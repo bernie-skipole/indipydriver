@@ -293,7 +293,7 @@ An io.BytesIO buffer is set with temperature logs every second. After five minut
                                 blobmembers=[logs] )
 
         # create a switchvector so client can turn on/off log reporting
-        logswitchmember = SwitchMember(name="switchmember", label="Logs On/Off",
+        logswitchmember = SwitchMember(name="switchmember", label="Logs",
                                        membervalue=thermalcontrol.logswitch)
         logswitchvector = SwitchVector( name="switchvector",
                                         label="Logs Control",
