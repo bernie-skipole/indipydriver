@@ -60,4 +60,6 @@ Issues
 
 Using stdin/stdout has required some linux/unix specific commands, which will probably not work on Windows. However setting the driver to listen on a port should work on Windows, but is untested. (I don't have a Windows machine.)
 
-Transmitting and receiving BLOBS is untested in the early releases - any passing of large binary objects to a client should use some other method.
+When transmitting or receiving BLOBS the entire BLOB is loaded into memory, which may cause issues if the BLOB is large. It is suggested that very large binary objects should be transferred by some other method.
+
+When using the driver with the listen() method - which listens on a given host address and port, only one connection at a time is accepted, further connection attempts while a client is already connected will be refused.
