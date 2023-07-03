@@ -236,7 +236,7 @@ class Port_TX():
         self.writer = writer
 
     async def run_tx(self, writerque):
-        """Gets data from writerque, and transmits it out on stdout"""
+        """Gets data from writerque, and transmits it out on the port writer"""
         while True:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
