@@ -37,7 +37,8 @@ class IPyServer:
             # set the comms for each driver
             if not driver.comms is None:
                  raise RuntimeError("A driver communications method has already been set, there can only be one")
-            driver.comms = _DriverComms(driver, self.serverreaderque, self.serverwriterque)
+            # an instance of _DriverComms is created for each driver
+            driver.comms = _DriverComms(driver, self.serverwriterque)
         self.drivers = drivers
         self.host = host
         self.port = port
@@ -63,7 +64,7 @@ class IPyServer:
         rx = Port_RX(reader)
         tx = Port_TX(writer)
         try:
-            txtask = asyncio.create_task(tx.run_tx(self.serverwriterque))  # may have to create a que for each connection???
+            txtask = asyncio.create_task(tx.run_tx(self.serverwriterque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
             await txtask
             await rxtask
@@ -76,39 +77,65 @@ class IPyServer:
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
-        await asyncio.gather(*driverruns, self.runserver())
+        await asyncio.gather(*driverruns,
+                             self.runserver(),
+                             self.copyreceivedtodriversrxque()
+                             )
+
+
+    async def copyreceivedtodriversrxque(self):
+        "For every driver, get rxque and copy data into it from serverreaderque"
+        while True:
+            await asyncio.sleep(0)
+            xmldata = await self.serverreaderque.get()
+            for driver in self.drivers
+                # should check data is for the driver
+                await driver.comms.rxque.put(xmldata)
+            self.serverreaderque.task_done()
+            # now every driver.comms object has this xmldata in its rxque
+
 
 
 class _DriverComms:
 
+    """An instance of this is created for each driver, which calls the __call__
+       method, expecting xmldata to be received from the client and placed
+       in readerque, and any data the driver wishes to be sent should
+       be taken from the writerque and transmitted to the client by placing it
+       into the serverwriterque"""
 
-    def __init__(self, driver, serverreaderque, serverwriterque):
-        self.driver = driver
-        self.serverreaderque = serverreaderque
+    def __init__(self, serverwriterque):
+        # self.rxque will have data received from the network
+        # inserted into it from the IPyServer.copyreceivedtodriversrxque()
+        # method
+        self.rxque = asyncio.Queue(6)
         self.serverwriterque = serverwriterque
 
 
     async def __call__(self, readerque, writerque):
-        "Called by each driver, should run continuously to add and read the queues"
+        "Called by the driver, should run continuously to add and read the queues"
         await asyncio.gather(self.handleread(readerque),
                              self.handlewrite(writerque))
 
     async def handleread(self, readerque):
-        "reads serverreaderque, and sends xml data to the driver"
+        "reads rxque, and sends xml data to the driver"
         while True:
             await asyncio.sleep(0)
-            xmldata = await self.serverreaderque.get()
-            # should check data is for the driver
+            xmldata = await self.rxque.get()
             await readerque.put(xmldata)
+            # task completed
+            self.rxque.task_done()
 
 
     async def handlewrite(self, writerque):
-        "reads writerque from the driver, and sends xml data to the server"
+        "reads writerque from the driver, and sends xml data to the network"
         while True:
             await asyncio.sleep(0)
             xmldata = await writerque.get()
             # should check if this driver wants to snoop
             await self.serverwriterque.put(xmldata)
+            # task completed
+            self.writerque.task_done()
 
 
 
