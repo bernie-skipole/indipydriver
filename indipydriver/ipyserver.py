@@ -38,11 +38,10 @@ class IPyServer:
             if not driver.comms is None:
                  raise RuntimeError("A driver communications method has already been set, there can only be one")
             # an instance of _DriverComms is created for each driver
-            driver.comms = _DriverComms(driver, self.serverwriterque)
+            driver.comms = _DriverComms(self.serverwriterque)
         self.drivers = drivers
         self.host = host
         self.port = port
-        self.connected = False
 
     async def runserver(self):
         "Runs the server on the given host and port"
@@ -55,12 +54,6 @@ class IPyServer:
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
-        if self.connected:
-            # already connected, can only handle one connection
-            writer.close()
-            await writer.wait_closed()
-            return
-        self.connected = True
         rx = Port_RX(reader)
         tx = Port_TX(writer)
         try:
@@ -69,7 +62,6 @@ class IPyServer:
             await txtask
             await rxtask
         except ConnectionResetError:
-            self.connected = False
             txtask.cancel()
             rxtask.cancel()
 
@@ -110,6 +102,10 @@ class _DriverComms:
         # method
         self.rxque = asyncio.Queue(6)
         self.serverwriterque = serverwriterque
+        # self.connected is read by the driver, and in this case is always True
+        # as the driver is connected to IPyServer, which handles snooping traffic,
+        # even if no client is connected
+        self.connected = True
 
 
     async def __call__(self, readerque, writerque):
