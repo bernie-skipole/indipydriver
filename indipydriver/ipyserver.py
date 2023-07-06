@@ -19,17 +19,25 @@ class IPyServer:
 
        host and port are "localhost" and 7624 as default
 
+       maxconnections is the number of simultaneous client connections
+       accepted, with a default of 5. The number given should be
+       between 1 and 10 inclusive.
+
        The awaitable asyncrun method should be run in an async loop.
        """
 
 
 
-    def __init__(self, drivers, host="localhost", port=7624):
+    def __init__(self, drivers, host="localhost", port=7624, maxconnection=5):
 
-        # traffic is transmitted out on the serverwriterque  # may have to create a que for each connection???
+        # traffic is transmitted out on the serverwriterque
         self.serverwriterque = asyncio.Queue(6)
         # and read in from the serverreaderque
         self.serverreaderque = asyncio.Queue(6)
+
+        if maxconnections<1 or maxconnections>10:
+            raise ValueError("maxconnections should be a number between 1 and 10")
+        self.maxconnections = maxconnections
 
         for driver in drivers:
             if not isinstance(driver, IPyDriver):
