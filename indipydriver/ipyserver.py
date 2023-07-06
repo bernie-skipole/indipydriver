@@ -56,7 +56,7 @@ class IPyServer:
 
         self.connectionpool = []
         for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(self.devices, self.serverreaderque, self.serverwriterque))
+            self.connectionpool.append(_ClientConnection(self.devices, self.serverreaderque))
 
         for driver in drivers:
             # an instance of _DriverComms is created for each driver
@@ -94,7 +94,8 @@ class IPyServer:
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         await asyncio.gather(*driverruns,
                              self.runserver(),
-                             self.copyreceivedtodriversrxque()
+                             self.copyreceivedtodriversrxque(),
+                             self.copytransmittedtoclienttxque()
                              )
 
 
@@ -108,6 +109,18 @@ class IPyServer:
                 await driver.comms.rxque.put(xmldata)
             self.serverreaderque.task_done()
             # now every driver.comms object has this xmldata in its rxque
+
+
+    async def copytransmittedtoclienttxque(self):
+        "For every clientconnection, get txque and copy data into it from serverwriterque"
+        while True:
+            await asyncio.sleep(0)
+            xmldata = await self.serverwriterque.get()
+            for clientconnection in self.connectionpool:
+                if clientconnection.connected:
+                    await clientconnection.txque.put(xmldata)
+            self.serverwriterque.task_done()
+            # now every connected clientconnection object has this xmldata in its txque
 
 
 class _DriverComms:
@@ -181,11 +194,15 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, devices, serverreaderque, serverwriterque):
+    def __init__(self, devices, serverreaderque):
+        # self.txque will have data to be transmitted
+        # inserted into it from the IPyServer.copytransmittedtoclienttxque()
+        # method
+        self.txque = asyncio.Queue(6)
+
         # devices is a dictionary of device name to device
         self.devices = devices
         self.serverreaderque = serverreaderque
-        self.serverwriterque = serverwriterque
         # self.connected is True if this pool object is running a connection
         self.connected = False
 
@@ -195,7 +212,7 @@ class _ClientConnection:
         rx = Port_RX(reader)
         tx = Port_TX(self.devices, writer)
         try:
-            txtask = asyncio.create_task(tx.run_tx(self.serverwriterque))
+            txtask = asyncio.create_task(tx.run_tx(self.txque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
             await txtask
             await rxtask
