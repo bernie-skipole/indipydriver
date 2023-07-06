@@ -18,6 +18,7 @@ indipydriver = Python tools to create INDI drivers
    usage/example3
    usage/example4
    usage/example5
+   usage/ipyserver
    usage/references
    usage/license
 

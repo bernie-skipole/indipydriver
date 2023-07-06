@@ -114,8 +114,8 @@ class IPyDriver(collections.UserDict):
 
 
     async def send(self, xmldata):
-        "Puts xmldata into the driver writerque, but only if driver comms has connected True"
-        if self.comms.connected: 
+        "Transmits xmldata, this is an internal method, not normally called by a user."
+        if self.comms.connected:
             await self.writerque.put(xmldata)
         else:
             # not connected, do not send the data
