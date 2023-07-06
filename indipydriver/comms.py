@@ -236,8 +236,10 @@ class STDINOUT():
 class Port_TX():
     "An object that transmits data on a port, used by Portcomms as one half of the communications path"
 
-    def __init__(self, writer):
+    def __init__(self, devices, writer):
         self.writer = writer
+        # devices is a dictionary of device name to device
+        self.devices = devices
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
@@ -298,7 +300,9 @@ class Portcomms():
     """If indipydriver.comms is set to an instance of this class it is
        used to implement communications via a port"""
 
-    def __init__(self, host="localhost", port=7624):
+    def __init__(self, devices, host="localhost", port=7624):
+        # devices is a dictionary of device name to device this driver owns
+        self.devices = devices
         self.host = host
         self.port = port
         self.connected = False
@@ -323,7 +327,7 @@ class Portcomms():
             return
         self.connected = True
         rx = Port_RX(reader)
-        tx = Port_TX(writer)
+        tx = Port_TX(self.devices, writer)
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(rx.run_rx(self.readerque))

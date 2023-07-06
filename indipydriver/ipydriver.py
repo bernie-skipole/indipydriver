@@ -110,7 +110,7 @@ class IPyDriver(collections.UserDict):
            further connection attempts while a client is already connected will be refused."""
         if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
-        self.comms = Portcomms(host, port)
+        self.comms = Portcomms(self.devices, host, port)
 
 
     async def send(self, xmldata):
@@ -125,7 +125,7 @@ class IPyDriver(collections.UserDict):
                 for oneblob in xmldata.iter('oneBLOB'):
                     # get the filepointer
                     fp = oneblob.text
-                    if hasattr(fp 'close'):
+                    if hasattr(fp, 'close'):
                         fp.close()
 
 

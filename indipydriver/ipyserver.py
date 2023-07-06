@@ -28,7 +28,7 @@ class IPyServer:
 
 
 
-    def __init__(self, drivers, host="localhost", port=7624, maxconnection=5):
+    def __init__(self, drivers, host="localhost", port=7624, maxconnections=5):
 
         # traffic is transmitted out on the serverwriterque
         self.serverwriterque = asyncio.Queue(6)
@@ -39,19 +39,30 @@ class IPyServer:
             raise ValueError("maxconnections should be a number between 1 and 10 inclusive.")
         self.maxconnections = maxconnections
 
-        self.connectionpool = []
-        for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(self.serverreaderque, self.serverwriterque))
-
+        # this is a dictionary of device name to device
+        self.devices = {}
 
         for driver in drivers:
             if not isinstance(driver, IPyDriver):
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
-            # set the comms for each driver
             if not driver.comms is None:
                  raise RuntimeError("A driver communications method has already been set, there can only be one")
+            devicesindriver = driver.devices.copy()
+            for devicename in devicesindriver:
+                if devicename in self.devices:
+                    # duplicate devicename
+                    raise ValueError(f"Device name {devicename} is duplicated in the attached drivers.")
+            self.devices.update(devicesindriver)
+
+        self.connectionpool = []
+        for clientconnection in range(0, maxconnections):
+            self.connectionpool.append(_ClientConnection(self.devices, self.serverreaderque, self.serverwriterque))
+
+        for driver in drivers:
             # an instance of _DriverComms is created for each driver
             driver.comms = _DriverComms(self.serverwriterque, self.connectionpool)
+
+
         self.drivers = drivers
         self.host = host
         self.port = port
@@ -92,12 +103,11 @@ class IPyServer:
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
-            for driver in self.drivers
+            for driver in self.drivers:
                 # should check data is for the driver
                 await driver.comms.rxque.put(xmldata)
             self.serverreaderque.task_done()
             # now every driver.comms object has this xmldata in its rxque
-
 
 
 class _DriverComms:
@@ -109,6 +119,7 @@ class _DriverComms:
        into the serverwriterque"""
 
     def __init__(self, serverwriterque, connectionpool):
+
         # self.rxque will have data received from the network
         # inserted into it from the IPyServer.copyreceivedtodriversrxque()
         # method
@@ -161,7 +172,7 @@ class _DriverComms:
                     for oneblob in xmldata.iter('oneBLOB'):
                         # get the filepointer
                         fp = oneblob.text
-                        if hasattr(fp 'close'):
+                        if hasattr(fp, 'close'):
                             fp.close()
 
 
@@ -170,7 +181,9 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, serverreaderque, serverwriterque):
+    def __init__(self, devices, serverreaderque, serverwriterque):
+        # devices is a dictionary of device name to device
+        self.devices = devices
         self.serverreaderque = serverreaderque
         self.serverwriterque = serverwriterque
         # self.connected is True if this pool object is running a connection
@@ -180,7 +193,7 @@ class _ClientConnection:
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
         rx = Port_RX(reader)
-        tx = Port_TX(writer)
+        tx = Port_TX(self.devices, writer)
         try:
             txtask = asyncio.create_task(tx.run_tx(self.serverwriterque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
@@ -190,10 +203,3 @@ class _ClientConnection:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-
-
-
-
-
-
-
