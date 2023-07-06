@@ -60,7 +60,7 @@ class PropertyVector(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
         self.enable = False
         for member in self.data.values():
             # set all members as changed, so when re-enabled, all values are ready to be sent again
@@ -203,7 +203,7 @@ class SwitchVector(PropertyVector):
             # after a defswitch sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             switch.changed = True
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
@@ -266,7 +266,7 @@ class SwitchVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            await self.driver.writerque.put(xmldata)
+            await self.driver.send(xmldata)
 
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
@@ -309,7 +309,7 @@ class SwitchVector(PropertyVector):
         for switch in Onswitches:
             xmldata.append(switch.oneswitch())
             switch.changed = False
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
 
 class LightVector(PropertyVector):
@@ -381,7 +381,7 @@ class LightVector(PropertyVector):
             # after a deflight sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             light.changed = True
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
@@ -431,7 +431,7 @@ class LightVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            await self.driver.writerque.put(xmldata)
+            await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setLightVector) and members with their values to the client.
@@ -464,7 +464,7 @@ class LightVector(PropertyVector):
             if light.name in  members:
                 xmldata.append(light.onelight())
                 light.changed = False
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
 
 
@@ -551,7 +551,7 @@ class TextVector(PropertyVector):
             # after a deftext sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             text.changed = True
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
@@ -604,7 +604,7 @@ class TextVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            await self.driver.writerque.put(xmldata)
+            await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setTextVector) and members with their values to the client.
@@ -640,7 +640,7 @@ class TextVector(PropertyVector):
             if text.name in members:
                 xmldata.append(text.onetext())
                 text.changed = False
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
 
 class NumberVector(PropertyVector):
@@ -724,7 +724,7 @@ class NumberVector(PropertyVector):
             # after a defnumber sent, assume new client connection, and set all members as changed
             # so they will all be included in the first 'send_setVector'
             number.changed = True
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
@@ -777,7 +777,7 @@ class NumberVector(PropertyVector):
                 membersincluded = True
         if membersincluded:
             # only send xmldata if a member is included in the vector
-            await self.driver.writerque.put(xmldata)
+            await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout='0', members=[]):
         """Transmits the vector (setNumberVector) and members with their values to the client.
@@ -813,7 +813,7 @@ class NumberVector(PropertyVector):
             if number.name in members:
                 xmldata.append(number.onenumber())
                 number.changed = False
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
 
 class BLOBVector(PropertyVector):
@@ -913,7 +913,7 @@ class BLOBVector(PropertyVector):
             xmldata.set("message", message)
         for blob in self.data.values():
             xmldata.append(blob.defblob())
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
     # NOTE: BLOBVectors do not have a send_setVector method
     #       only the more explicit send_setVectorMembers is available
@@ -953,4 +953,4 @@ class BLOBVector(PropertyVector):
                     xmldata.append(blob.oneblob())
                 except ValueError as ex:
                     self._reporterror(ex)
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)

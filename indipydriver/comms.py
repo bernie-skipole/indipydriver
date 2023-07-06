@@ -216,6 +216,10 @@ class STDINOUT():
     """If indipydriver.comms is set to an instance of this class it is
        used to implement communications via stdin and stdout"""
 
+    def __init__(self):
+        self.connected = True
+
+
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
         # Set stdin to non-blocking mode

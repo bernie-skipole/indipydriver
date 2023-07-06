@@ -112,6 +112,23 @@ class IPyDriver(collections.UserDict):
              raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(host, port)
 
+
+    async def send(self, xmldata):
+        "Puts xmldata into the driver writerque, but only if driver comms has connected True"
+        if self.comms.connected: 
+            await self.writerque.put(xmldata)
+        else:
+            # not connected, do not send the data
+            # if xmldata is a file pointer, close it
+            if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                # xmldata is a setBLOBVector containing blobs
+                for oneblob in xmldata.iter('oneBLOB'):
+                    # get the filepointer
+                    fp = oneblob.text
+                    if hasattr(fp 'close'):
+                        fp.close()
+
+
     def __setitem__(self, devicename):
         raise KeyError
 
@@ -238,7 +255,7 @@ class IPyDriver(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        await self.writerque.put(xmldata)
+        await self.send(xmldata)
 
     async def send_getProperties(self, devicename=None, vectorname=None):
         """Sends a getProperties request - which is used to snoop data from other devices
@@ -246,17 +263,17 @@ class IPyDriver(collections.UserDict):
            the point of this is to snoop on remote devices."""
         xmldata = ET.Element('getProperties')
         if devicename is None:
-            await self.writerque.put(xmldata)
+            await self.send(xmldata)
             return
         if devicename in self.devices:
             self._reporterror("Cannot snoop on a device already controlled by this driver")
             return
         xmldata.set("device", devicename)
         if vectorname is None:
-            await self.writerque.put(xmldata)
+            await self.send(xmldata)
             return
         xmldata.set("name", vectorname)
-        await self.writerque.put(xmldata)
+        await self.send(xmldata)
 
     async def hardware(self):
         """Override this to operate device hardware, and transmit updates
@@ -371,7 +388,7 @@ class Device(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
 
     async def send_delProperty(self, message="", timestamp=None):
         """Sending delProperty with this device method, (as opposed to the vector send_delProperty method)
@@ -392,7 +409,7 @@ class Device(collections.UserDict):
         xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
         if message:
             xmldata.set("message", message)
-        await self.driver.writerque.put(xmldata)
+        await self.driver.send(xmldata)
         self.enable = False
 
 
