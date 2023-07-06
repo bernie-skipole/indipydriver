@@ -41,7 +41,7 @@ class IPyServer:
 
         self.connectionpool = []
         for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(ClientConnection(self.serverreaderque, self.serverwriterque))
+            self.connectionpool.append(_ClientConnection(self.serverreaderque, self.serverwriterque))
 
 
         for driver in drivers:
@@ -166,7 +166,7 @@ class _DriverComms:
 
 
 
-class ClientConnection:
+class _ClientConnection:
 
     "Handles a client connection"
 
