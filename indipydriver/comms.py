@@ -273,11 +273,25 @@ class Port_TX():
 class Port_RX(STDIN_RX):
     """Produces xml.etree.ElementTree data from data received on the port,
        this is used by Portcomms as one half of the communications path.
-       This overwrites the datainput method of the STDIN_RX parent class."""
+       This overwrites methods of the STDIN_RX parent class."""
 
     def __init__(self, blobstatus, reader):
         self.blobstatus = blobstatus
         self.reader = reader
+
+    async def run_rx(self, readerque):
+        "pass data to readerque"
+        source = self.datasource()
+        while True:
+            await asyncio.sleep(0)
+            if readerque is None:
+                continue
+            # get block of xml.etree.ElementTree data
+            # from source and append it to  readerque
+            root = await anext(source)
+            if root is not None:
+                await readerque.put(root)
+
 
     async def datainput(self):
         "Generator producing binary string of data from the port"
@@ -386,7 +400,7 @@ class BLOBSstatus:
 
 
     def allowed(self, xmldata):
-        "Return True if this can be transmitted, False otherwise"
+        "Return True if this xmldata can be transmitted, False otherwise"
         devicename = xmldata.get("device")
         if devicename is None:
             # either a getproperties or message, only deny it if ALL Other allowed are False
