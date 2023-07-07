@@ -337,3 +337,22 @@ class Portcomms():
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
+            cleanque(self.writerque)
+
+
+def cleanque(que):
+    "Clears out a que"
+    try:
+        while True:
+            xmldata = que.get_nowait()
+            if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                # xmldata is a setBLOBVector containing blobs
+                for oneblob in xmldata.iter('oneBLOB'):
+                    # get the filepointer
+                    fp = oneblob.text
+                    if hasattr(fp, 'close'):
+                        fp.close()
+            que.task_done()
+    except asyncio.QueueEmpty:
+        # que is now empty, nothing further to do
+        pass

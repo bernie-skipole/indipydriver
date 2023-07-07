@@ -8,7 +8,7 @@ from functools import partialmethod
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX
+from .comms import Port_RX, Port_TX, cleanque
 
 
 class IPyServer:
@@ -61,7 +61,6 @@ class IPyServer:
         for driver in drivers:
             # an instance of _DriverComms is created for each driver
             driver.comms = _DriverComms(self.serverwriterque, self.connectionpool)
-
 
         self.drivers = drivers
         self.host = host
@@ -116,11 +115,26 @@ class IPyServer:
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverwriterque.get()
+            connectioninplace = False
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
+                    connectioninplace = True
                     await clientconnection.txque.put(xmldata)
+            if not connectioninplace:
+                # no client connected, discard this data
+                # if xmldata is a file pointer, close it
+                if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                    # xmldata is a setBLOBVector containing blobs
+                    for oneblob in xmldata.iter('oneBLOB'):
+                        # get the filepointer
+                        fp = oneblob.text
+                        if hasattr(fp, 'close'):
+                            fp.close()
+            # task completed
             self.serverwriterque.task_done()
-            # now every connected clientconnection object has this xmldata in its txque
+
+
+
 
 
 class _DriverComms:
@@ -174,8 +188,6 @@ class _DriverComms:
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     await self.serverwriterque.put(xmldata)
-                    # task completed
-                    writerque.task_done()
                     break
             else:
                 # no client connected, discard this data
@@ -187,6 +199,8 @@ class _DriverComms:
                         fp = oneblob.text
                         if hasattr(fp, 'close'):
                             fp.close()
+            # task completed
+            writerque.task_done()
 
 
 
@@ -220,3 +234,4 @@ class _ClientConnection:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
+            cleanque(self.txque)
