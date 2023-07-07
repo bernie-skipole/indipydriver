@@ -8,7 +8,7 @@ from functools import partialmethod
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque
+from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus
 
 
 class IPyServer:
@@ -135,8 +135,6 @@ class IPyServer:
 
 
 
-
-
 class _DriverComms:
 
     """An instance of this is created for each driver, which calls the __call__
@@ -223,8 +221,9 @@ class _ClientConnection:
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
-        rx = Port_RX(reader)
-        tx = Port_TX(self.devices, writer)
+        blobstatus = BLOBSstatus(self.devices)
+        rx = Port_RX(blobstatus, reader)
+        tx = Port_TX(blobstatus, writer)
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
