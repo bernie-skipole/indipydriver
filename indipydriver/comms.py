@@ -240,6 +240,19 @@ class Port_TX():
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
+            if not self.blobstatus.allowed(txdata):
+                # this data should not be transmitted, discard it
+                # if txdata is a file pointer, close it
+                if (txdata.tag == "setBLOBVector") and len(txdata):
+                    # txdata is a setBLOBVector containing blobs
+                    for oneblob in txdata.iter('oneBLOB'):
+                        # get the filepointer
+                        fp = oneblob.text
+                        if hasattr(fp, 'close'):
+                            fp.close()
+                writerque.task_done()
+                continue
+            # this data can be transmitted
             if txdata.tag == "setBLOBVector" and len(txdata):
                 # txdata is a setBLOBVector containing blobs
                 # the generator blob_xml_bytes yields bytes
@@ -355,5 +368,51 @@ def cleanque(que):
 class BLOBSstatus:
     "Carries the enableBLOB status on a device or property"
 
+    # Command to control whether setBLOBs should be sent to this channel from a given Device. They can
+    # be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
+    # commands by setting Also or made the only command by setting Only.
+
     def __init__(self, devices):
-        self.devices = devices
+        "For every device, propertyvector create a status list of (Other allowed, BLOB allowed)"
+        self.devicestatus = {}
+        # create a dictionary of devicenames : list of propertynames for that device
+        self.deviceproperties = {}
+        for devicename, device in devices.items():
+            self.deviceproperties[devicename] = []
+            for propertyvector in device.values():
+                # Initially set with BLOBs not allowed
+                self.devicestatus[(devicename, propertyvector.name)] = (True, False)
+                self.deviceproperties[devicename].append(propertyvector.name)
+
+
+    def allowed(self, xmldata):
+        "Return True if this can be transmitted, False otherwise"
+        devicename = xmldata.get("device")
+        if devicename is None:
+            # either a getproperties or message, only deny it if ALL Other allowed are False
+            # so this connection is dedictated to BLOBs only
+            for status in self.devicestatus.values():
+                if status[0]:
+                    return True
+            return False
+        # so we have a devicename, get propertyname
+        name = xmldata.get("name")
+        # if name missing, could be a message, cannot be a setBLOBVector
+        if name is None:
+            # only deny it if ALL other allowed are False for this device
+            properties = self.deviceproperties[devicename]
+            for name in properties:
+                status = self.devicestatus[devicename, name]
+                if status[0]:
+                    return True
+            return False
+        # so we have a devicename, propertyname
+        status = self.devicestatus[devicename, name]
+        if xmldata.tag == "setBLOBVector":
+            return status[1]
+        else:
+            return status[0]
+        
+            
+        
+
