@@ -89,7 +89,7 @@ class IPyServer:
             await writer.wait_closed()
 
     async def asyncrun(self):
-        """Gathers tasks to be run simultaneously"""
+        """Runs the server together with its drivers."""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         await asyncio.gather(*driverruns,
                              self.runserver(),
