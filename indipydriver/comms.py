@@ -68,8 +68,11 @@ def blob_xml_bytes(xmldata):
         # yield start of oneblob
         start = _makestart(oneblob)
         yield start.encode()
-        # yield body, b64 encoded
-        yield standard_b64encode(bytescontent)
+        # yield body, b64 encoded, in chunks
+        encoded_data = standard_b64encode(bytescontent)
+        chunksize = 1000
+        for b in range(0, len(encoded_data), chunksize):
+            yield source[b:b+encoded_data]
         yield b"</oneBLOB>"
     yield b"</setBLOBVector>\n"
 
