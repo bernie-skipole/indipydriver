@@ -290,6 +290,7 @@ class Port_RX(STDIN_RX):
             # from source and append it to  readerque
             rxdata = await anext(source)
             if rxdata is not None:
+                print(rxdata.tag, file=sys.stderr)
                 if rxdata.tag == "enableBLOB":
                     # set permission flags in the blobstatus object
                     self.blobstatus.setpermissions(rxdata)
@@ -435,25 +436,27 @@ class BLOBSstatus:
         # be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
         # commands by setting Also or made the only command by setting Only.
 
-         devicename = rxdata.get("device")
-         if devicename is None:
-             # invalid
-             return
-         value = rxdata.text.strip()
-         if value == "Never":
-             perm = (True, False)    # (Other allowed, BLOB not allowed)
-         elif value == "Also":
-             perm = (True, True)     # (Other allowed, BLOB allowed)
-         elif value == "Only":
-             perm == (False, True)   # (Only not allowed, BLOB allowed)
-         else:
-             # value not recognised
-             return
-         propertyname = rxdata.get("name")
-         if propertyname is None:
-             # This applies to all properties of the device
-             properties = self.deviceproperties[devicename]
-             for name in properties:
-                 self.devicestatus[devicename, name] = perm
-         else:
-             self.devicestatus[devicename, propertyname] = perm
+        devicename = rxdata.get("device")
+
+        if devicename is None:
+            # invalid
+            return
+        value = rxdata.text.strip()
+        #print(value, file=sys.stderr)
+        if value == "Never":
+            perm = (True, False)    # (Other allowed, BLOB not allowed)
+        elif value == "Also":
+            perm = (True, True)     # (Other allowed, BLOB allowed)
+        elif value == "Only":
+            perm = (False, True)   # (Only not allowed, BLOB allowed)
+        else:
+            # value not recognised
+            return
+        propertyname = rxdata.get("name")
+        if propertyname is None:
+            # This applies to all properties of the device
+            properties = self.deviceproperties[devicename]
+            for name in properties:
+                self.devicestatus[devicename, name] = perm
+        else:
+            self.devicestatus[devicename, propertyname] = perm
