@@ -121,9 +121,9 @@ class STDIN_RX:
                 continue
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
-            root = await anext(source)
-            if root is not None:
-                await readerque.put(root)
+            rxdata = await anext(source)
+            if rxdata is not None:
+                await readerque.put(rxdata)
 
     async def datasource(self):
         # get received data, parse it, and yield it as xml.etree.ElementTree object
@@ -288,9 +288,13 @@ class Port_RX(STDIN_RX):
                 continue
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
-            root = await anext(source)
-            if root is not None:
-                await readerque.put(root)
+            rxdata = await anext(source)
+            if rxdata is not None:
+                if rxdata.tag == "enableBLOB":
+                    # set permission flags in the blobstatus object
+                    self.blobstatus.setpermissions(rxdata)
+                # and place rxdata into readerque
+                await readerque.put(rxdata)
 
 
     async def datainput(self):
@@ -382,10 +386,6 @@ def cleanque(que):
 class BLOBSstatus:
     "Carries the enableBLOB status on a device or property"
 
-    # Command to control whether setBLOBs should be sent to this channel from a given Device. They can
-    # be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
-    # commands by setting Also or made the only command by setting Only.
-
     def __init__(self, devices):
         "For every device, propertyvector create a status list of (Other allowed, BLOB allowed)"
         self.devicestatus = {}
@@ -426,7 +426,34 @@ class BLOBSstatus:
             return status[1]
         else:
             return status[0]
-        
-            
-        
 
+
+    def setpermissions(self, rxdata):
+        "Read the received enableBLOB xml and set permission in self.devicestatus"
+
+        # Command to control whether setBLOBs should be sent to this channel from a given Device. They can
+        # be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
+        # commands by setting Also or made the only command by setting Only.
+
+         devicename = rxdata.get("device")
+         if devicename is None:
+             # invalid
+             return
+         value = rxdata.text.strip()
+         if value == "Never":
+             perm = (True, False)    # (Other allowed, BLOB not allowed)
+         elif value == "Also":
+             perm = (True, True)     # (Other allowed, BLOB allowed)
+         elif value == "Only":
+             perm == (False, True)   # (Only not allowed, BLOB allowed)
+         else:
+             # value not recognised
+             return
+         propertyname = rxdata.get("name")
+         if propertyname is None:
+             # This applies to all properties of the device
+             properties = self.deviceproperties[devicename]
+             for name in properties:
+                 self.devicestatus[devicename, name] = perm
+         else:
+             self.devicestatus[devicename, propertyname] = perm
