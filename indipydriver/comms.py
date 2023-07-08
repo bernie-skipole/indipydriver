@@ -240,7 +240,7 @@ class Port_TX():
         """Gets data from writerque, and transmits it out on the port writer"""
         while True:
             await asyncio.sleep(0)
-            # get block of data from writerque and transmit down stdout
+            # get block of data from writerque and transmit
             txdata = await writerque.get()
             if not self.blobstatus.allowed(txdata):
                 # this data should not be transmitted, discard it
