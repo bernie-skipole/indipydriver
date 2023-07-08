@@ -54,25 +54,14 @@ def _makestart(element):
 def blob_xml_bytes(xmldata):
     """A generator yielding blob xml byte strings
        for a setBLOBVector.
-       reads member files, b64 encodes the data
-       closes the files, and yields the binary
-       string including tags."""
+       reads member bytes, b64 encodes the data
+       and yields the byte string including tags."""
 
     # yield initial setBLOBVector
     setblobvector = _makestart(xmldata)
     yield setblobvector.encode()
-
     for oneblob in xmldata.iter('oneBLOB'):
-        # get the filepointer
-        fp = oneblob.text
-        if fp.closed:
-            continue
-        # set seek(0) so is read from start of file
-        fp.seek(0)
-        bytescontent = fp.read()
-        fp.close()
-        if bytescontent == b"":
-            continue
+        bytescontent = oneblob.text
         size = oneblob.get("size")
         if size == "0":
             oneblob.set("size", str(len(bytescontent)))
@@ -244,14 +233,6 @@ class Port_TX():
             txdata = await writerque.get()
             if not self.blobstatus.allowed(txdata):
                 # this data should not be transmitted, discard it
-                # if txdata is a file pointer, close it
-                if (txdata.tag == "setBLOBVector") and len(txdata):
-                    # txdata is a setBLOBVector containing blobs
-                    for oneblob in txdata.iter('oneBLOB'):
-                        # get the filepointer
-                        fp = oneblob.text
-                        if hasattr(fp, 'close'):
-                            fp.close()
                 writerque.task_done()
                 continue
             # this data can be transmitted
@@ -372,13 +353,6 @@ def cleanque(que):
     try:
         while True:
             xmldata = que.get_nowait()
-            if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                # xmldata is a setBLOBVector containing blobs
-                for oneblob in xmldata.iter('oneBLOB'):
-                    # get the filepointer
-                    fp = oneblob.text
-                    if hasattr(fp, 'close'):
-                        fp.close()
             que.task_done()
     except asyncio.QueueEmpty:
         # que is now empty, nothing further to do

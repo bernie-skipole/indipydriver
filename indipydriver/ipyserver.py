@@ -115,21 +115,9 @@ class IPyServer:
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverwriterque.get()
-            connectioninplace = False
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
-                    connectioninplace = True
                     await clientconnection.txque.put(xmldata)
-            if not connectioninplace:
-                # no client connected, discard this data
-                # if xmldata is a file pointer, close it
-                if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                    # xmldata is a setBLOBVector containing blobs
-                    for oneblob in xmldata.iter('oneBLOB'):
-                        # get the filepointer
-                        fp = oneblob.text
-                        if hasattr(fp, 'close'):
-                            fp.close()
             # task completed
             self.serverwriterque.task_done()
 
@@ -186,17 +174,6 @@ class _DriverComms:
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     await self.serverwriterque.put(xmldata)
-                    break
-            else:
-                # no client connected, discard this data
-                # if xmldata is a file pointer, close it
-                if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                    # xmldata is a setBLOBVector containing blobs
-                    for oneblob in xmldata.iter('oneBLOB'):
-                        # get the filepointer
-                        fp = oneblob.text
-                        if hasattr(fp, 'close'):
-                            fp.close()
             # task completed
             writerque.task_done()
 

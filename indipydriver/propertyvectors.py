@@ -923,8 +923,8 @@ class BLOBVector(PropertyVector):
            The members list specifies the member names which will have their values sent.
 
            Members contain either a bytes string, a file-like object, or a path to a file. If
-           a file-like object is given, it's close() method will automatically be called after
-           the BLOB is sent, so you do not have to close it.
+           a file-like object is given, its contents will be read and its close() method
+           will be called, so you do not have to close it.
         """
         if not isinstance(timeout, str):
             self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be a string object")

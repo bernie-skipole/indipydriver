@@ -117,17 +117,6 @@ class IPyDriver(collections.UserDict):
         "Transmits xmldata, this is an internal method, not normally called by a user."
         if self.comms.connected:
             await self.writerque.put(xmldata)
-        else:
-            # not connected, do not send the data
-            # if xmldata is a file pointer, close it
-            if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                # xmldata is a setBLOBVector containing blobs
-                for oneblob in xmldata.iter('oneBLOB'):
-                    # get the filepointer
-                    fp = oneblob.text
-                    if hasattr(fp, 'close'):
-                        fp.close()
-
 
     def __setitem__(self, devicename):
         raise KeyError

@@ -310,18 +310,28 @@ class BLOBMember(PropertyMember):
         xmldata.set("name", self.name)
         xmldata.set("size", str(self.blobsize))
         xmldata.set("format", self.blobformat)
-        # the value set in the xmldata object should be a file-like object
+        # the value set in the xmldata object should be a bytes object
         if isinstance(self._membervalue, bytes):
-            xmldata.text = io.BytesIO(self._membervalue)
+            xmldata.text = self._membervalue
         elif hasattr(self._membervalue, "read") and callable(self._membervalue.read):
             # a file-like object
-            xmldata.text = self._membervalue
+            # set seek(0) so is read from start of file
+            self._membervalue.seek(0)
+            bytescontent = self._membervalue.read()
+            self._membervalue.close()
+            if bytescontent == b"":
+                raise ValueError(f"The BLOBMember {self.name} value is empty")
+            xmldata.text = bytescontent
         else:
             # could be a path to a file
             try:
-                xmldata.text = open(self._membervalue, "rb")
+                with open(self._membervalue, "rb") as fp:
+                    bytescontent = fp.read()
             except:
                 raise ValueError(f"The BLOBMember {self.name} value cannot be openned")
-         # old value was
+            if bytescontent == b"":
+                raise ValueError(f"The BLOBMember {self.name} value is empty")
+            xmldata.text = bytescontent
+        # old value was
         # xmldata.text = standard_b64encode(self._membervalue).decode('ascii')
         return xmldata
