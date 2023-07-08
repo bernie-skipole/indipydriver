@@ -65,6 +65,8 @@ def blob_xml_bytes(xmldata):
     for oneblob in xmldata.iter('oneBLOB'):
         # get the filepointer
         fp = oneblob.text
+        if fp.closed:
+            continue
         # set seek(0) so is read from start of file
         fp.seek(0)
         bytescontent = fp.read()
@@ -290,7 +292,6 @@ class Port_RX(STDIN_RX):
             # from source and append it to  readerque
             rxdata = await anext(source)
             if rxdata is not None:
-                print(rxdata.tag, file=sys.stderr)
                 if rxdata.tag == "enableBLOB":
                     # set permission flags in the blobstatus object
                     self.blobstatus.setpermissions(rxdata)
@@ -442,7 +443,6 @@ class BLOBSstatus:
             # invalid
             return
         value = rxdata.text.strip()
-        #print(value, file=sys.stderr)
         if value == "Never":
             perm = (True, False)    # (Other allowed, BLOB not allowed)
         elif value == "Also":
