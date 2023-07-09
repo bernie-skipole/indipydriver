@@ -21,6 +21,7 @@ indipydriver = Python tools to create INDI drivers
    usage/ipyserver
    usage/references
    usage/license
+   usage/queflow
 
 
 

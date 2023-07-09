@@ -1,5 +1,5 @@
 Device
-=========
+======
 
 .. autoclass:: indipydriver.Device
    :members:
