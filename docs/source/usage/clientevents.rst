@@ -40,7 +40,7 @@ The INDI specification describes enableBLOB when sent from a client::
     individual Device drivers shall disregard enableBLOB and send all elements at will.
 
 
-Your driver would normally ignore the enableBLOB event, however it is still presented as your application may wish to know about it, to log it for example.
+Your driver would normally ignore the enableBLOB event, however it is still presented as your application may wish to know about it, to log it for example. If the driver listen() method is used, it effectively becomes an "intermediate INDI server process", and the enableBLOB instruction will be acted on automatically, you do not need to handle it.
 
 
 newVectors

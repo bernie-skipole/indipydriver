@@ -107,7 +107,8 @@ class IPyDriver(collections.UserDict):
 
     def listen(self, host="localhost", port=7624):
         """If called, listens on the given host and port. Only one connection is accepted,
-           further connection attempts while a client is already connected will be refused."""
+           further connection attempts while a client is already connected will be refused.
+           This method also checks for enableBLOB instructions, and implements them."""
         if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(self.devices, host, port)

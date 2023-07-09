@@ -29,7 +29,9 @@ class getProperties(Event):
 
 
 class enableBLOB(Event):
-    "defines an event with self.value one of Never, Also, Only"
+    """Defines an event with self.value being one of Never, Also,
+       or Only. This can be ignored by the driver. It is automatically
+       acted on, if the driver listen() method is used."""
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
