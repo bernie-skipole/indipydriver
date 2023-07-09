@@ -319,6 +319,8 @@ class BLOBMember(PropertyMember):
             self._membervalue.seek(0)
             bytescontent = self._membervalue.read()
             self._membervalue.close()
+            if not isinstance(bytescontent, bytes):
+                raise ValueError(f"On being read, the BLOBMember {self.name} does not give bytes")
             if bytescontent == b"":
                 raise ValueError(f"The BLOBMember {self.name} value is empty")
             xmldata.text = bytescontent

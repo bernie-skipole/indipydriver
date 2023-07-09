@@ -388,6 +388,9 @@ class BLOBSstatus:
                 if status[0]:
                     return True
             return False
+        if not devicename in self.deviceproperties:
+            # devicename not recognised
+            return False
         # so we have a devicename, get propertyname
         name = xmldata.get("name")
         # if name missing, could be a message, cannot be a setBLOBVector
@@ -400,7 +403,10 @@ class BLOBSstatus:
                     return True
             return False
         # so we have a devicename, propertyname
-        status = self.devicestatus[devicename, name]
+        status = self.devicestatus.get(devicename, name)
+        if status is None:
+            # this property is not recognised as belonging to the device
+            return False
         if xmldata.tag == "setBLOBVector":
             return status[1]
         else:
@@ -415,9 +421,11 @@ class BLOBSstatus:
         # commands by setting Also or made the only command by setting Only.
 
         devicename = rxdata.get("device")
-
         if devicename is None:
             # invalid
+            return
+        if not devicename in self.deviceproperties:
+            # devicename not recognised
             return
         value = rxdata.text.strip()
         if value == "Never":
@@ -435,5 +443,7 @@ class BLOBSstatus:
             properties = self.deviceproperties[devicename]
             for name in properties:
                 self.devicestatus[devicename, name] = perm
-        else:
+        elif (devicename, propertyname) in self.devicestatus:
             self.devicestatus[devicename, propertyname] = perm
+        # otherwise the (devicename, propertyname) are not recognised
+        # so return without setting any permissions
