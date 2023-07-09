@@ -173,7 +173,11 @@ class _DriverComms:
             # the serverwriterque
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
+                    # at least one is connected, so this data is put into
+                    # serverwriterque, and is then sent to each client by
+                    # the copytransmittedtoclienttxque method.
                     await self.serverwriterque.put(xmldata)
+                    break
             # task completed
             writerque.task_done()
 
