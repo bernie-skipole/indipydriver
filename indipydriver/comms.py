@@ -72,7 +72,7 @@ def blob_xml_bytes(xmldata):
         encoded_data = standard_b64encode(bytescontent)
         chunksize = 1000
         for b in range(0, len(encoded_data), chunksize):
-            yield source[b:b+encoded_data]
+            yield encoded_data[b:b+chunksize]
         yield b"</oneBLOB>"
     yield b"</setBLOBVector>\n"
 
@@ -388,7 +388,7 @@ class BLOBSstatus:
                 if status[0]:
                     return True
             return False
-        if not devicename in self.deviceproperties:
+        if not (devicename in self.deviceproperties):
             # devicename not recognised
             return False
         # so we have a devicename, get propertyname
@@ -403,7 +403,7 @@ class BLOBSstatus:
                     return True
             return False
         # so we have a devicename, propertyname
-        status = self.devicestatus.get(devicename, name)
+        status = self.devicestatus.get((devicename, name))
         if status is None:
             # this property is not recognised as belonging to the device
             return False
@@ -424,7 +424,7 @@ class BLOBSstatus:
         if devicename is None:
             # invalid
             return
-        if not devicename in self.deviceproperties:
+        if not (devicename in self.deviceproperties):
             # devicename not recognised
             return
         value = rxdata.text.strip()
