@@ -11,9 +11,13 @@ INDI - Instrument Neutral Distributed Interface.
 
 For further information on INDI, see :ref:`references`.
 
-Typically the driver created with this package interfaces between your code which controls an instrument, or GPIO pins on the computer itself, and the INDI protocol which communicates to an INDI client. The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.  The client can be general purpose - communicating with any INDI driver, and taking the format of switches, numbers etc., from the protocol.
+Typically the driver created with this package interfaces between your code which controls an instrument, or GPIO pins on the computer itself, and the INDI protocol which communicates to an INDI client.
 
-INDI is normally used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control providing drivers are available. This package is aimed at making drivers easy to write.
+This package can be used to create the drivers, it does not include client functions. The INDI protocol is defined so that drivers should operate with any INDI client.
+
+The protocol defines the format of the data sent, such as light, number, text or switch, and the client can send commands to control the instrument.  The client can be general purpose, taking the format of switches, numbers etc., from the protocol.
+
+INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control providing drivers are available.
 
 The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
 
@@ -23,7 +27,7 @@ https://pypi.org/project/indipydriver
 
 Typically you would create a subclass of IPyDriver.
 
-The driver has two methods which should be overwritten.
+The driver has methods which should be overwritten.
 
 async def clientevent(self, event)
 
@@ -33,33 +37,22 @@ async def hardware(self)
 
 This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
 
-A further method can be overwritten.
-
 async def snoopevent(self, event)
 
 This is only used if one device is monitoring (snooping) on other devices, an example is given further in this documentation.
 
-Having created your IPyDriver subclass, you would create member objects, being instances of SwitchMember, LightMember, TextMember, BLOBMember or NumberMember which provide attribute values to control your instrument.
-
-You would then create vector objects, being instances of SwitchVector, LightVector, TextVector, BLOBVector or NumberVector these containing the appropriate member objects.
-
-You would then create one or more 'Device' instances, containing the vector objects.
-
-And then you would create an instance of your IPyDriver subclass, which in turn is set with the Devices.
-
-Finally you would run the driver asyncrun() method which runs the driver, typically called using:
+Having created an instance of your IPyDriver subclass, you would run the driver asyncrun() method which runs the driver, typically called using:
 
 asyncio.run(driver.asyncrun())
 
-The driver can transmit/receive either by stdin/stdout, or by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects. If this is the only driver on the network, then the 'indiserver' (debian package indi-bin) software - which connects multiple drivers to a port - is not needed.
+The driver can transmit/receive either by stdin/stdout, or if a single driver is being operated, by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects.
 
-An INDI web client is available on Pypi as project indiredis, and can connect to port 7624, and display the instrument controls.
+A further class provided in the package, IPyServer can operate with multiple driver instances, and serves them all via a port, a connected client can then control all the drivers.
+
 
 Issues
 ^^^^^^
 
-Using stdin/stdout has required some linux/unix specific commands, which will probably not work on Windows. However setting the driver to listen on a port should work on Windows, but is untested. (I don't have a Windows machine.)
+Using stdin/stdout has required some linux/unix specific commands, which will probably not work on Windows. However setting the driver to listen on a port, or using IPyServer should work on Windows, but is untested. (I don't have a Windows machine.)
 
 When transmitting or receiving BLOBS the entire BLOB is loaded into memory, which may cause issues if the BLOB is large. It is suggested that very large binary objects should be transferred by some other method.
-
-When using the driver with the listen() method - which listens on a given host address and port, only one connection at a time is accepted, further connection attempts while a client is already connected will be refused.
