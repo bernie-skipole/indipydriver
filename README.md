@@ -32,11 +32,11 @@ async def snoopevent(self, event)
 
 This is only used if one device is monitoring (snooping) on other devices.
 
-Having created an instance of your IPyDriver subclass, you would run the driver asyncrun() method which runs the driver, typically called using:
+Having created an instance of your IPyDriver subclass, you would run the driver using:
 
 asyncio.run(driver.asyncrun())
 
-The driver can transmit/receive either by stdin/stdout, or if a single driver is being operated, by a port, typically localhost:7624 which is the INDI port number, and to which a client typically connects.
+The driver can transmit/receive either by stdin/stdout, or by a port.
 
 A further class provided in the package, IPyServer can operate with multiple driver instances, and serves them all via a port, a connected client can then control all the drivers.
 
