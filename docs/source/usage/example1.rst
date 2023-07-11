@@ -10,8 +10,8 @@ constructor which is::
 
     IPyDriver(devices, **driverdata)
 
-devices will be a list of devices (instances of the Device class) and driverdata will
-be an attribute dictionary of the objects you have created to operate the instrument.
+devices will be a list of devices (instances of the Device class) and driverdata can
+be used to pass in any objects you have created to operate the instrument.
 
 So in the example below, a class 'ThermalControl' is defined to actually do the
 instrument control, with an instance 'thermalcontrol' created from it.
