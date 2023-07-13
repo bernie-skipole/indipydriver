@@ -100,6 +100,13 @@ class IPyDriver(collections.UserDict):
         # self.comms = STDINOUT() will be set in the asyncrun call
         self.comms = None
 
+        # These set the remote traffic which this driver is snooping
+        # initially the driver is not snooping anything, until it sends
+        # a getProperties
+        self.snoopall = False           # gets set to True if it is snooping everything
+        self.snoopdevices = set()       # gets set to a set of device names
+        self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+
 
     def _reporterror(self, message):
         "Prints message to stderr"
@@ -254,6 +261,7 @@ class IPyDriver(collections.UserDict):
         xmldata = ET.Element('getProperties')
         if devicename is None:
             await self.send(xmldata)
+            self.snoopall = True
             return
         if devicename in self.devices:
             self._reporterror("Cannot snoop on a device already controlled by this driver")
@@ -261,9 +269,13 @@ class IPyDriver(collections.UserDict):
         xmldata.set("device", devicename)
         if vectorname is None:
             await self.send(xmldata)
+            self.snoopdevices.add(devicename)
             return
         xmldata.set("name", vectorname)
         await self.send(xmldata)
+        # adds tuple (devicename,vectorname) to self.snoopvectors
+        self.snoopvectors.add((devicename,vectorname))
+
 
     async def hardware(self):
         """Override this to operate device hardware, and transmit updates

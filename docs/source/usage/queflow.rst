@@ -39,7 +39,7 @@ If the listen method is used, the writerque is read in module comms.Port_TX, it 
 
 If IPyServer is used, possibly with multiple drivers, an IPyServer.serverwriterque is created.
 
-Multiple ipyserver._DriverComms objects are created, one for each driver, and assigned to the driver.comms attribute, each reads the driver.writerque and puts the data into the IPyServer.serverwriterque.  This combines all the driver writer queues into one queue.
+Multiple ipyserver._DriverComms objects are created, one for each driver, and assigned to the driver.comms attribute, each reads the driver.writerque and puts the data into the IPyServer.serverwriterque.  This combines all the driver writer queues into one queue. The data from the driver.writerque is also tested against other drivers snooping requirements, and if another driver wants to snoop it, a copy is placed into the other drivers _DriverComms.rxque.
 
 A pool of ipyserver._ClientConnection objects is created, and one is assigned per client connection. Each has a _ClientConnection.txque queue.
 
@@ -59,7 +59,7 @@ If IPyServer is used, comms.Port_RX places the parsed xmldata into an IPyServer.
 
 An ipyserver._DriverComms object is created for each driver. Each has a _DriverComms.rxque.
 
-The IPyServer.asyncrun() coroutine creates a task which reads data from IPyServer.serverreaderque and copies it to each drivers _DriverComms.rxque.
+The IPyServer.asyncrun() coroutine creates a task copyreceivedtodriversrxque which reads data from IPyServer.serverreaderque and copies it to each drivers _DriverComms.rxque, this copy function checks the xmldata to get it to the right driver.
 
 Each driver is calling its _DriverComms object, which places its rxque contents into the drivers IPyDriver.readerque
 
