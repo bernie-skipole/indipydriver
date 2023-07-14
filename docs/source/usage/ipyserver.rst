@@ -1,18 +1,14 @@
 IPyServer
 =========
 
-In the current version 0.0.6, the IPyServer object is still being developed.
-
-enableBLOBs is implemented
-
-snooping between drivers is not yet done.
+This server class is not a general purpose INDI server such as is available at indilib.org which can run third party drivers as executable programes. Rather it is used with IPyDriver instances only. It provides the snooping ability between drivers, implements enableBLOB instructions received from the client, and allows up to ten client connections.
 
 
 .. autoclass:: indipydriver.IPyServer
    :members: asyncrun
 
 
-Assuming you have two importable modules containing the previous examples, thermostat.py and windowcontrol.py::
+Assuming you have two importable modules containing drivers, thermostat.py and windowcontrol.py::
 
 
     import asyncio
@@ -29,4 +25,4 @@ Assuming you have two importable modules containing the previous examples, therm
 
     asyncio.run(server.asyncrun())
 
-This example would run the drivers together with the server, each driver.asyncrun() method should not be called, nor should the driver.listen() method - as IPyServer is doing the port communications.  Using the above example, up to five (the default) clients can connect to localhost, 7624.
+This example would run the drivers together with the server, all in a single thread.  Using the above example, up to five clients can connect to localhost, port 7624, these being the defaults.
