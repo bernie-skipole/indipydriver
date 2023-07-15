@@ -71,7 +71,7 @@ The enableBLOB vector can be ignored - it is used by IpyServer.
 
 In this case the only new vector to be received will be a newSwitchVector for the LED switch, and the event.vector attribute is the vector with name "ledswitchvector". This vector, and the device with devicename 'led' are created and added to the driver when it is instantiated, which will be described shortly.
 
-Calling event.get("ledswitchmember") gets the value, or None if this member is not included in the received newSwitchVector. In this example 'control' is an instance of your LEDSwitch class, and so calling its set_LED method sets the LED.
+Calling event.get("ledswitchmember") gets the member's value ('On' or 'Off'), or None if this member is not included in the received newSwitchVector. In this example 'control' is an instance of your LEDSwitch class, and so calling its set_LED method sets the LED.
 
 Finally, having set the LED, you should set the vector state to ok, set its member "ledswitchmember" to the switch value, and await the vector's send_setVector() method, which sends it to the client, confirming that the switch has changed state.
 
@@ -79,7 +79,7 @@ This covers receiving instructions from the client, but you will also want to se
 
 
         async def hardware(self):
-            "This should be a continuously running coroutine which can be used to run the hardware"
+            "This should be a continuously running coroutine"
             control =  self.driverdata["control"]
             vector = self["led"]["ledswitchvector"]
             while True:
@@ -109,7 +109,9 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         ledswitch = LEDSwitch()
 
         # create switch member
-        switchmember = SwitchMember(name="ledswitchmember", label="LED Switch", membervalue=ledswitch.get_LED())
+        switchmember = SwitchMember(name="ledswitchmember",
+                                    label="LED Switch",
+                                    membervalue=ledswitch.get_LED())
 
         # create switch vector, in this case containing a single switch member.
         switchvector = SwitchVector(  name="ledswitchvector",
@@ -123,7 +125,8 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         # create a Device, in this case containing a single vector
         leddevice = Device( devicename="led", properties=[switchvector] )
 
-        # Create the LEDDriver, in this case containing a single device, and your hardware object
+        # Create the LEDDriver, in this case containing a single device,
+        # together with your hardware object
         leddriver = LEDDriver(devices=[leddevice], control=ledswitch)
 
         # and return the driver
@@ -139,8 +142,28 @@ As it stands the module could be imported and the make_driver() function would b
     if __name__ == "__main__":
 
         driver = make_driver()
-
         asyncio.run(driver.asyncrun())
 
-
 If the appropriate shebang line is used, and the script made executable, the driver will communicate on stdin and stdout if executed.
+
+Alternatively::
+
+    if __name__ == "__main__":
+
+        driver = make_driver()
+        driver.listen()
+        asyncio.run(driver.asyncrun())
+
+In this example, the driver is set to listen on a host/port rather than stdin and stdout. If the host and port are not specified in this method call, defaults of 'localhost' and port 7624 are used.
+
+This has a limitation that it accepts only a single connection, so is useful in the case where a single driver is connected to a single client.
+
+Alternatively, and starting with a "from indipydriver import IPyServer"::
+
+    if __name__ == "__main__":
+
+        driver = make_driver()
+        server = IPyServer([driver])
+        asyncio.run(server.asyncrun())
+
+The IPyServer class takes a list of drivers (only one in this example) and can connect to multiple clients. Again the defaults of 'localhost' and 7624 are used in this example. The drivers must all be created from IPyDriver subclasses - this is not a general purpose server able to run third party INDI drivers created with other languages or tools.

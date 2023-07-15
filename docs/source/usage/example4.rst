@@ -6,8 +6,6 @@ This example builds on the last, but adds a switch to either leave the window on
 This consists of three switches in a vector - with a OneOfMany rule, so only one switch can be active::
 
 
-    #!/usr/bin/env python3
-
     import asyncio
 
     from indipydriver import (IPyDriver, Device,
@@ -237,5 +235,4 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
     if __name__ == "__main__":
 
         driver = make_driver()
-
         asyncio.run(driver.asyncrun())

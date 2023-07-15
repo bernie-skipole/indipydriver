@@ -4,34 +4,7 @@ Example1
 The following example shows a simulated thermostat and heater which
 maintains a temperature around 15C.
 
-Initially you would create any objects and functions needed to
-operate your hardware, and these can be inserted into the IPyDriver
-constructor which is::
-
-    IPyDriver(devices, **driverdata)
-
-devices will be a list of devices (instances of the Device class) and driverdata can
-be used to pass in any objects you have created to operate the instrument.
-
-So in the example below, a class 'ThermalControl' is defined to actually do the
-instrument control, with an instance 'thermalcontrol' created from it.
-
-An instance of the Device class, 'thermostat' is created.
-
-A subclass of IPyDriver is defined with class name ThermoDriver and a driver
-is then be made using::
-
-    driver = ThermoDriver(devices=[thermostat], control=thermalcontrol)
-
-The code in this subclass can access the thermalcontrol object with::
-
-    self.driverdata["control"]
-
-So the code added in the IPyDriver subclass has access to any objects and
-methods required to control and monitor the instrument.
-
-The thermostat device in this example uses a NumberVector, which is a class describing
-and containing one or more NumberMember objects. In this example a NumberMember
+In this example a NumberVector and NumberMember
 contains the temperature which is reported to the client::
 
 

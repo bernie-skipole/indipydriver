@@ -321,9 +321,4 @@ An io.BytesIO buffer is set with temperature logs every second. After five minut
     if __name__ == "__main__":
 
         driver = make_driver()
-
         asyncio.run(driver.asyncrun())
-
-        # to test logging at the console
-        # <getProperties version="1.7" />
-        # <newSwitchVector device="Thermostat" name="switchvector"><oneSwitch name="switchmember">On</oneSwitch></newSwitchVector>

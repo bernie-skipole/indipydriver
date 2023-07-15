@@ -1,19 +1,8 @@
 Example3
 ========
 
-This example simulates a driver which snoops on the thermostat of the first example, and if the temperature becomes too hot, it opens a window, and closes it when the temperature drops.
+This example simulates a driver which snoops on the thermostat of the first example, and if the temperature becomes too hot, it opens a window, and closes it when the temperature drops. It also shows how a device can be subclassed, to delegate functions to the device objects::
 
-This could be achieved by adding a new device to the thermostat driver, in which case snooping would not be required, however to illustrate the full functionality this example is a separate driver, with both this, and the thermostat driver, connected to indiserver.
-
-To run the thermostat with indiserver, it would need a shebang line adding, the script set as executable, and the 'listen' method removing so it will communicate by stdin and stdout.
-
-The indiserver program is run with the driver names as arguments, and executes them, communicating via stdin/stdout - so this driver script will need to be executable::
-
-
-    #!/usr/bin/env python3
-
-    # indiserver 'runs' executable drivers, so the above shebang, together with giving this
-    # script executable permissions ensures the driver can be run.
 
     import asyncio
 
@@ -163,5 +152,18 @@ The indiserver program is run with the driver names as arguments, and executes t
     if __name__ == "__main__":
 
         driver = make_driver()
-
         asyncio.run(driver.asyncrun())
+
+
+Assuming this module is windowcontrol.py, and the thermostat example is thermostat.py, these would be run with::
+
+
+    import asyncio
+    from indipydriver import IPyServer
+    import thermostat, windowcontrol
+
+    driver1 = thermostat.make_driver()
+    driver2 = windowcontrol.make_driver()
+
+    server = IPyServer([driver1, driver2])
+    asyncio.run(server.asyncrun())
