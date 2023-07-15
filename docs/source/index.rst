@@ -7,18 +7,19 @@ indipydriver = Python tools to create INDI drivers
    :maxdepth: 1
 
    usage/introduction
-   usage/example1
-   usage/ipydriver
-   usage/device
-   usage/example2
+   usage/summary
    usage/propertyvectors
-   usage/hardware
+   usage/device
+   usage/ipydriver
    usage/clientevents
    usage/snoopevents
+   usage/ipyserver
+   usage/example1
+   usage/example2
+   usage/hardware
    usage/example3
    usage/example4
    usage/example5
-   usage/ipyserver
    usage/references
    usage/license
    usage/queflow

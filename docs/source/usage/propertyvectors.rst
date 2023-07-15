@@ -1,5 +1,5 @@
-Propertyies
-===========
+Properties
+==========
 
 A property vector is an object containing one or more 'members'.  For example a NumberVector will contain one or more NumberMember objects, each containing a number value.
 
@@ -7,15 +7,15 @@ This section documents the property vectors created and set into the device, and
 
 All these vectors have arguments name, label, group, perm, state, except for LightVector which does not have permission (being a read only value).
 
-name is the vector name
+**name** is the vector name
 
-label is a string which can be used by the client, if not given it will be set equal to the name.
+**label** is a string which can be used by the client, if not given it will be set equal to the name.
 
-group is a further label used by the client, which can be used to group properties together. It can be left blank if not used.
+**group** is a further label used by the client, which can be used to group properties together. It can be left blank if not used.
 
-perm is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them.
+**perm** is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them.
 
-state is the state of the vector, and is an attribute which can be set before calling a send_setVector method to inform the client of the state of the property.
+**state** is the state of the vector, and is an attribute which can be set before calling a send_setVector method to inform the client of the state of the property.
 
 state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
 

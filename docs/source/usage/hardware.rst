@@ -102,3 +102,35 @@ You could subclass the Device class, and override this method to control the har
 To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any hardware related object required.
 
 The args and kwargs arguments of devhardware are there so you can pass in any argument you like when calling this method.
+
+Events
+^^^^^^
+
+When handling an event, more than one 'send_setvector' can be sent, you are not limited to just the event.vector.
+
+Expanding the thermostat example with the "statusvector" set of lights. When a target temperature is received, if the target is below 5.0, then the frost light should give some warning, and the response could be::
+
+    case newNumberVector(devicename='Thermostat',
+                         vectorname='targetvector') if 'target' in event:
+
+        newtarget = event['target']
+        try:
+            target = self.indi_number_to_float(newtarget)
+        except TypeError:
+            # ignore an incoming invalid number
+            pass
+        else:
+            control.target = target
+            event.vector['target'] = control.stringtarget
+            event.vector.state = 'Ok'
+            await event.vector.send_setVector()
+            # If the target is below 5C, and if the temperature is still
+            # above 5.0, warn of the danger of frost due to the target being low
+            statusvector = self['Thermostat']['statusvector']
+            if target < 5.0 and control.temperature > 5.0:
+                statusvector["frost"] = 'Idle'
+                await statusvector.send_setVector(allvalues=False)
+                await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+
+
+So the target is set ok, but the client GUI displays a warning.
