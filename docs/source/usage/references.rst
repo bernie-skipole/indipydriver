@@ -30,5 +30,3 @@ https://www.clearskyinstitute.com/INDI/INDI.pdf
 https://indilib.org/
 
 https://github.com/indilib/indi/releases
-
-https://packages.debian.org/buster/indi-bin

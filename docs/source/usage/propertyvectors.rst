@@ -19,11 +19,9 @@ All these vectors have arguments name, label, group, perm, state, except for Lig
 
 state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
 
-Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the thermostat example, the temperature of the vector member is set by
+Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the LED switch example, the value of the vector member is set by
 
-vector['temperature'] = control.stringtemperature
-
-Where 'temperature' is the name of the member object and control.stringtemperature is a string of a numeric value.
+vector["ledswitchmember"] = control.get_LED()
 
 Numeric values are set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol, the only exception is blobsize, where the number should be an integer.
 
@@ -50,15 +48,6 @@ A LightVector takes one or more LightMember objects.
 
 .. autoclass:: indipydriver.LightVector
    :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
-
-
-For example, if a LightMember name is 'Indicator' it could be set with:
-
-vector['Indicator'] = 'Ok'
-
-await vector.send_setVector()
-
-where vector is the vector object containing the Indicator.
 
 
 Switches

@@ -71,6 +71,19 @@ Typically, if you accept a new member value, you would have code that controls y
 
 Setting the state to Ok is necessary, as when the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed.
 
+It may be that you expect to receive multiple member values in a vector, and want to act on them all, in which case you may do something like::
+
+    case newXXXXXVector(devicename='AAA',
+                        vectorname='BBB'):
+
+        for name, value in event.items():
+            # your code to act on these values
+            # followed by:
+            event.vector[name] = value
+        event.vector.state = 'Ok'
+        await event.vector.send_setVector()
+
+
 The new Vector events are:
 
 

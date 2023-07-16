@@ -6,20 +6,22 @@ The driver has method::
 
     async def snoopevent(self, event):
 
-If this driver is 'snooping' on other drivers or devices, this method should be written to handle events created as data is received.
+If this driver is 'snooping' on other drivers, this method should be written to handle events created as data is received.
 
 Your code should typically use match and case to determine the type of event, and read the event contents, and then take any appropriate action.
 
 Snooping
 ^^^^^^^^
 
-Snooping can occur on a network of INDI drivers, typically using the program 'indiserver' to connect multiple drivers to a client.  A driver can transmit a 'getProperties' command using driver coroutine method::
+Snooping can occur on a network of INDI drivers, typically connected together by IPyServer, or using the program 'indiserver' from indilib.org.  A driver can transmit a 'getProperties' command using driver coroutine method::
 
     send_getProperties(devicename=None, vectorname=None)
 
-which requests indiserver to copy traffic from a remote device to this driver.
+which requests the server utility to copy traffic from another driver/device to this driver.
 
-If vectorname is None, then all traffic from the specified device will be copied, if devicename is None as well, then traffic from all devices will be copied.
+If vectorname is None, then all traffic from the specified device will be copied, if devicename is None as well, then traffic from all devices will be copied (apart from devices on this particular driver).
+
+Note: in this implementation, snooping will not occur between devices on the same driver. Your driver code is handling all its devices, so should be able to control all traffic needed between them.
 
 Snooping is typically used when an instrument should only take actions if another remote instrument has already taken a required prior action.  Snooping may also be useful as a method of logging traffic.
 
