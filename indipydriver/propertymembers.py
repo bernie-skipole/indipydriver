@@ -298,7 +298,7 @@ class BLOBMember(PropertyMember):
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""
-        xmldata = ET.Element('defBlob')
+        xmldata = ET.Element('defBLOB')
         xmldata.set("name", self.name)
         xmldata.set("label", self.label)
         return xmldata

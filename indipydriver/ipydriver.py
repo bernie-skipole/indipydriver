@@ -259,6 +259,7 @@ class IPyDriver(collections.UserDict):
            on the network, if devicename given, it must not be a device of this driver as
            the point of this is to snoop on remote devices."""
         xmldata = ET.Element('getProperties')
+        xmldata.set("version", "1.7")
         if devicename is None:
             await self.send(xmldata)
             self.snoopall = True
