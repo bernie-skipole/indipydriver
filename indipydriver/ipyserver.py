@@ -241,6 +241,20 @@ class _ClientConnection:
         # self.connected is True if this pool object is running a connection
         self.connected = False
 
+
+    async def _monitor_connection(self):
+        """If connected and self.txque is empty, send def vectors every 30 seconds
+           This ensures that if the connection has failed, due to the client disconnecting, the write
+           to the port operation will cause a failure exception which will close the connection"""
+        while True:
+            await asyncio.sleep(30)
+            if self.connected and self.txque.empty():
+                for device in self.devices.values():
+                    for vector in device.values():
+                        xmldata =  vector._make_defVector()
+                        await self.txque.put(xmldata)
+
+
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
@@ -250,10 +264,11 @@ class _ClientConnection:
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
-            await txtask
-            await rxtask
+            montask = asyncio.create_task(self._monitor_connection())
+            await asyncio.gather(txtask, rxtask, montask)
         except ConnectionResetError:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
+            montask.cancel()
             cleanque(self.txque)

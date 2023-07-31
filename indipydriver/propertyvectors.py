@@ -162,17 +162,8 @@ class SwitchVector(PropertyVector):
             self.dataque.task_done()
 
 
-    async def send_defVector(self, message='', timestamp=None, timeout='0'):
-        """Transmits the vector definition (defSwitchVector) to the client.
-
-           message is any suitable string for the client.
-
-           timestamp should be a datetime.datetime object or None, in which
-           case a datetime.datetime.utcnow() value will be inserted.
-
-           The timeout value should be '0' if not used, or a string of a
-           numeric value indicating to the client how long this data is valid.
-        """
+    def _make_defVector(self, message='', timestamp=None, timeout='0'):
+        "Creates xml data object"
         if not isinstance(timeout, str):
             self._reporterror("Aborting sending defSwitchVector: The given send_defVector timeout value must be a string object")
             return
@@ -200,7 +191,22 @@ class SwitchVector(PropertyVector):
             xmldata.set("message", message)
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
-        await self.driver.send(xmldata)
+        return xmldata
+
+    async def send_defVector(self, message='', timestamp=None, timeout='0'):
+        """Transmits the vector definition (defSwitchVector) to the client.
+
+           message is any suitable string for the client.
+
+           timestamp should be a datetime.datetime object or None, in which
+           case a datetime.datetime.utcnow() value will be inserted.
+
+           The timeout value should be '0' if not used, or a string of a
+           numeric value indicating to the client how long this data is valid.
+        """
+        xmldata = self._make_defVector(message, timestamp, timeout)
+        if not xmldata is None:
+            await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
