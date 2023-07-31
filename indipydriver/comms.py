@@ -1,5 +1,5 @@
 
-import asyncio, sys, os
+import asyncio, sys, os, time
 
 import xml.etree.ElementTree as ET
 
@@ -313,6 +313,7 @@ class Portcomms():
 
     def __init__(self, devices, host="localhost", port=7624):
         # devices is a dictionary of device name to device this driver owns
+        self.devices = devices
         self.blobstatus = BLOBSstatus(devices)
         self.host = host
         self.port = port
@@ -329,6 +330,19 @@ class Portcomms():
             server.close()
             raise e
 
+
+    async def _monitor_connection(self):
+        """If connected and self.writerque and self.readerque are empty, send def vectors every ten seconds
+           This ensures that if the connection has failed, due to the client disconnecting, the write
+           to the port operation will cause a failure exception which will close the connection"""
+        while True:
+            await asyncio.sleep(10)
+            if self.connected and self.writerque.empty() and self.readerque.empty():
+                for device in self.devices.values():
+                    for vector in device.values():
+                        await vector.send_defVector()
+
+
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         if self.connected:
@@ -342,12 +356,13 @@ class Portcomms():
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(rx.run_rx(self.readerque))
-            await txtask
-            await rxtask
-        except ConnectionResetError:
+            montask = asyncio.create_task(self._monitor_connection())
+            await asyncio.gather(txtask, rxtask, montask)
+        except Exception as e:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
+            montask.cancel()
             cleanque(self.writerque)
 
 

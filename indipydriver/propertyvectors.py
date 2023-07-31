@@ -200,9 +200,6 @@ class SwitchVector(PropertyVector):
             xmldata.set("message", message)
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
-            # after a defswitch sent, assume new client connection, and set all members as changed
-            # so they will all be included in the first 'send_setVector'
-            switch.changed = True
         await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
@@ -378,9 +375,6 @@ class LightVector(PropertyVector):
             xmldata.set("message", message)
         for light in self.data.values():
             xmldata.append(light.deflight())
-            # after a deflight sent, assume new client connection, and set all members as changed
-            # so they will all be included in the first 'send_setVector'
-            light.changed = True
         await self.driver.send(xmldata)
 
 
@@ -548,9 +542,6 @@ class TextVector(PropertyVector):
             xmldata.set("message", message)
         for text in self.data.values():
             xmldata.append(text.deftext())
-            # after a deftext sent, assume new client connection, and set all members as changed
-            # so they will all be included in the first 'send_setVector'
-            text.changed = True
         await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
@@ -721,9 +712,6 @@ class NumberVector(PropertyVector):
             xmldata.set("message", message)
         for number in self.data.values():
             xmldata.append(number.defnumber())
-            # after a defnumber sent, assume new client connection, and set all members as changed
-            # so they will all be included in the first 'send_setVector'
-            number.changed = True
         await self.driver.send(xmldata)
 
     async def send_setVector(self, message='', timestamp=None, timeout='0', allvalues=True):
