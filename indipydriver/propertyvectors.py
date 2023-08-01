@@ -100,10 +100,6 @@ class PropertyVector(collections.UserDict):
         except ValueError as ex:
             self._reporterror(ex)
 
-    def send_defVector(self, timestamp=None, timeout=0, message=''):
-        "overridden in child classes"
-        pass
-
     def __setitem__(self, membername, value):
         try:
             self.data[membername].membervalue = value
