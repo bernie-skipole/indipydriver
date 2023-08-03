@@ -312,7 +312,7 @@ class Port_RX(STDIN_RX):
 
 class TXTimer():
 
-    def __init(self, timeout = 15):
+    def __init__(self, timeout = 15):
         self.timer = time.time()
         self.timeout = timeout
 
