@@ -223,9 +223,10 @@ class STDINOUT():
 class Port_TX():
     "An object that transmits data on a port, used by Portcomms as one half of the communications path"
 
-    def __init__(self, blobstatus, writer):
+    def __init__(self, blobstatus, writer, timer):
         self.blobstatus = blobstatus
         self.writer = writer
+        self.timer = timer
 
 
     async def run_tx(self, writerque):
@@ -244,12 +245,14 @@ class Port_TX():
                 # the generator blob_xml_bytes yields bytes
                 for binarydata in blob_xml_bytes(txdata):
                     # Send to the port
+                    self.timer.update()
                     self.writer.write(binarydata)
                     await self.writer.drain()
             else:
                 # its straight xml, send it out on the port
                 binarydata = ET.tostring(txdata)
                 # Send to the port
+                self.timer.update()
                 self.writer.write(binarydata)
                 await self.writer.drain()
             writerque.task_done()
@@ -307,6 +310,25 @@ class Port_RX(STDIN_RX):
                 # could put a max value here to stop this increasing indefinetly
 
 
+class TXTimer():
+
+    def __init(self, timeout = 15):
+        self.timer = time.time()
+        self.timeout = timeout
+
+    def update(self):
+        "call this every time a transmission is made, and it resets the timer"
+        self.timer = time.time()
+
+    def elapsed(self):
+        "Return True if more than timeout seconds have elapsed since last update"
+        telapsed = time.time() - self.timer
+        if telapsed > self.timeout:
+            self.timer = time.time()
+            return True
+        return False
+
+
 class Portcomms():
     """If indipydriver.comms is set to an instance of this class it is
        used to implement communications via a port"""
@@ -318,6 +340,11 @@ class Portcomms():
         self.host = host
         self.port = port
         self.connected = False
+
+        # timer used to force a data transmission after timeout seconds
+        # this will cause an exception if the connection is broken and will shut down
+        # the connection
+        self.timer = TXTimer(timeout = 15)
 
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
@@ -332,15 +359,19 @@ class Portcomms():
 
 
     async def _monitor_connection(self):
-        """If connected and self.writerque and self.readerque are empty, send def vectors every ten seconds
+        """If connected and not transmitting, send def vectors every self.timeout seconds
            This ensures that if the connection has failed, due to the client disconnecting, the write
            to the port operation will cause a failure exception which will close the connection"""
         while True:
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
+            # this is tested every five seconds
             if self.connected and self.writerque.empty() and self.readerque.empty():
-                for device in self.devices.values():
-                    for vector in device.values():
-                        await vector.send_defVector()
+                # only need to test if the queue are empty
+                if self.timer.elapsed():
+                    # no transmission in timeout seconds so send defVectors
+                    for device in self.devices.values():
+                        for vector in device.values():
+                            await vector.send_defVector()
 
 
     async def handle_data(self, reader, writer):
@@ -352,7 +383,7 @@ class Portcomms():
             return
         self.connected = True
         rx = Port_RX(self.blobstatus, reader)
-        tx = Port_TX(self.blobstatus, writer)
+        tx = Port_TX(self.blobstatus, writer, self.timer)
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(rx.run_rx(self.readerque))

@@ -8,7 +8,7 @@ from functools import partialmethod
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus
+from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus, TXTimer
 
 
 class IPyServer:
@@ -241,18 +241,27 @@ class _ClientConnection:
         # self.connected is True if this pool object is running a connection
         self.connected = False
 
+        # timer used to force a data transmission after timeout seconds
+        # this will cause an exception if the connection is broken and will shut down
+        # the connection
+        self.timer = TXTimer(timeout = 15)
+
 
     async def _monitor_connection(self):
-        """If connected and self.txque is empty, send def vectors every 30 seconds
+        """If connected and self.txque is empty, send def vectors every timeout seconds
            This ensures that if the connection has failed, due to the client disconnecting, the write
            to the port operation will cause a failure exception which will close the connection"""
         while True:
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
+            # this is tested every five seconds
             if self.connected and self.txque.empty():
-                for device in self.devices.values():
-                    for vector in device.values():
-                        xmldata =  vector._make_defVector()
-                        await self.txque.put(xmldata)
+                 # only need to test if the queue is empty
+                if self.timer.elapsed():
+                    # no transmission in timeout seconds so send defVectors
+                    for device in self.devices.values():
+                        for vector in device.values():
+                            xmldata =  vector._make_defVector()
+                            await self.txque.put(xmldata)
 
 
     async def handle_data(self, reader, writer):
@@ -260,7 +269,7 @@ class _ClientConnection:
         self.connected = True
         blobstatus = BLOBSstatus(self.devices)
         rx = Port_RX(blobstatus, reader)
-        tx = Port_TX(blobstatus, writer)
+        tx = Port_TX(blobstatus, writer, self.timer)
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
