@@ -14,7 +14,7 @@ The given name of the device, this device object can be accessed from the driver
 
 **enable**
 
-Automatically set to False if the device is deleted, should be set to True to re-enable the device.
+Automatically set to False if the device is deleted by calling the device send_delProperty() method. The attribute should be set to True to re-enable the device, also for every property of the device, you will need to call the vector send_defVector() method to inform the client that the device and its properties are now available.
 
 **devicedata**
 
