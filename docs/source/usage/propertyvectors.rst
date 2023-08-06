@@ -5,9 +5,13 @@ A property vector is an object containing one or more 'members'.  For example a 
 
 This section documents the property vectors created and set into the device, and also the associated members.
 
-All these vectors have arguments name, label, group, perm, state, except for LightVector which does not have permission (being a read only value).
+All these vectors have arguments name, label, group, perm, state except for LightVector which does not have permission (being a read only value).
 
-**name** is the vector name
+**name** is the vector name, any unique name consistent with xml can be used (normal ascii characters), however if you are working with astronomical instruments, and want compatability with other drivers and clients, see the site:
+
+https://indilib.org/develop/developer-manual/101-standard-properties.html
+
+Which provides a convention for property and member names.
 
 **label** is a string which can be used by the client, if not given it will be set equal to the name.
 
@@ -18,6 +22,12 @@ All these vectors have arguments name, label, group, perm, state, except for Lig
 **state** is the state of the vector, and is an attribute which can be set before calling a send_setVector method to inform the client of the state of the property.
 
 state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
+
+As well as these arguments, each vector has attribute 'enable'.
+
+**enable** is by default True, and is automatically set to False if the send_delProperty() method is called. When False no further data is sent by this property and any incoming values are ignored, until the enable attribute is set True again. This has the effect of removing the property from the client.
+
+If in the initial state of the device, it is required that a particular property should be hidden, then when the vector is first created, set vector.enable = False, and the vector will be disabled until the enable attribute is set True, and the vector send_defVector() method called, which informs the client of the existence of this property.
 
 Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the LED switch example, the value of the vector member is set by
 
