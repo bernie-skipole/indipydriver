@@ -145,24 +145,26 @@ To run the driver include::
 
 If the appropriate shebang line is used, and the script made executable, the driver will communicate on stdin and stdout if executed.
 
-Alternatively::
-
-    if __name__ == "__main__":
-
-        driver = make_driver()
-        driver.listen()
-        asyncio.run(driver.asyncrun())
-
-In this example, the driver is set to listen on a host/port rather than stdin and stdout. If the host and port are not specified in the listen() method, defaults of 'localhost' and port 7624 are used.
-
-This has a limitation that it accepts only a single connection, so is useful in the case where a single driver is connected to a single client.
-
 Alternatively, (include a "from indipydriver import IPyServer")::
 
     if __name__ == "__main__":
 
         driver = make_driver()
-        server = IPyServer([driver])
+        server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
         asyncio.run(server.asyncrun())
 
-The IPyServer class takes a list of drivers, only one in this example, runs them in a common event loop and serves them all on a host/port. It allows connections from multiple clients. Again the defaults of 'localhost' and 7624 are used in this example. The drivers must all be created from IPyDriver subclasses - this is not a general purpose server able to run third party INDI drivers created with other languages or tools.
+In this example, the driver is set to listen on a host/port rather than stdin and stdout. If the host, port and maxconnections are not specified in the IPyServer call, the values shown above are the defaults.
+
+The IPyServer class takes a list of drivers, only one in this example, runs them in a common event loop and serves them all on the host/port. It allows connections from multiple clients. The drivers must all be created from IPyDriver subclasses - this is not a general purpose server able to run third party INDI drivers created with other languages or tools.
+
+Another option::
+
+    if __name__ == "__main__":
+
+        driver = make_driver()
+        driver.listen(host="localhost", port=7624)
+        asyncio.run(driver.asyncrun())
+
+In this example, the driver also listens on a host/port rather than stdin and stdout.
+
+This has a limitation that it accepts only a single connection, so may be useful in the case where a single driver is connected to a single client. It should be noted that on disconnection, a port can take several seconds to reset, so a client reconnection may not happen immediately. Using IPyServer is better in this regard, since if one connection is locked up, a reconnection can be made as long as 'maxconnections' is not reached.
