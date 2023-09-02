@@ -160,7 +160,6 @@ a 'newNumberVector', which causes the clientevent method to be called::
         driver = make_driver()
 
         # In this example, the driver communicates by stdin and stdout.
-        # and the 'listen' method is not called
 
         asyncio.run(driver.asyncrun())
 
