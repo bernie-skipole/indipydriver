@@ -153,15 +153,9 @@ contains the temperature which is reported to the client::
 
         # In this example, set the driver to listen on a host/port
         # rather than stdin and stdout.
-        # If host and port are not specified in this method call,
-        # defaults of 'localhost' and 7624 are used
-        driver.listen()
 
-        # If the above line is not included, the driver will
-        # communicate via stdin and stdout.
-
-        # Finally the driver asyncrun() method is called which runs the driver
-        asyncio.run(driver.asyncrun())
+        server = IPyServer([driver])
+        asyncio.run(server.asyncrun())
 
         # To see this working, in another terminal try "telnet localhost 7624" and
         # Copy and paste the following xml into the terminal:
@@ -205,6 +199,12 @@ Alternatively, if you want the driver to listen on a port::
 
         driver = make_driver()
 
-        server = IPyServer([driver], maxconnections=5)
+        server = IPyServer([driver], host="localhost",
+                                     port=7624,
+                                     maxconnections=5)
 
         asyncio.run(server.asyncrun())
+
+If host, port and maxconnections arguments are not given, the above defaults
+are used. The IPyServer class can serve multiple drivers if they are given in
+the first list argument.
