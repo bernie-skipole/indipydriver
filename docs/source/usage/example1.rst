@@ -12,7 +12,7 @@ contains the temperature which is reported to the client::
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
-                              getProperties
+                              getProperties, IPyServer
                              )
 
     # Other vectors, members and events are available,
@@ -191,16 +191,20 @@ devices are included in the driver.
 Your package should include a make_driver() function which returns the driver
 and makes your package suitable for import into other possible python scripts.
 
-Finally::
+Finally, if the driver is to communicate by stdin and stdout::
 
     if __name__ == "__main__":
 
         driver = make_driver()
 
-        driver.listen()   # omit if stdin stdout are to be used
-
         asyncio.run(driver.asyncrun())
 
-The driver asyncrun() method gathers several tasks to receive, parse and transmit
-the INDI protocol, including the hardware coroutine method which uses your
-objects to control your hardware.
+Alternatively, if you want the driver to listen on a port::
+
+    if __name__ == "__main__":
+
+        driver = make_driver()
+
+        server = IPyServer([driver], maxconnections=5)
+
+        asyncio.run(server.asyncrun())
