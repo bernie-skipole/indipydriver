@@ -1,5 +1,7 @@
 
-import collections, datetime, sys
+import collections, sys
+
+from datetime import datetime, timezone
 
 import asyncio
 
@@ -47,10 +49,10 @@ class PropertyVector(collections.UserDict):
            The message argument is any appropriate string which the client could display to the user.
 
            The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-           a datetime.datetime.utcnow() value will be inserted."""
+           a UTC value will be inserted."""
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('delProperty')
@@ -73,7 +75,7 @@ class PropertyVector(collections.UserDict):
            message is any suitable string for the client.
 
            timestamp should be a datetime.datetime object or None, in which
-           case a datetime.datetime.utcnow() value will be inserted.
+           case a UTC value will be inserted.
 
            The timeout value should be '0' if not used, or a string of a
            numeric value indicating to the client how long this data is valid.
@@ -185,8 +187,8 @@ class SwitchVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defSwitchVector')
@@ -216,7 +218,7 @@ class SwitchVector(PropertyVector):
            message is any suitable string for the client.
 
            timestamp should be a datetime.datetime object or None, in which case a
-           datetime.datetime.utcnow() value will be inserted.
+           UTC value will be inserted.
 
            The timeout value should be '0' if not used, or a string value indicating
            to the client how long this data is valid.
@@ -236,8 +238,8 @@ class SwitchVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
@@ -289,8 +291,8 @@ class SwitchVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
@@ -359,8 +361,8 @@ class LightVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defLightVector')
@@ -386,7 +388,7 @@ class LightVector(PropertyVector):
            message is any suitable string for the client.
 
            timestamp should be a datetime.datetime object or None, in which case a
-           datetime.datetime.utcnow() value will be inserted.
+           UTC value will be inserted.
 
            For Light Vectors the timeout value is not used, but is included in the arguments
            to match other send_vectors.
@@ -403,8 +405,8 @@ class LightVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
@@ -442,8 +444,8 @@ class LightVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
@@ -515,8 +517,8 @@ class TextVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defTextVector')
@@ -543,7 +545,7 @@ class TextVector(PropertyVector):
            message is any suitable string for the client.
 
            timestamp should be a datetime.datetime object or None, in which case a
-           datetime.datetime.utcnow() value will be inserted.
+           UTC value will be inserted.
 
            The timeout value should be '0' if not used, or a string value
            indicating to the client how long this data is valid.
@@ -563,8 +565,8 @@ class TextVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
@@ -605,8 +607,8 @@ class TextVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
@@ -676,8 +678,8 @@ class NumberVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defNumberVector')
@@ -704,7 +706,7 @@ class NumberVector(PropertyVector):
            message is any suitable string for the client.
 
            timestamp should be a datetime.datetime object or None, in which case a
-           datetime.datetime.utcnow() value will be inserted.
+           UTC value will be inserted.
 
            The timeout value should be '0' if not used, or a string value
            indicating to the client how long this data is valid.
@@ -724,8 +726,8 @@ class NumberVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
@@ -766,8 +768,8 @@ class NumberVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
@@ -856,8 +858,8 @@ class BLOBVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('defBLOBVector')
@@ -895,8 +897,8 @@ class BLOBVector(PropertyVector):
         if not self.enable:
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
             return
         xmldata = ET.Element('setBLOBVector')

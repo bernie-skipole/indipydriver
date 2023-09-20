@@ -1,6 +1,8 @@
 
 
-import collections, asyncio, datetime, sys
+import collections, asyncio, sys
+
+from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
 
@@ -243,8 +245,8 @@ class IPyDriver(collections.UserDict):
     async def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
             return
         xmldata = ET.Element('message')
@@ -376,13 +378,13 @@ class Device(collections.UserDict):
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
-           timestamp is None a datetime.datetime.utcnow() value will be inserted."""
+           timestamp is None a UTC value will be inserted."""
         if not self.enable:
             # messages only sent if self.enable is True
             return
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
             return
         xmldata = ET.Element('message')
@@ -400,10 +402,10 @@ class Device(collections.UserDict):
            Setting device.enable to True re-enables communications.
            The message argument is any appropriate string which the client could display to the user.
            The timestamp should be either None or a datetime.datetime object. If the timestamp is None
-           a datetime.datetime.utcnow() value will be inserted."""
+           a UTC value will be inserted."""
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
-        if not isinstance(timestamp, datetime.datetime):
+            timestamp = datetime.now(tz=timezone.utc)
+        if not isinstance(timestamp, datetime):
             self._reporterror("The timestamp given in send_delProperty must be a datetime.datetime object")
             return
         xmldata = ET.Element('delProperty')

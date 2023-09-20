@@ -5,8 +5,6 @@ import xml.etree.ElementTree as ET
 
 import fcntl
 
-from datetime import datetime
-
 from base64 import standard_b64encode
 
 

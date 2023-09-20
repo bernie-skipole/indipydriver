@@ -1,7 +1,7 @@
 
 import sys
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from base64 import standard_b64decode
 
@@ -58,7 +58,7 @@ class newVector(Event, UserDict):
             except:
                 self.timestamp = None
         else:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = datetime.now(tz=timezone.utc)
 
     def __setitem__(self, membername):
         raise KeyError
@@ -182,7 +182,7 @@ class SnoopEvent:
             except:
                 self.timestamp = None
         else:
-            self.timestamp = datetime.utcnow()
+            self.timestamp = datetime.now(tz=timezone.utc)
 
 
 class Message(SnoopEvent):
