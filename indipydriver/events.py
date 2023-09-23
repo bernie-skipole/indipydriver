@@ -7,6 +7,33 @@ from base64 import standard_b64decode
 
 from collections import UserDict
 
+
+def _parse_timestamp(timestamp_string):
+    """Parse a timestamp string and return either None on failure, or a datetime object
+       If the given timestamp_string is None, return the datetime for the current time.
+       Everything is UTC"""
+    if timestamp_string:
+        try:
+            if '.' in timestamp_string:
+                # remove fractional part, not supported by datetime.fromisoformat
+                timestamp_string, remainder = timestamp_string.rsplit('.', maxsplit=1)
+                if len(remainder) < 6:
+                    remainder = "{:<06}".format(remainder)
+                elif len(remainder) > 6:
+                    remainder = remainder[:6]
+                remainder = int(remainder)
+                timestamp = datetime.fromisoformat(timestamp_string)
+                timestamp = timestamp.replace(microsecond=remainder, tzinfo=timezone.utc)
+            else:
+                timestamp = datetime.fromisoformat(timestamp_string)
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+        except:
+            timestamp = None
+    else:
+        timestamp = datetime.now(tz=timezone.utc)
+    return timestamp
+
+
 class Event:
     "Parent class for events"
     def __init__(self, devicename, vectorname, vector, root):
@@ -49,16 +76,7 @@ class newVector(Event, UserDict):
         Event.__init__(self, devicename, vectorname, vector, root)
         UserDict.__init__(self)
         timestamp_string = root.get("timestamp")
-        if timestamp_string:
-            try:
-                if '.' in timestamp_string:
-                    # remove fractional part, not supported by datetime.fromisoformat
-                    timestamp_string, remainder = timestamp_string.rsplit('.', maxsplit=1)
-                self.timestamp = datetime.fromisoformat(timestamp_string)
-            except:
-                self.timestamp = None
-        else:
-            self.timestamp = datetime.now(tz=timezone.utc)
+        self.timestamp = _parse_timestamp(timestamp_string)
 
     def __setitem__(self, membername):
         raise KeyError
@@ -173,16 +191,7 @@ class SnoopEvent:
         self.devicename = root.get("device")
         self.root = root
         timestamp_string = root.get("timestamp")
-        if timestamp_string:
-            try:
-                if '.' in timestamp_string:
-                    # remove fractional part, not supported by datetime.fromisoformat
-                    timestamp_string, remainder = timestamp_string.rsplit('.', maxsplit=1)
-                self.timestamp = datetime.fromisoformat(timestamp_string)
-            except:
-                self.timestamp = None
-        else:
-            self.timestamp = datetime.now(tz=timezone.utc)
+        self.timestamp = _parse_timestamp(timestamp_string)
 
 
 class Message(SnoopEvent):
