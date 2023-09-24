@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 
 from .comms import STDINOUT, Portcomms
 from . import events
+from .propertyvectors import timestamp_string
 
 
 class IPyDriver(collections.UserDict):
@@ -244,14 +245,12 @@ class IPyDriver(collections.UserDict):
 
     async def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("The timestamp given in send_message must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('message')
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         await self.send(xmldata)
@@ -382,15 +381,13 @@ class Device(collections.UserDict):
         if not self.enable:
             # messages only sent if self.enable is True
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("The timestamp given in send_message must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("The timestamp given in send_device_message must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('message')
         xmldata.set("device", self.devicename)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         await self.driver.send(xmldata)
@@ -403,15 +400,13 @@ class Device(collections.UserDict):
            The message argument is any appropriate string which the client could display to the user.
            The timestamp should be either None or a datetime.datetime object. If the timestamp is None
            a UTC value will be inserted."""
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("The timestamp given in send_delProperty must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("The timestamp given in send_delProperty must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         await self.driver.send(xmldata)

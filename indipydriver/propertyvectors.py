@@ -10,6 +10,24 @@ import xml.etree.ElementTree as ET
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
+
+def timestamp_string(timestamp = None):
+    "Return a string timestamp or None if invalid"
+    if timestamp is None:
+        timestamp = datetime.now(tz=timezone.utc)
+    if not isinstance(timestamp, datetime):
+        # invalid timestamp given
+        return
+    if not (timestamp.tzinfo is None):
+        if timestamp.tzinfo == timezone.utc:
+            timestamp = timestamp.replace(tzinfo = None)
+        else:
+            # invalid timestamp
+            return
+    # timestamp has no tzinfo so isoformat does not include timezone info
+    return timestamp.isoformat(sep='T')
+
+
 class PropertyVector(collections.UserDict):
     "Parent class of SwitchVector etc.."
 
@@ -50,16 +68,14 @@ class PropertyVector(collections.UserDict):
 
            The timestamp should be either None or a datetime.datetime object. If the timestamp is None
            a UTC value will be inserted."""
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         await self.driver.send(xmldata)
@@ -186,10 +202,9 @@ class SwitchVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defSwitchVector')
         xmldata.set("device", self.devicename)
@@ -199,8 +214,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("perm", self.perm)
         xmldata.set("rule", self.rule)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -237,17 +251,15 @@ class SwitchVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -290,17 +302,15 @@ class SwitchVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -360,10 +370,9 @@ class LightVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defLightVector')
         xmldata.set("device", self.devicename)
@@ -371,8 +380,7 @@ class LightVector(PropertyVector):
         xmldata.set("label", self.label)
         xmldata.set("group", self.group)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         for light in self.data.values():
@@ -404,17 +412,15 @@ class LightVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -443,17 +449,15 @@ class LightVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         if message:
             xmldata.set("message", message)
         for light in self.data.values():
@@ -516,10 +520,9 @@ class TextVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defTextVector')
         xmldata.set("device", self.devicename)
@@ -528,8 +531,7 @@ class TextVector(PropertyVector):
         xmldata.set("group", self.group)
         xmldata.set("state", self.state)
         xmldata.set("perm", self.perm)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -564,17 +566,15 @@ class TextVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -606,17 +606,15 @@ class TextVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -677,10 +675,9 @@ class NumberVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defNumberVector')
         xmldata.set("device", self.devicename)
@@ -689,8 +686,7 @@ class NumberVector(PropertyVector):
         xmldata.set("group", self.group)
         xmldata.set("state", self.state)
         xmldata.set("perm", self.perm)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -725,17 +721,15 @@ class NumberVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -767,17 +761,15 @@ class NumberVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -857,10 +849,9 @@ class BLOBVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defBLOBVector')
         xmldata.set("device", self.devicename)
@@ -869,8 +860,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("group", self.group)
         xmldata.set("state", self.state)
         xmldata.set("perm", self.perm)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
@@ -896,17 +886,15 @@ class BLOBVector(PropertyVector):
             return
         if not self.enable:
             return
-        if not timestamp:
-            timestamp = datetime.now(tz=timezone.utc)
-        if not isinstance(timestamp, datetime):
-            self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a datetime.datetime object")
+        tstring = timestamp_string(timestamp)
+        if not tstring:
+            self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setBLOBVector')
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
-        # note - limit timestamp characters to :21 to avoid long fractions of a second
-        xmldata.set("timestamp", timestamp.isoformat(sep='T')[:21])
+        xmldata.set("timestamp", tstring)
         xmldata.set("timeout", timeout)
         if message:
             xmldata.set("message", message)
