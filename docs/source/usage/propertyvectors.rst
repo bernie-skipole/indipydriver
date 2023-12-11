@@ -29,13 +29,13 @@ As well as these arguments, each vector has attribute 'enable'.
 
 If in the initial state of the device, it is required that a particular property should be hidden, then when the vector is first created, set vector.enable = False, and the vector will be disabled until the enable attribute is set True, and the vector send_defVector() method called, which informs the client of the existence of this property.
 
-Each vector is also a mapping, of membername:memberVALUE  - note, not member object, rather it is the value held by the member. In the LED switch example, the value of the vector member is set by
+Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the ledswitchdriver example, the value of the vector member is set by::
 
-vector["ledswitchmember"] = control.get_LED()
+    ledvector["ledmember"] = control.get_LED()
 
 Numeric values are set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol, the only exception is blobsize, where the number should be an integer.
 
-Each member has a name and label, again label is a string which can be used by the client, if not given it will be set equal to the name.
+Each member has a name and label, the label is a string which can be used by the client, if not given it will be set equal to the name.
 
 When transmitting a vector, using the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
 

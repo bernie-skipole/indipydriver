@@ -39,33 +39,25 @@ contains the temperature which is reported to the client::
             "Gives temperature as a string to two decimal places"
             return '{:.2f}'.format(self.temperature)
 
-        def control(self):
-            """This simulates temperature increasing/decreasing, and
-               turns on/off a heater if moving too far from the target
-               temperature. It should be called at regular intervals"""
-
-            if self.heater == "On":
-                # increasing temperature if the heater is on
-                self.temperature += 0.2
-            else:
-                # decreasing temperature if the heater is off
-                self.temperature -= 0.2
-
-            if self.temperature > self.target+0.5:
-                # too hot
-                self.heater = "Off"
-
-            if self.temperature < self.target-0.5:
-                # too cold
-                self.heater = "On"
-
         async def poll_thermostat(self):
-            "poll thermostat control every second"
+            """This simulates temperature increasing/decreasing, and turns
+               on/off a heater if moving too far from the target."""
             while True:
                 await asyncio.sleep(1)
-                self.control()
-                # control is called to turn on and off the heater to
-                # keep the temperature near to the target.
+                if self.heater == "On":
+                    # increasing temperature if the heater is on
+                    self.temperature += 0.2
+                else:
+                    # decreasing temperature if the heater is off
+                    self.temperature -= 0.2
+
+                if self.temperature > self.target+0.5:
+                    # too hot
+                    self.heater = "Off"
+
+                if self.temperature < self.target-0.5:
+                    # too cold
+                    self.heater = "On"
 
 
     # An instance of the above class will be set as a keyword argument of

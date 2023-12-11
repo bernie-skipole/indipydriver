@@ -6,7 +6,7 @@ The driver has method::
 
     async def clientevent(self, event):
 
-When a request is received from the client, an event is produced, and this method is called. You should create the contents of this method to check the event and take the appropriate action.
+When a request is received from the client, an event is produced, and this method is called. You should use this to check the event and take the appropriate action.
 
 Typically you would start with::
 
@@ -40,7 +40,7 @@ The INDI specification describes enableBLOB when sent from a client::
     individual Device drivers shall disregard enableBLOB and send all elements at will.
 
 
-Your driver would normally ignore the enableBLOB event, however it is still presented as your application may wish to know about it, to log it for example. If the driver listen() method is used, it effectively becomes an "intermediate INDI server process", and the enableBLOB instruction will be acted on automatically, you do not need to handle it.
+Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
 
 
 newVectors
@@ -50,7 +50,7 @@ The following event objects indicate the client is trying to set new member valu
 
 The event is a mapping of membername:value which the client is submitting.
 
-It also has a self.timestamp attribute which is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, datetime.utcnow() is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
+It also has a self.timestamp attribute which is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, a current utc time is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
 
 Typically, if you accept a new member value, you would have code that controls your instrument, and you would then set the new value into the vector and transmit the update to the client::
 

@@ -31,34 +31,25 @@ a 'newNumberVector', which causes the clientevent method to be called::
             "Gives target as a string to two decimal places"
             return '{:.2f}'.format(self.target)
 
-        def control(self):
-            """This simulates temperature increasing/decreasing, and
-               turns on/off a heater if moving too far from the target temperature
-               Should be called at regular intervals"""
-
-            if self.heater == "On":
-                # increasing temperature if the heater is on
-                self.temperature += 0.2
-            else:
-                # decreasing temperature if the heater is off
-                self.temperature -= 0.2
-
-            if self.temperature > self.target+0.5:
-                # too hot
-                self.heater = "Off"
-
-            if self.temperature < self.target-0.5:
-                # too cold
-                self.heater = "On"
-
         async def poll_thermostat(self):
-            "poll thermostat every second"
+            """This simulates temperature increasing/decreasing, and turns
+               on/off a heater if moving too far from the target."""
             while True:
                 await asyncio.sleep(1)
-                # the control function turns on and off the heater to keep
-                # the temperature near to the target.
-                self.control()
+                if self.heater == "On":
+                    # increasing temperature if the heater is on
+                    self.temperature += 0.2
+                else:
+                    # decreasing temperature if the heater is off
+                    self.temperature -= 0.2
 
+                if self.temperature > self.target+0.5:
+                    # too hot
+                    self.heater = "Off"
+
+                if self.temperature < self.target-0.5:
+                    # too cold
+                    self.heater = "On"
 
 
     class ThermoDriver(IPyDriver):
