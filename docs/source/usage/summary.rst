@@ -126,11 +126,11 @@ The enableBLOB event can be ignored - it is used internally by IpyServer.
 
 The getProperties event is sent by the client to discover the properties of the driver, and the reply you should generally use is shown above. The event has a 'vector' attribute, which is the vector being requested, and its send_defVector() method will transmit its definition back to the client.
 
-The new vector events are mappings of membername to value which the client is submitting, not all membernames may be present if they are not being changed.
+The new vector events are sent by the client to change the instrument settings, in this case to switch on or off the LED. These events are mappings of membername to value which the client is submitting, not all membernames may be present if they are not being changed.
 
 In this case the only event to be received will be a newSwitchVector for the devicename "ledswitch", and vectorname "ledvector" - as this is the only device and vector defined which can be controlled by the client, The buttonvector is read-only. If any other device or vector event is received, it can be ignored.
 
-The client is requesting the member's value, 'On' or 'Off' which is obtained from event["ledmember"]. In this example 'control' is an instance of your LEDSwitchControl class, and so::
+The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledmember"]. In this example 'control' is an instance of your LEDSwitchControl class, which is actually your hardware that does the change, and so::
 
         received_value = event["ledmember"]
         control.set_LED(received_value)
