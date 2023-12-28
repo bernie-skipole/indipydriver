@@ -147,16 +147,16 @@ a 'newNumberVector', which causes the clientevent method to be called::
         return driver
 
 
-        if __name__ == "__main__":
+    if __name__ == "__main__":
 
-            driver = make_driver()
+        driver = make_driver()
 
-            # In this example, set the driver to listen on a host/port
-            server = IPyServer([driver], host="localhost",
-                                         port=7624,
-                                         maxconnections=5)
+        # In this example, set the driver to listen on a host/port
+        server = IPyServer([driver], host="localhost",
+                                     port=7624,
+                                     maxconnections=5)
 
-            asyncio.run(server.asyncrun())
+        asyncio.run(server.asyncrun())
 
 
 Or alternatively, if you want the driver to communicate by stdin and stdout::
