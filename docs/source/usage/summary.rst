@@ -144,7 +144,9 @@ This covers receiving and replying to instructions, but you will also want to se
 hardware method
 ^^^^^^^^^^^^^^^
 
-This coroutine is automatically started and should run continuously, typically with a 'while True' loop as shown above. You should take care not to call any long lived blocking function, which would disable the entire driver.  If your hardware control class (the LEDSwitchContol class above), needs any coroutines to be running, this is a good place to start them, as shown by the asyncio.create_task() line in the example.
+This coroutine is automatically started and should run continuously, typically with a 'while True' loop as shown above. You should take care not to call any long lived blocking function, which would disable the entire driver.
+
+If your hardware control class (the LEDSwitchControl class above), needs any coroutines to be running, this is a good place to start them, as shown by the asyncio.create_task() line in the example.
 
 The driver is a mapping to its devices, so self["ledswitch"] will get the device with devicename "ledswitch", and a device is a mapping to its vectors, so self["ledswitch"]["ledvector"] will return the vector controlling the LED and self["ledswitch"]["buttonvector"] will return the vector controlling the button.
 

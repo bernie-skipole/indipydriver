@@ -8,7 +8,8 @@ a 'newNumberVector', which causes the clientevent method to be called::
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
-                              getProperties, newNumberVector
+                              getProperties, newNumberVector,
+                              IPyServer
                              )
 
 
