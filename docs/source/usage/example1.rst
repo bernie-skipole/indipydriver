@@ -163,7 +163,7 @@ contains the temperature which is reported to the client::
 In summary. You create any objects or functions needed to operate your
 hardware, and these can be inserted into the IPyDriver constructor.
 
-You would typically create your own child class of IPyDriver, overiding methods:
+You would typically create your own child class of IPyDriver, overriding methods:
 
 async def clientevent(self, event) - to handle incoming calls from the client.
 
