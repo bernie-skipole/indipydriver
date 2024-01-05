@@ -64,7 +64,9 @@ The IPyDriver class has signature::
 
 Where 'devices' is a list of devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "ledswitch".
 
-The device object can contain multiple property vectors. In this example it will contain two vectors, one to hold the LED status, and one to hold the button status. A vector can hold multiple members, for example a radio button may hold a number of switches, in this example, each vector will only have one member.
+A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
+
+In this example the device object will contain two switch vectors, one to hold the LED status, and one to hold the button status. Each vector will only have one member.
 
 The keyworded variable-length argument 'driverdata' contains any data you wish to set into the class, in this example it will consist of keyword 'control' set to an instance of your LEDSwitchControl class which will then be available as the attribute self.driverdata['control']
 
@@ -75,6 +77,7 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' and 
         async def clientevent(self, event):
             "On receiving data, this is called, and should handle any necessary actions"
             control =  self.driverdata["control"]
+            # control is the instance of LEDSwitchControl
             match event:
                 case getProperties():
                     await event.vector.send_defVector()
@@ -102,6 +105,7 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' and 
             # and simulates someone toggling the button
 
             # poll the hardware for any changes, and send changes to the client
+            # get the two vectors belonging to the ledswitch device
             ledvector = self["ledswitch"]["ledvector"]
             buttonvector = self["ledswitch"]["buttonvector"]
 

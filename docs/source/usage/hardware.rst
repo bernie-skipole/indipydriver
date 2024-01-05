@@ -65,17 +65,21 @@ The hardware method becomes::
                 await temperaturevector.send_setVector(timeout='10')
 
                 temperature = control.temperature
+                message = "No further data"
 
                 # Now set the status lights.
                 if temperature < 5.0:
+                    message="Warning: Low Temperature"
                     statusvector["frost"] = "Alert"
                 elif control.target < 5.0:
                     # frost is not emminent, but show Idle light as warning
                     # that the target is set too low, causing a risk of frost.
+                    message="Warning: Low Target"
                     statusvector["frost"] = "Idle"
                 else:
                     statusvector["frost"] = "Ok"
                 if temperature > 30.0:
+                    message="Warning: High Temperature"
                     statusvector["hot"] = "Alert"
                 else:
                     statusvector["hot"] = "Ok"
@@ -85,7 +89,7 @@ The hardware method becomes::
                     statusvector["heater"] = "Ok"
                 # send this vector, but with allvalues=False so it
                 # is only sent as the values change
-                await statusvector.send_setVector(allvalues=False)
+                await statusvector.send_setVector(message=message, allvalues=False)
 
 
 devhardware
@@ -97,7 +101,7 @@ The Device class has method::
 
     async def devhardware(self, *args, **kwargs):
 
-You could subclass the Device class, and override this method to control the hardware of that particular device, in which case the driver hardware method would need to call each of the devices devhardware methods. Typically this could be done using the asyncio.gather function.
+You could subclass the Device class, and override this method to control the hardware of that particular device, in which case the driver hardware method would need to await each of the devices devhardware methods. Typically this could be done using the asyncio.gather function.
 
 To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any hardware related object required.
 
@@ -106,13 +110,10 @@ The args and kwargs arguments of devhardware are there so you can pass in any ar
 Events
 ^^^^^^
 
-When handling an event, more than one 'send_setvector' can be sent, you are not limited to just the event.vector.
-
-Expanding the thermostat example with the "statusvector" set of lights. When a target temperature is received, if the target is below 5.0, then the frost light should give some warning, and the response could be::
+You could also set a warning in the clientevent coroutine when a target below 5.0 is set::
 
     case newNumberVector(devicename='Thermostat',
                          vectorname='targetvector') if 'target' in event:
-
         newtarget = event['target']
         try:
             target = self.indi_number_to_float(newtarget)
@@ -122,15 +123,14 @@ Expanding the thermostat example with the "statusvector" set of lights. When a t
         else:
             control.target = target
             event.vector['target'] = control.stringtarget
-            event.vector.state = 'Ok'
-            await event.vector.send_setVector()
-            # If the target is below 5C, and if the temperature is still
-            # above 5.0, warn of the danger of frost due to the target being low
-            statusvector = self['Thermostat']['statusvector']
-            if target < 5.0 and control.temperature > 5.0:
-                statusvector["frost"] = 'Idle'
-                await statusvector.send_setVector(allvalues=False)
-                await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+            # If the target is below 5C
+            # warn of the danger of frost due to the target being low
+            if target < 5.0:
+                event.vector.state = 'Alert'
+                await event.vector.send_setVector(message="Setting a target below 5C risks frost damage")
+            else:
+                event.vector.state = 'Ok'
+                await event.vector.send_setVector(message="Target Set")
 
 
-So the target is set ok, but the client GUI displays a warning.
+So the target is set, but the client GUI displays a warning.

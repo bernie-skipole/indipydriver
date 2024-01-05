@@ -16,8 +16,6 @@ class IPyDriver(collections.UserDict):
     """A subclass of this should be created with methods written
        to control your device.
 
-       Its awaitable asyncrun method should be run in an async loop.
-
        devices is a list of Device objects this driver handles.
 
        driverdata will be an attribute dictionary of any hardware
@@ -118,7 +116,8 @@ class IPyDriver(collections.UserDict):
     def listen(self, host="localhost", port=7624):
         """If called, listens on the given host and port. Only one connection is accepted,
            further connection attempts while a client is already connected will be refused.
-           This method also checks for enableBLOB instructions, and implements them."""
+           This method also checks for enableBLOB instructions, and implements them.
+           In general, using IPyServer is preferred."""
         if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
         self.comms = Portcomms(self.devices, host, port)
