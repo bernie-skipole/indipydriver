@@ -205,7 +205,7 @@ An io.BytesIO buffer is set with temperature logs every second. After five minut
 
                 # set the string temperature into the temperature vector
                 temperaturevector['temperature'] = control.stringtemperature
-                await temperaturevector.send_setVector(timeout='10')
+                await temperaturevector.send_setVector()
 
                 temperature = control.temperature
 

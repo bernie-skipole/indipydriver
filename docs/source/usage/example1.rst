@@ -106,9 +106,7 @@ contains the temperature which is reported to the client::
                 # get the latest temperature, and set it into the vector, then transmit
                 # this vector to the client using its send_setVector method
                 vector['temperature'] = control.stringtemperature
-                await vector.send_setVector(timeout='10')
-                # the 'timeout' argument informs the client that this
-                # value is only valid for ten seconds
+                await vector.send_setVector()
 
 
     def make_driver():

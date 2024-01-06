@@ -107,7 +107,7 @@ a 'newNumberVector', which causes the clientevent method to be called::
             while True:
                 await asyncio.sleep(10)
                 vector['temperature'] = control.stringtemperature
-                await vector.send_setVector(timeout='10')
+                await vector.send_setVector()
 
 
     def make_driver():
