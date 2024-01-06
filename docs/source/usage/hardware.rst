@@ -95,42 +95,67 @@ The hardware method becomes::
 devhardware
 ^^^^^^^^^^^
 
-If your driver contains several devices, you may find it simpler to delegate the hardware control to each device.
+If your driver contains several devices, it could be messy including the code to handle all the devices in the driver hardware method. You may find it simpler to delegate the hardware control to each device, separating the code to where it is most relevant.
 
 The Device class has method::
 
     async def devhardware(self, *args, **kwargs):
 
-You could subclass the Device class, and override this method to control the hardware of that particular device, in which case the driver hardware method would need to await each of the devices devhardware methods. Typically this could be done using the asyncio.gather function.
+You could subclass the Device class, and override this method to control the hardware of that particular device, in which case the driver hardware method would need to await each of the devices devhardware methods.
+
+For example the driver hardware method would contain the line::
+
+    await self[devicename].devhardware()
+
+which then awaits the device's devhardware method, containing the code to run that device. If you have multiple devices this could be done using the asyncio.gather function.
 
 To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any hardware related object required.
 
 The args and kwargs arguments of devhardware are there so you can pass in any argument you like when calling this method.
 
+
 Events
 ^^^^^^
 
-You could also set a warning in the clientevent coroutine when a target below 5.0 is set::
+On receiving data an 'event' is created and the clientevent method is awaited. You should create this method to handle data sent by the client.
 
-    case newNumberVector(devicename='Thermostat',
-                         vectorname='targetvector') if 'target' in event:
-        newtarget = event['target']
-        try:
-            target = self.indi_number_to_float(newtarget)
-        except TypeError:
-            # ignore an incoming invalid number
-            pass
-        else:
-            control.target = target
-            event.vector['target'] = control.stringtarget
-            # If the target is below 5C
-            # warn of the danger of frost due to the target being low
-            if target < 5.0:
-                event.vector.state = 'Alert'
-                await event.vector.send_setVector(message="Setting a target below 5C risks frost damage")
-            else:
-                event.vector.state = 'Ok'
-                await event.vector.send_setVector(message="Target Set")
+The 'event' is any one of getProperties, newSwitchVector, newTextVector, newNumberVector or newBLOBVector objects, these 'newxxxVector' objects are requests from the client to update the members of a vector.
+
+These new vector objects have attribute 'vector' which is the vector to be updated, and are also mappings of membername to new membervalue. Typically you would create code to test which vector is being altered, obtain the new member value (from event[membername]) and update your instrument accordingly.
+
+You should then update the vector and call the vector's send_setVector() method to inform the client the update has been applied.
+
+For example, in the case of receiving a target temperature for the thermostat, you could also set a warning when a target below 5.0 is set::
+
+    async def clientevent(self, event):
+        "On receiving data, this is called, and should handle any necessary actions"
+
+        # The hardware control object is stored in the driverdata dictionary
+        control = self.driverdata["control"]
+
+        match event:
+            case getProperties():
+                await event.vector.send_defVector()
+
+            case newNumberVector(devicename='Thermostat',
+                                 vectorname='targetvector') if 'target' in event:
+                newtarget = event['target']
+                try:
+                    target = self.indi_number_to_float(newtarget)
+                except TypeError:
+                    # ignore an incoming invalid number
+                    pass
+                else:
+                    control.target = target
+                    event.vector['target'] = control.stringtarget
+                    # If the target is below 5C
+                    # warn of the danger of frost due to the target being low
+                    if target < 5.0:
+                        event.vector.state = 'Alert'
+                        await event.vector.send_setVector(message="Setting a target below 5C risks frost damage")
+                    else:
+                        event.vector.state = 'Ok'
+                        await event.vector.send_setVector(message="Target Set")
 
 
 So the target is set, but the client GUI displays a warning.
