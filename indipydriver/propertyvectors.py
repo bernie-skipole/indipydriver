@@ -86,7 +86,7 @@ class PropertyVector(collections.UserDict):
             member.changed = True
 
 
-    async def send_defVector(self, message='', timestamp=None, timeout=None):
+    async def send_defVector(self, message='', timestamp=None, timeout=None, state=None):
         """Transmits the vector definition to the client.
 
            message is any suitable string for the client.
@@ -108,6 +108,12 @@ class PropertyVector(collections.UserDict):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending defVector: The given send_defVector timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         xmldata = self._make_defVector(message, timestamp)
         if not xmldata is None:
@@ -235,7 +241,7 @@ class SwitchVector(PropertyVector):
 
 
 
-    async def send_setVector(self, message='', timestamp=None, timeout=None, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -266,6 +272,12 @@ class SwitchVector(PropertyVector):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending setSwitchVector: The given send_setVector timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -307,7 +319,7 @@ class SwitchVector(PropertyVector):
             await self.driver.send(xmldata)
 
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -321,6 +333,12 @@ class SwitchVector(PropertyVector):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -410,7 +428,7 @@ class LightVector(PropertyVector):
         return xmldata
 
 
-    async def send_setVector(self, message='', timestamp=None, timeout=None, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -430,6 +448,12 @@ class LightVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                return
         if not self.device.enable:
             return
         if not self.enable:
@@ -457,7 +481,7 @@ class LightVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.send(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """Transmits the vector (setLightVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -467,6 +491,12 @@ class LightVector(PropertyVector):
            just a state or message is to be sent.
         """
         # Note timeout is not used
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                return
         if not self.device.enable:
             return
         if not self.enable:
@@ -559,7 +589,7 @@ class TextVector(PropertyVector):
             xmldata.append(text.deftext())
         return xmldata
 
-    async def send_setVector(self, message='', timestamp=None, timeout=None, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -590,6 +620,12 @@ class TextVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setTextVector: The given send_setVector timeout value must be either None or a string object")
                 return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                return
         if not self.device.enable:
             return
         if not self.enable:
@@ -619,7 +655,7 @@ class TextVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.send(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """Transmits the vector (setTextVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -633,6 +669,12 @@ class TextVector(PropertyVector):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -725,7 +767,7 @@ class NumberVector(PropertyVector):
             xmldata.append(number.defnumber())
         return xmldata
 
-    async def send_setVector(self, message='', timestamp=None, timeout=None, allvalues=True):
+    async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Typically the vector 'state' should be set, and any changed member value prior to
            transmission.
@@ -757,6 +799,12 @@ class NumberVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setNumberVector: The given send_setVector timeout value must be either None or a string object")
                 return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                return
         if not self.device.enable:
             return
         if not self.enable:
@@ -786,7 +834,7 @@ class NumberVector(PropertyVector):
             # only send xmldata if a member is included in the vector
             await self.driver.send(xmldata)
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """Transmits the vector (setNumberVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
@@ -800,6 +848,12 @@ class NumberVector(PropertyVector):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -914,7 +968,7 @@ class BLOBVector(PropertyVector):
     # NOTE: BLOBVectors do not have a send_setVector method
     #       only the more explicit send_setVectorMembers is available
 
-    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, members=[]):
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            The members list specifies the member names which will have their values sent.
 
@@ -927,6 +981,12 @@ class BLOBVector(PropertyVector):
                 self.timeout = timeout
             else:
                 self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                return
+        if not state is None:
+            if state in ('Idle','Ok','Busy','Alert'):
+                self._state = state
+            else:
+                self._reporterror("Aborting sending setBLOBVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return

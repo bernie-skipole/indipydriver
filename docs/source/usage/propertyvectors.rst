@@ -28,7 +28,7 @@ Further attributes
 
 The timeout attribute is not set in the arguments, but is always initially set to '0'.
 
-**timeout** This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method.
+**timeout** This attribute is a string numeric value which can be changed either by explicitly setting the vector.timeout attribute or when calling a send_defVector, or send_setVector method where it can be set as an argument of these methods.
 
 From the indi spec
 
