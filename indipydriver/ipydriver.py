@@ -295,7 +295,10 @@ class IPyDriver(collections.UserDict):
            devicename, vectorname, vector, root
            where vector is the properties vector the event refers to, and
            root is an xml.etree.ElementTree object of the received xml"""
-        pass
+        match event:
+            case getProperties():
+                await event.vector.send_defVector()
+
 
     async def snoopevent(self, event):
         """Override this if this driver is snooping on other devices.

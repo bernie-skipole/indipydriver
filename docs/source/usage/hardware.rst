@@ -34,17 +34,6 @@ This statusvector would be included in the 'Thermostat' device::
         driver = ThermoDriver(devices=[thermostat],  control=thermalcontrol)
 
 
-The constructor of the driver has keyword dictionary 'driverdata' set as an attribute of the driver, so when you create an instance of the driver you can include any hardware related objects required.  In this case, the keyword 'control' has been set to an instance of the ThermalControl class, and therefore methods and attributes which control the hardware are available.
-
-Driver methods have access to the thermalcontrol object simply by using::
-
-
-       control = self.driverdata["control"]
-
-
-The control object has coroutine method poll_thermostat(). When the hardware method is called, it can create a task from this co-routine, which is therefore immediately set running, and can then happily run in the background.
-
-
 The hardware method becomes::
 
         async def hardware(self):
@@ -107,7 +96,7 @@ For example the driver hardware method would contain the line::
 
     await self[devicename].devhardware()
 
-which then awaits the device's devhardware method, containing the code to run that device. If you have multiple devices this could be done using the asyncio.gather function.
+which awaits the device's devhardware method, containing the code to run that device. If you have multiple devices this could be done using the asyncio.gather function.
 
 To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any hardware related object required.
 
@@ -117,11 +106,17 @@ The args and kwargs arguments of devhardware are there so you can pass in any ar
 Events
 ^^^^^^
 
-On receiving data an 'event' is created and the clientevent method is awaited. You should create this method to handle data sent by the client.
+On receiving data from a client, an 'event' is created and the clientevent method is awaited. You should create this method to handle data sent by the client.
 
-The 'event' is any one of getProperties, newSwitchVector, newTextVector, newNumberVector or newBLOBVector objects, these 'newxxxVector' objects are requests from the client to update the members of a vector.
+The 'event' is any one of enableBLOB, getProperties, newSwitchVector, newTextVector, newNumberVector or newBLOBVector objects, these 'newxxxVector' objects are requests from the client to update the members of a vector.
 
-These new vector objects have attribute 'vector' which is the vector to be updated, and are also mappings of membername to new membervalue. Typically you would create code to test which vector is being altered, obtain the new member value (from event[membername]) and update your instrument accordingly.
+The enableBLOB event can be ignored - it is used internally by IpyServer. If a getProperties is received, you should typically respond with::
+
+    await event.vector.send_defVector()
+
+This sends a vector definition to the client.
+
+These new vector events have attribute 'vector' which is the vector to be updated, and are also mappings of membername to new membervalue. Typically you would create code to test which vector is being altered, obtain the new member value (from event[membername]) and update your instrument accordingly.
 
 You should then update the vector and call the vector's send_setVector() method to inform the client the update has been applied.
 
@@ -148,8 +143,8 @@ For example, in the case of receiving a target temperature for the thermostat, y
                 else:
                     control.target = target
                     event.vector['target'] = control.stringtarget
-                    # If the target is below 5C
-                    # warn of the danger of frost due to the target being low
+                    # If the target is below 5C warn of the
+                    # danger of frost due to the target being low
                     if target < 5.0:
                         event.vector.state = 'Alert'
                         await event.vector.send_setVector(message="Setting a target below 5C risks frost damage")

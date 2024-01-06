@@ -4,7 +4,7 @@ IPyDriver
 .. autoclass:: indipydriver.IPyDriver
    :members:
 
-There are three ways a driver can be run, assuming 'driver' is an instance of this method.
+There are three ways a driver can be run, assuming 'driver' is an instance of this class.
 
 This outputs the xml data on stdout, and reads it on stdin::
 
