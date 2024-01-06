@@ -23,7 +23,21 @@ Which provides a convention for property and member names.
 
 state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
 
-As well as these arguments, each vector has attribute 'enable'.
+Further attributes
+^^^^^^^^^^^^^^^^^^
+
+The timeout attribute is not set in the arguments, but is always initially set to '0'.
+
+**timeout** This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method.
+
+From the indi spec
+
+"Each Property has a timeout value that specifies the worst-case time it might take to change the value to something else.
+The Device may report changes to the timeout value depending on current device status. Timeout values give Clients a simple
+ability to detect dysfunctional Devices or broken communication and also gives them a way to predict the duration of an
+action for scheduling purposes..."
+
+The default of '0' indicates to the client that the vector will be updated in a minimal time should the client request it.
 
 **enable** is by default True, and is automatically set to False if the send_delProperty() method is called. When False no further data is sent by this property and any incoming values are ignored, until the enable attribute is set True again. Calling send_delProperty() therefore has the effect of removing the property from the client.
 
