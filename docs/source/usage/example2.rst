@@ -87,12 +87,9 @@ a 'newNumberVector', which causes the clientevent method to be called::
                     else:
                         # set this new target into the ThermalControl object
                         control.target = target
-                        # and set the new target value into the vector member, then
-                        # transmits the vector back to client, with vector state ok
+                        # and set the new target value into the vector member,
+                        # then transmits the vector back to client.
                         event.vector['target'] = control.stringtarget
-                        # vector.state can be one of 'Idle','Ok','Busy' or 'Alert'
-                        # sending 'Ok' informs the client that the value has been received
-                        event.vector.state = 'Ok'
                         await event.vector.send_setVector()
 
         async def hardware(self):

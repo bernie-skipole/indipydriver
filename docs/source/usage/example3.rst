@@ -73,6 +73,8 @@ This example simulates a driver which snoops on the thermostat of the first exam
             control =  self.devicedata["control"]
             alarmvector = self["windowalarm"]
             while True:
+                # set control.updated to False, wait 60 seconds, and if updated is not
+                # True, this indicates no updates are coming from the thermostat, so show an alarm
                 control.updated = False
                 await asyncio.sleep(60)
                 if not control.updated:
@@ -101,9 +103,11 @@ This example simulates a driver which snoops on the thermostat of the first exam
                         # ignore an incoming invalid number
                         pass
                     else:
-                        # open or close the widow
+                        # this updates the control.updated attribute
+                        # and opens or closes the widow
                         control.set_window(temperature)
-                        # send window status light to the client
+                        # send window status light to the client to
+                        # indicate temperature is being received
                         alarmvector["alarm"] = "Ok"
                         await alarmvector.send_setVector(allvalues=False)
                         # and send text of window position to the client

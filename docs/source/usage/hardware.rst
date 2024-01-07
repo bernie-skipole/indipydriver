@@ -146,11 +146,10 @@ For example, in the case of receiving a target temperature for the thermostat, y
                     # If the target is below 5C warn of the
                     # danger of frost due to the target being low
                     if target < 5.0:
-                        event.vector.state = 'Alert'
-                        await event.vector.send_setVector(message="Setting a target below 5C risks frost damage")
+                        await event.vector.send_setVector(message="Setting a target below 5C risks frost damage",
+                                                          state='Alert')
                     else:
-                        event.vector.state = 'Ok'
-                        await event.vector.send_setVector(message="Target Set")
+                        await event.vector.send_setVector(message="Target Set", state='Ok')
 
 
 So the target is set, but the client GUI displays a warning.

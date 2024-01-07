@@ -165,15 +165,13 @@ An io.BytesIO buffer is set with temperature logs every second. After five minut
                     else:
                         control.target = target
                         event.vector['target'] = control.stringtarget
-                        event.vector.state = 'Ok'
-                        await event.vector.send_setVector()
-                        # If the target is below 5C, and if the temperature is still
-                        # above 5.0, warn of the danger of frost due to the target being low
-                        statusvector = self['Thermostat']['statusvector']
-                        if target < 5.0 and control.temperature > 5.0:
-                            statusvector["frost"] = 'Idle'
-                            await statusvector.send_setVector(allvalues=False)
-                            await self['Thermostat'].send_device_message(message="Setting a target below 5C risks frost damage")
+                        # If the target is below 5C warn of the
+                        # danger of frost due to the target being low
+                        if target < 5.0:
+                            await event.vector.send_setVector(message="Setting a target below 5C risks frost damage",
+                                                              state = 'Alert')
+                        else:
+                            await event.vector.send_setVector(message="Target Set", state='Ok')
 
                 case newSwitchVector(devicename='Thermostat',
                                      vectorname='switchvector') if "switchmember" in event:
@@ -181,9 +179,7 @@ An io.BytesIO buffer is set with temperature logs every second. After five minut
                         control.enablelogs = True
                     elif event["switchmember"] == "Off":
                         control.enablelogs = False
-                    # sending 'Ok' informs the client that the value has been received
-                    # and setting the switch value into the vector updates the client switch
-                    event.vector.state = 'Ok'
+                    # setting the switch value into the vector updates the client switch
                     event.vector["switchmember"] = control.logswitch
                     await event.vector.send_setVector()
                     await self['Thermostat'].send_device_message(message=f"Log reporting is now {control.logswitch}")

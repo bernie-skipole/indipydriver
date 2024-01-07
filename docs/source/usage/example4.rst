@@ -36,9 +36,11 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
                 if temperature < 25:
                     self.window = "Closed"
 
+        # properties describe the status of three switches
+
         @property
         def switch_auto(self):
-            "Return switch status"
+            "Return switch 1 (auto) status"
             if self.auto:
                 return "On"
             else:
@@ -46,7 +48,8 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
 
         @property
         def switch_open(self):
-            "Return switch status"
+            """Return switch 2 (window open) status, always Off is auto is True
+               otherwise only On if the window is open"""
             if self.auto:
                 return "Off"
             if self.window == "Open":
@@ -55,7 +58,8 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
 
         @property
         def switch_close(self):
-            "Return switch status"
+            """Return switch 3 (window close) status, always Off is auto is True
+               otherwise only On if the window is closed"""
             if self.auto:
                 return "Off"
             if self.window == "Closed":
@@ -103,6 +107,8 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
             statusvector = self["windowstatus"]
             match event:
                 case newSwitchVector(devicename="Window", vectorname="windowswitches"):
+                    # members of this vector are 'auto', 'open', or 'close'
+                    # each with values 'On' or 'Off'
 
                     if "auto" in event:
                         if event["auto"] == "On":
@@ -127,8 +133,7 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
                     event.vector["open"] = control.switch_open
                     event.vector["close"] = control.switch_close
 
-                    # sending 'Ok' informs the client that the value has been received
-                    event.vector.state = 'Ok'
+                    # Inform the client that the value has been received
                     await event.vector.send_setVector()
 
                     # and send text of window position to the client
@@ -144,6 +149,8 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
             control =  self.devicedata["control"]
             alarmvector = self["windowalarm"]
             while True:
+                # set control.updated to False, wait 60 seconds, and if updated is not
+                # True, this indicates no updates are coming from the thermostat, so show an alarm
                 control.updated = False
                 await asyncio.sleep(60)
                 if not control.updated:
@@ -171,10 +178,12 @@ This consists of three switches in a vector - with a OneOfMany rule, so only one
                         # ignore an incoming invalid number
                         pass
                     else:
-                        # open or close the widow, this only takes action
-                        # if control.auto is True
+                        # this updates the control.updated attribute
                         control.set_window(temperature)
-                        # send window status light to the client
+                        # but only opens or closes the widow
+                        # if control.auto is True
+                        # send window status light to the client to
+                        # indicate temperature is being received
                         alarmvector["alarm"] = "Ok"
                         await alarmvector.send_setVector(allvalues=False)
                         # and send text of window position to the client

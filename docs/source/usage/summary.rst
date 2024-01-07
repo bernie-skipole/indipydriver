@@ -87,9 +87,6 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' and 
                     received_value = event["ledmember"]
                     control.set_LED(received_value)
                     ledvector = event.vector
-                    # On sending data, clients set their vector state to "Busy",
-                    # so sending 'Ok' resets the state on the client
-                    ledvector.state = 'Ok'
                     # set the ledmember to the current LED state
                     ledvector["ledmember"] = control.get_LED()
                     # and send the updated vector to the client
@@ -113,10 +110,8 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' and 
                 await asyncio.sleep(0.1)
                 # poll the device every 0.1 of a second,
                 # send an update if values have changed
-                ledvector.state = 'Ok'
                 ledvector["ledmember"] = control.get_LED()
                 await ledvector.send_setVector(allvalues=False)
-                buttonvector.state = 'Ok'
                 buttonvector["buttonmember"] = control.get_BUTTON()
                 await buttonvector.send_setVector(allvalues=False)
 
@@ -141,7 +136,7 @@ The client is setting the member's value, 'On' or 'Off' which is obtained from e
 
 Gets the value from the event, and sets it into LEDSwitchControl which sets the LED.
 
-Having set the LED, you should set the vector state to ok, set its member "ledmember" to the LED value, and await the vector's send_setVector() method, which sends it to the client, confirming that the LED has changed state.
+Having set the LED, you should set its member "ledmember" to the LED value, and await the vector's send_setVector() method, which sends it to the client, confirming that the LED has changed state.
 
 This covers receiving and replying to instructions, but you will also want to send instrument data to the client, for example if someone presses the button (which is simulated above by toggling the button every 5 seconds).  To handle this, you should create your own hardware() coroutine method.
 

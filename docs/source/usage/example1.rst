@@ -170,9 +170,11 @@ async def hardware(self) - to run any continuous tasks.
 You would also create members which contain values to be sent or received from
 the client, one or more members are included in vectors.
 
-vectors are included in devices.
+The driver can manage multiple devices.
 
-devices are included in the driver.
+Each device contains one or more vectors.
+
+Eech vector conatins one or more members.
 
 Your package should include a make_driver() function which returns the driver
 and makes your package suitable for import into other possible python scripts.
@@ -197,6 +199,8 @@ Alternatively, if you want the driver to listen on a port::
 
         asyncio.run(server.asyncrun())
 
+The server can contain multiple drivers, the first argument to IPyServer is
+a list of drivers.
+
 If host, port and maxconnections arguments are not given, the above defaults
-are used. The IPyServer class can serve multiple drivers if they are given in
-the first list argument.
+are used.

@@ -66,10 +66,9 @@ Typically, if you accept a new member value, you would have code that controls y
         # your code to act on this newvalue, followed by:
 
         event.vector['membername'] = newvalue
-        event.vector.state = 'Ok'
         await event.vector.send_setVector()
 
-Setting the state to Ok is necessary, as when the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed.
+When the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed. Calling vector.send_setVector() therefore informs the client of the new value and resets the state on the client display.
 
 It may be that you expect to receive multiple member values in a vector, and want to act on them all, in which case you may do something like::
 
@@ -80,7 +79,6 @@ It may be that you expect to receive multiple member values in a vector, and wan
             # your code to act on these values
             # followed by:
             event.vector[name] = value
-        event.vector.state = 'Ok'
         await event.vector.send_setVector()
 
 

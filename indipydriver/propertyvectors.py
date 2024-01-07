@@ -98,10 +98,10 @@ class PropertyVector(collections.UserDict):
            timeout attribute. If it is None, the timeout attribute will remain unchanged.
 
            This timeout indicates to the client how long it takes to effect a change of
-           this vector. So the default '0' means the vector will be updated in a minimal
-           time should the client request it, but a value of '30' means it could take 30
-           seconds. In which case the client may flag an error if it requests a change,
-           but gets no update after waiting 30 seconds.
+           this vector.
+
+           The state should be either None - in which case no change to the state attribute
+           will be made, or one of Idle, Ok, Busy or Alert.
         """
         if not timeout is None:
             if isinstance(timeout, str):
@@ -109,7 +109,7 @@ class PropertyVector(collections.UserDict):
             else:
                 self._reporterror("Aborting sending defVector: The given send_defVector timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -255,10 +255,10 @@ class SwitchVector(PropertyVector):
            timeout attribute. If it is None, the timeout attribute will remain unchanged.
 
            This timeout indicates to the client how long it takes to effect a change of
-           this vector. So the default '0' means the vector will be updated in a minimal
-           time should the client request it, but a value of '30' means it could take 30
-           seconds. In which case the client may flag an error if it requests a change,
-           but gets no update after waiting 30 seconds.
+           this vector.
+
+           The state should be either None - in which case no change to the state attribute
+           will be made, or one of Idle, Ok, Busy or Alert.
 
            If allvalues is True, all values are sent.
 
@@ -273,7 +273,7 @@ class SwitchVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setSwitchVector: The given send_setVector timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -334,7 +334,7 @@ class SwitchVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -441,6 +441,9 @@ class LightVector(PropertyVector):
            For Light Vectors the timeout value is not used, but is included in the arguments
            to match other send_vectors.
 
+           The state should be either None - in which case no change to the state attribute
+           will be made, or one of Idle, Ok, Busy or Alert.
+
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
@@ -448,7 +451,7 @@ class LightVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -491,7 +494,7 @@ class LightVector(PropertyVector):
            just a state or message is to be sent.
         """
         # Note timeout is not used
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -603,10 +606,11 @@ class TextVector(PropertyVector):
            timeout attribute. If it is None, the timeout attribute will remain unchanged.
 
            This timeout indicates to the client how long it takes to effect a change of
-           this vector. So the default '0' means the vector will be updated in a minimal
-           time should the client request it, but a value of '30' means it could take 30
-           seconds. In which case the client may flag an error if it requests a change,
-           but gets no update after waiting 30 seconds.
+           this vector.
+
+           The state should be either None - in which case no change to the state attribute
+           will be made, or one of Idle, Ok, Busy or Alert.
+
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
@@ -620,7 +624,7 @@ class TextVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setTextVector: The given send_setVector timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -670,7 +674,7 @@ class TextVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -781,10 +785,10 @@ class NumberVector(PropertyVector):
            timeout attribute. If it is None, the timeout attribute will remain unchanged.
 
            This timeout indicates to the client how long it takes to effect a change of
-           this vector. So the default '0' means the vector will be updated in a minimal
-           time should the client request it, but a value of '30' means it could take 30
-           seconds. In which case the client may flag an error if it requests a change,
-           but gets no update after waiting 30 seconds.
+           this vector.
+
+           The state should be either None - in which case no change to the state attribute
+           will be made, or one of Idle, Ok, Busy or Alert.
 
            If allvalues is True, all values are sent.
 
@@ -799,7 +803,7 @@ class NumberVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setNumberVector: The given send_setVector timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -849,7 +853,7 @@ class NumberVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
@@ -982,7 +986,7 @@ class BLOBVector(PropertyVector):
             else:
                 self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
-        if not state is None:
+        if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:

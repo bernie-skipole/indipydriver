@@ -25,4 +25,4 @@ Assuming you have two importable modules containing drivers, thermostat.py and w
 
     asyncio.run(server.asyncrun())
 
-This example would run the drivers together with the server, all in a single thread.  Using the above example, up to five clients can connect to localhost, port 7624, these being the defaults.
+This example would run the drivers together with the server.  Using the above example, up to five clients can connect to localhost, port 7624, these being the defaults.

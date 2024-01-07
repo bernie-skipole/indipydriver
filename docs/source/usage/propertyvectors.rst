@@ -19,25 +19,28 @@ Which provides a convention for property and member names.
 
 **perm** is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them.
 
-**state** is the state of the vector, and is an attribute which can be set before calling a send_setVector method to inform the client of the state of the property.
+**state** can be set to one of 'Idle', 'Ok', 'Busy' or 'Alert'. Typically the client displays this in an appropriate colour.
 
-state can be set to one of 'Idle', 'Ok', 'Busy', 'Alert'.
+The state can be changed either by explicitly setting the vector.state attribute or when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument state=None (the default), then the state attribute remains unchanged, however if the argument is set to one of the state values, then the state attribute is changed, and the client will receive the new state.
 
 Further attributes
 ^^^^^^^^^^^^^^^^^^
 
 The timeout attribute is not set in the arguments, but is always initially set to '0'.
 
-**timeout** This attribute is a string numeric value which can be changed either by explicitly setting the vector.timeout attribute or when calling a send_defVector, or send_setVector method where it can be set as an argument of these methods.
+**timeout** indicates to the client the worst-case time it might take to change the value to something else.
 
-From the indi spec
+The default of '0' implies that the vector will be updated in a minimal time should the client request it.
+
+This attribute is a string numeric value which can be changed either by explicitly setting the vector.timeout attribute or when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
+
+From the indi specification
 
 "Each Property has a timeout value that specifies the worst-case time it might take to change the value to something else.
 The Device may report changes to the timeout value depending on current device status. Timeout values give Clients a simple
 ability to detect dysfunctional Devices or broken communication and also gives them a way to predict the duration of an
 action for scheduling purposes..."
 
-The default of '0' indicates to the client that the vector will be updated in a minimal time should the client request it.
 
 **enable** is by default True, and is automatically set to False if the send_delProperty() method is called. When False no further data is sent by this property and any incoming values are ignored, until the enable attribute is set True again. Calling send_delProperty() therefore has the effect of removing the property from the client.
 
