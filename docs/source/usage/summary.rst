@@ -35,7 +35,7 @@ Subclass IPyDriver
 
 The IPyDriver class has signature::
 
-    class ipydriver.IPyDriver(devices, **driverdata)
+    class IPyDriver(devices, **driverdata)
 
 Where 'devices' is a list of devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "ledswitch".
 
