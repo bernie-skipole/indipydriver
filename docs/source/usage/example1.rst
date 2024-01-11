@@ -174,7 +174,7 @@ The driver can manage multiple devices.
 
 Each device contains one or more vectors.
 
-Eech vector conatins one or more members.
+Eech vector contains one or more members.
 
 Your package should include a make_driver() function which returns the driver
 and makes your package suitable for import into other possible python scripts.
