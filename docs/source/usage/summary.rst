@@ -1,7 +1,7 @@
 Summary
 =======
 
-The following summarises how a driver could be structured, describing a simulated LED control and button.
+The following summarises how a driver could be structured, describing a simulated LED control.
 
 Your Class
 ^^^^^^^^^^
@@ -11,47 +11,22 @@ You would normally start by creating one or more classes or functions that contr
     import asyncio
 
     from indipydriver import (IPyDriver, Device,
-                              getProperties,
                               SwitchVector, SwitchMember, newSwitchVector,
-                              IPyServer
+                              getProperties, IPyServer
                              )
+
 
     # Other vectors, members and events are available,
     # this example only imports those used.
 
-    class LEDSwitchControl:
-        """This is a simulation containing variables only, normally it
-           would control a real LED on an output GPIO, and monitor a
-           button on an input GPIO."""
+    class LED:
+        """This is a simulation containing a variable only,
+           normally it would control a real LED."""
 
-        def __init__(self):
-            "Set start up values"
-            self._LED = False
-            self._BUTTON = False
-
-        def set_LED(self, value):
-            "Set LED On or Off"
-            self._LED = True if value == "On" else False
-
-        def get_LED(self):
-            "Return state, On or Off"
-            if self._LED:
-                return "On"
-            else:
-                return "Off"
-
-        def get_BUTTON(self):
-            "Return button, On or Off"
-            if self._BUTTON:
-                return "On"
-            else:
-                return "Off"
-
-        async def buttoncycle(self):
-            "Simulates the button being toggled every five seconds"
-            while True:
-                await asyncio.sleep(5)
-                self._BUTTON = False if self._BUTTON else True
+        def __init__(self, value):
+            "Set initial value of led"
+            self.value = value
+            # value should be 'On' or 'Off'
 
 
 
@@ -66,54 +41,42 @@ Where 'devices' is a list of devices this driver will control, each device being
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
-In this example the device object will contain two switch vectors, one to hold the LED status, and one to hold the button status. Each vector will only have one member.
+In this example the device object will contain a single switch vector, with a single switch member, to control the LED.
 
-The keyworded variable-length argument 'driverdata' contains any data you wish to set into the class, in this example it will consist of keyword 'control' set to an instance of your LEDSwitchControl class which will then be available as the attribute self.driverdata['control']
+The keyworded variable-length argument 'driverdata' contains any data you wish to set into the class, in this example it will consist of keyword 'control' set to an instance of your LED class which will then be available as the attribute self.driverdata['control']
 
-The class IPyDriver should be subclassed with your own 'clientevent(event)' and 'hardware()' coroutine methods::
+The class IPyDriver should be subclassed with your own 'clientevent(event)' coroutine method::
 
-    class LEDSwitchDriver(IPyDriver):
+    class LEDDriver(IPyDriver):
+
+        """IPyDriver is subclassed here."""
 
         async def clientevent(self, event):
-            "On receiving data, this is called, and should handle any necessary actions"
-            control =  self.driverdata["control"]
-            # control is the instance of LEDSwitchControl
+            "On receiving data from the client, this is called"
+
+            led = self.driverdata["control"]
+            # led is an instance of the LED class
             match event:
+
+                # event.vector is the vector being requested or altered
+                # event[membername] is the new value
+
                 case getProperties():
+                    # An event of type 'getProperties' is a client request
+                    # to define a property. Send back a property definition
                     await event.vector.send_defVector()
 
                 case newSwitchVector(devicename="ledswitch",
-                                     vectorname="ledvector") if "ledmember" in event:
-                    received_value = event["ledmember"]
-                    control.set_LED(received_value)
-                    ledvector = event.vector
-                    # set the ledmember to the current LED state
-                    ledvector["ledmember"] = control.get_LED()
-                    # and send the updated vector to the client
-                    await ledvector.send_setVector()
+                                     vectorname="ledswitchvector") if 'ledswitchmember' in event:
+                    # a new value has been received from the client
+                    newvalue = event["ledswitchmember"]
+                    # set received value into led, this controls the actual LED
+                    led.value = newvalue
+                    # and set this new value into the vector
+                    event.vector["ledswitchmember"] = newvalue
+                    # send the updated vector back to the client
+                    await event.vector.send_setVector()
 
-
-        async def hardware(self):
-            "This should be a continuously running coroutine"
-            control =  self.driverdata["control"]
-            # control is the instance of LEDSwitchControl
-            cyclebutton = asyncio.create_task(control.buttoncycle())
-            # the buttoncycle method is now running continuously
-            # and simulates someone toggling the button
-
-            # poll the hardware for any changes, and send changes to the client
-            # get the two vectors belonging to the ledswitch device
-            ledvector = self["ledswitch"]["ledvector"]
-            buttonvector = self["ledswitch"]["buttonvector"]
-
-            while True:
-                await asyncio.sleep(0.1)
-                # poll the device every 0.1 of a second,
-                # send an update if values have changed
-                ledvector["ledmember"] = control.get_LED()
-                await ledvector.send_setVector(allvalues=False)
-                buttonvector["buttonmember"] = control.get_BUTTON()
-                await buttonvector.send_setVector(allvalues=False)
 
 
 clientevent method
@@ -127,39 +90,37 @@ The getProperties event is sent by the client to discover the properties of the 
 
 The new vector events are sent by the client to change the instrument settings, in this case to switch on or off the LED. These events are mappings of membername to value which the client is submitting, not all membernames may be present if they are not being changed.
 
-In this case the only event to be received will be a newSwitchVector for the devicename "ledswitch", and vectorname "ledvector" - as this is the only device and vector defined which can be controlled by the client, The buttonvector is read-only. If any other device or vector event is received, it can be ignored.
+In this case the only event to be received will be a newSwitchVector for the devicename "ledswitch", and vectorname "ledswitchvector" - as this is the only device and vector defined which can be controlled by the client. If any other device or vector event is received, it can be ignored.
 
-The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledmember"]. In this example 'control' is an instance of your LEDSwitchControl class, which is actually your hardware that does the change, and so::
+The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledswitchmember"]. In this example 'led' is an instance of your LED class, which is actually your hardware that does the change, and so::
 
-        received_value = event["ledmember"]
-        control.set_LED(received_value)
+    newvalue = event["ledswitchmember"]
+    led.value = newvalue
 
-Gets the value from the event, and sets it into LEDSwitchControl which sets the LED.
+Gets the value from the event, and sets it into led which sets the LED - or in this simulation, just a class attribute.
 
-Having set the LED, you should set its member "ledmember" to the LED value, and await the vector's send_setVector() method, which sends it to the client, confirming that the LED has changed state.
+You should then set the vector's member "ledswitchmember" to the new value, and await the vector's send_setVector() method, which sends it to the client, confirming that the led has changed state.
 
-This covers receiving and replying to instructions, but you will also want to send instrument data to the client, for example if someone presses the button (which is simulated above by toggling the button every 5 seconds).  To handle this, you should create your own hardware() coroutine method.
+A vector is a mapping to its member values, so::
+
+    event.vector["ledswitchmember"] = newvalue
+
+Sets the vector member with name "ledswitchmember" to the new value, and::
+
+    await event.vector.send_setVector()
+
+Sends this new value to the client.
+
+
 
 hardware method
 ^^^^^^^^^^^^^^^
 
-This coroutine is automatically started and should run continuously, typically with a 'while True' loop as shown above. You should take care not to call any long lived blocking function, which would disable the entire driver.
+In the example above no hardware coroutine is needed, but there may be instruments that need to send data periodically. The hardware coroutine is automatically started and should run continuously, typically with a 'while True' loop. Examples are given further in this documentation.
 
-If your hardware control class (the LEDSwitchControl class above), needs any coroutines to be running, this is a good place to start them, as shown by the asyncio.create_task() line in the example.
+The driver is a mapping to its devices, so self["ledswitch"] will get the device with devicename "ledswitch", and a device is a mapping to its vectors, so self["ledswitch"]["ledswitchvector"] will return the vector controlling the LED.
 
-The driver is a mapping to its devices, so self["ledswitch"] will get the device with devicename "ledswitch", and a device is a mapping to its vectors, so self["ledswitch"]["ledvector"] will return the vector controlling the LED and self["ledswitch"]["buttonvector"] will return the vector controlling the button.
-
-A vector is a mapping to its member values, so::
-
-    ledvector["ledmember"] = control.get_LED()
-
-Sets the vector member with name "ledmember" to the value of the LED.
-
-This vector, with updated member value can then be sent to the client using the vector's send_setVector() coroutine method.
-
-The allvalues=False argument to send_setVector requests the method to not send all values, just those which have changed. So this will not be continuously sending updates if the LED has not changed state.
-
-The same thing is done for the buttonvector, and the result is the vectors and their member values are sent to the client which displays the instrument status.
+This vector, with updated member value can then be sent to the client using the vector's send_setVector() coroutine method at regular intervals.
 
 
 Make the driver
@@ -171,45 +132,30 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         "Creates the driver"
 
         # create hardware object
-        ledswitchcontrol = LEDSwitchControl()
+        led = LED('Off')
 
-        # create an led switch member
-        ledmember = SwitchMember(name="ledmember",
-                                 label="LED Control",
-                                 membervalue=ledswitchcontrol.get_LED())
+        # create switch member
+        ledswitchmember = SwitchMember(name="ledswitchmember",
+                                       label="LED Value",
+                                       membervalue=led.value)
+        # set this member into a vector
+        ledswitchvector = SwitchVector(name="ledswitchvector",
+                                       label="LED",
+                                       group="Control Group",
+                                       perm="rw",
+                                       rule='AtMostOne',
+                                       state="Ok",
+                                       switchmembers=[ledswitchmember] )
+        # create a Device with this vector
+        ledswitch = Device( devicename="ledswitch", properties=[ledswitchvector])
 
-        # create a vector, in this case containing the single switch member.
-        ledvector = SwitchVector(name="ledvector",
-                                 label="LED Control",
-                                 group="Control",
-                                 perm="rw",
-                                 rule = "AtMostOne",
-                                 state="Ok",
-                                 switchmembers=[ledmember] )
-
-        # create a button member
-        buttonmember = SwitchMember(name="buttonmember",
-                                    label="Button Status",
-                                    membervalue=ledswitchcontrol.get_BUTTON())
-
-        # create a vector for the button.
-        buttonvector = SwitchVector(name="buttonvector",
-                                    label="Button status",
-                                    group="Control",
-                                    perm="ro",
-                                    rule = "AtMostOne",
-                                    state="Ok",
-                                    switchmembers=[buttonmember] )
-
-        # create a Device, containing the vectors
-        ledswitch = Device( devicename="ledswitch", properties=[ledvector, buttonvector] )
-
-        # Create the LEDSwitchDriver, in this case containing a single device,
-        # together with your hardware object
-        ledswitchdriver = LEDSwitchDriver(devices=[ledswitch], control=ledswitchcontrol)
+        # Create the Driver (inherited from IPyDriver) containing this device
+        # and also containing the led object as driverdata['control']
+        driver = LEDDriver(devices=[ledswitch], control=led)
 
         # and return the driver
-        return ledswitchdriver
+        return driver
+
 
 The various vector and member classes and their arguments are detailed further in this documentation.
 
