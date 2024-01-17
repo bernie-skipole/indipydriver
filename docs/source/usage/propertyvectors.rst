@@ -21,7 +21,7 @@ Which provides a convention for property and member names.
 
 **state** can be set to one of 'Idle', 'Ok', 'Busy' or 'Alert'. Typically the client displays this in an appropriate colour.
 
-The state can be changed either by explicitly setting the vector.state attribute or when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument state=None (the default), then the state attribute remains unchanged, however if the argument is set to one of the state values, then the state attribute is changed, and the client will receive the new state.
+The state can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument state=None (the default), then the state attribute remains unchanged, however if the argument is set to one of the state values, then the state attribute is changed, and the client will receive the new state.
 
 Further attributes
 ^^^^^^^^^^^^^^^^^^
@@ -32,7 +32,7 @@ The timeout attribute is not set in the arguments, but is always initially set t
 
 The default of '0' implies that the vector will be updated in a minimal time should the client request it.
 
-This attribute is a string numeric value which can be changed either by explicitly setting the vector.timeout attribute or when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
+This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
 
 From the indi specification
 
@@ -46,9 +46,9 @@ action for scheduling purposes..."
 
 If in the initial state of the device, it is required that a particular property should be hidden, then when the vector is first created, set vector.enable = False, and the vector will be disabled until the enable attribute is set True, and the vector send_defVector() method called, which informs the client of the existence of this property.
 
-Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the ledswitchdriver example, the value of the vector member is set by::
+Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the LEDDriver example, the value of the vector member is set by::
 
-    ledvector["ledmember"] = control.get_LED()
+    event.vector["ledswitchmember"] = newvalue
 
 Numeric values are set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol, the only exception is blobsize, where the number should be an integer.
 
