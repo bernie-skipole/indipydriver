@@ -243,8 +243,7 @@ class SwitchVector(PropertyVector):
 
     async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setSwitchVector) and members with their values to the client.
-           Typically the vector 'state' should be set, and any changed member value prior to
-           transmission.
+           Typically any changed member value should be set prior to transmission.
 
            message is any suitable string for the client.
 
@@ -430,8 +429,7 @@ class LightVector(PropertyVector):
 
     async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setLightVector) and members with their values to the client.
-           Typically the vector 'state' should be set, and any changed member value prior to
-           transmission.
+           Typically any changed member value should be set prior to transmission.
 
            message is any suitable string for the client.
 
@@ -594,8 +592,7 @@ class TextVector(PropertyVector):
 
     async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setTextVector) and members with their values to the client.
-           Typically the vector 'state' should be set, and any changed member value prior to
-           transmission.
+           Typically any changed member value should be set prior to transmission.
 
            message is any suitable string for the client.
 
@@ -773,8 +770,7 @@ class NumberVector(PropertyVector):
 
     async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
         """Transmits the vector (setNumberVector) and members with their values to the client.
-           Typically the vector 'state' should be set, and any changed member value prior to
-           transmission.
+           Typically any changed member value should be set prior to transmission.
 
            message is any suitable string for the client.
 
