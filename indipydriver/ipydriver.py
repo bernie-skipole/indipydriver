@@ -86,8 +86,8 @@ class IPyDriver(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.devices
         # simply because 'devices' is more descriptive
 
-        # tasks is a list of tasks to be started
-        self.tasks = tasks
+        # _tasks is a list of co_routines to be started
+        self._tasks = tasks
 
         # dictionary of optional data
         self.driverdata = driverdata
@@ -316,23 +316,22 @@ class IPyDriver(collections.UserDict):
         if self.comms is None:
             self.comms = STDINOUT()
 
-        device_handlers = []
-        property_handlers = []
+        # get all tasks into a list
+        self._tasks.append( self.comms(self.readerque, self.writerque) )    # run communications
+        self._tasks.append( self.hardware() )                               # task to operate device hardware, and transmit updates
+        self._tasks.append( self._read_readerque() )                        # task to handle received xml data
+        self._tasks.append( self._snoophandler() )                          # task to handle incoming snoop data
+
+
         for device in self.devices.values():
-            device_handlers.append(device._handler())
+            self._tasks.append(device._handler())                           # each device handles its incoming data
             for pv in device.propertyvectors.values():
-                property_handlers.append(pv._handler())
+                self._tasks.append(pv._handler())                           # each property handles its incoming data
                 # also give the propertyvector a reference to this driver
                 # so it can call eventaction and have access to writerque
                 pv.driver = self
 
-        await asyncio.gather(self.comms(self.readerque, self.writerque),   # run communications
-                             self.hardware(),        # task to operate device hardware, and transmit updates
-                             self._read_readerque(), # task to handle received xml data
-                             self._snoophandler(),   # task to handle incoming snoop data
-                             *device_handlers,       # each device handles its incoming data
-                             *property_handlers      # each property handles its incoming data
-                            )
+        await asyncio.gather( *self._tasks )
 
 
 class Device(collections.UserDict):
