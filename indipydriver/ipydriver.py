@@ -71,7 +71,7 @@ class IPyDriver(collections.UserDict):
             raise TypeError("Unable to parse the value")
         return floatvalue
 
-    def __init__(self, devices, **driverdata):
+    def __init__(self, devices, tasks=[], **driverdata):
         super().__init__()
 
         # this is a dictionary of device name to device this driver owns
@@ -85,6 +85,9 @@ class IPyDriver(collections.UserDict):
 
         # self.data is used by UserDict, it is an alias of self.devices
         # simply because 'devices' is more descriptive
+
+        # tasks is a list of tasks to be started
+        self.tasks = tasks
 
         # dictionary of optional data
         self.driverdata = driverdata
