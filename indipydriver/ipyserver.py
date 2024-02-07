@@ -28,7 +28,7 @@ class IPyServer:
 
 
 
-    def __init__(self, drivers, host="localhost", port=7624, maxconnections=5):
+    def __init__(self, drivers, *, host="localhost", port=7624, maxconnections=5):
 
         # traffic is transmitted out on the serverwriterque
         self.serverwriterque = asyncio.Queue(6)

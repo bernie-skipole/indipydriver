@@ -84,6 +84,7 @@ class STDOUT_TX:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
+            writerque.task_done()
             if (txdata.tag == "setBLOBVector") and len(txdata):
                 # txdata is a setBLOBVector containing blobs
                 # the generator blob_xml_bytes yields bytes
@@ -98,7 +99,7 @@ class STDOUT_TX:
                 binarydata += b"\n"
                 sys.stdout.buffer.write(binarydata)
                 sys.stdout.buffer.flush()
-            writerque.task_done()
+
 
 class STDIN_RX:
     """An object that receives data, parses it to ElementTree elements
@@ -233,9 +234,9 @@ class Port_TX():
             await asyncio.sleep(0)
             # get block of data from writerque and transmit
             txdata = await writerque.get()
+            writerque.task_done()
             if not self.blobstatus.allowed(txdata):
                 # this data should not be transmitted, discard it
-                writerque.task_done()
                 continue
             # this data can be transmitted
             if txdata.tag == "setBLOBVector" and len(txdata):
@@ -253,8 +254,6 @@ class Port_TX():
                 self.timer.update()
                 self.writer.write(binarydata)
                 await self.writer.drain()
-            writerque.task_done()
-
 
 
 class Port_RX(STDIN_RX):
