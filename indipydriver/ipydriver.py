@@ -293,7 +293,7 @@ class IPyDriver(collections.UserDict):
         then update the appropriate vectors, and send updated
         values to the client using
         await vector.send_setVector()"""
-        await asyncio.sleep(0)
+        pass
 
 
     async def clientevent(self, event):
