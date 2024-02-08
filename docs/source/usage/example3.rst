@@ -84,8 +84,9 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
                 # check if windowcontrol.timestamp is older than 60 seconds
                 if windowcontrol.timestamp < datetime.now(tz=timezone.utc)-timedelta(seconds=60):
-                    # So no temperature data has been received in the last minute, re-send a getProperties,
-                    # in case the thermostat was disconnected, and has hopefully restarted
+                    # So no temperature data has been received in the last minute,
+                    # re-send a getProperties, in case the thermostat was disconnected,
+                    # and has hopefully restarted
                     await self.send_getProperties( devicename="Thermostat",
                                                    vectorname="temperaturevector" )
                     # and send an alarm to the client
@@ -126,7 +127,9 @@ This example simulates a driver which snoops on the thermostat of the previous e
         windowcontrol = WindowControl(rxque)
 
         # create Light member
-        alarm = LightMember(name="alarm", label="Reading thermostat", membervalue="Idle")
+        alarm = LightMember( name="alarm",
+                             label="Reading thermostat",
+                             membervalue="Idle" )
         # set this member into a vector
         windowalarm =  LightVector( name="windowalarm",
                                     label="Thermostat Status",
@@ -134,7 +137,9 @@ This example simulates a driver which snoops on the thermostat of the previous e
                                     state="Idle",
                                     lightmembers=[alarm] )
 
-        status = TextMember(name="status", label="Window position", membervalue=windowcontrol.window)
+        status = TextMember( name="status",
+                             label="Window position",
+                             membervalue=windowcontrol.window )
         windowstatus = TextVector(  name="windowstatus",
                                     label="Window Status",
                                     group="Values",
