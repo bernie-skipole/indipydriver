@@ -35,15 +35,17 @@ Subclass IPyDriver
 
 The IPyDriver class has signature::
 
-    class IPyDriver(devices, **driverdata)
+    class IPyDriver(devices, tasks=[], **driverdata)
 
 Where 'devices' is a list of devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "ledswitch".
+
+The argument 'tasks' is a list of co-routines that you may have created to operate your instruments (to poll instrument values perhaps), the co-routines set in this list will all be started when the driver is run. This example does not use this functionality so tasks remains an empty list. The tasks argument was introduced in version 1.1.0.
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
 In this example the device object will contain a single switch vector, with a single switch member, to control the LED.
 
-The keyworded variable-length argument 'driverdata' contains any data you wish to set into the class, in this example it will consist of keyword 'control' set to an instance of your LED class which will then be available as the attribute self.driverdata['control']
+The keyword argument 'driverdata' contains any data you wish to set into the class, in this example it will consist of keyword 'led' set to an instance of your LED class which will then be available as the attribute self.driverdata['led']
 
 The class IPyDriver should be subclassed with your own 'clientevent(event)' coroutine method::
 
@@ -54,7 +56,7 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' coro
         async def clientevent(self, event):
             "On receiving data from the client, this is called"
 
-            led = self.driverdata["control"]
+            led = self.driverdata["led"]
             # led is an instance of the LED class
             match event:
 
@@ -97,7 +99,7 @@ The client is setting the member's value, 'On' or 'Off' which is obtained from e
     newvalue = event["ledswitchmember"]
     led.value = newvalue
 
-Gets the value from the event, and sets it into led which sets the LED - or in this simulation, just a class attribute.
+Gets the value from the event, and sets it into led which sets the LED - or in this simulation, just an object attribute.
 
 You should then set the vector's member "ledswitchmember" to the new value, and await the vector's send_setVector() method, which sends it to the client, confirming that the led has changed state.
 
@@ -131,7 +133,7 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
     def make_driver():
         "Creates the driver"
 
-        # create hardware object
+        # create an object to control the instrument
         led = LED('Off')
 
         # create switch member
@@ -147,11 +149,17 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
                                        state="Ok",
                                        switchmembers=[ledswitchmember] )
         # create a Device with this vector
-        ledswitch = Device( devicename="ledswitch", properties=[ledswitchvector])
+        ledswitch = Device( devicename="ledswitch", properties=[ledswitchvector] )
 
         # Create the Driver (inherited from IPyDriver) containing this device
-        # and also containing the led object as driverdata['control']
-        driver = LEDDriver(devices=[ledswitch], control=led)
+        # and also containing the led object which will be available as
+        # self.driverdata['led']
+        driver = LEDDriver(devices=[ledswitch], led=led)
+
+        # The self.driverdata arguments should contain all objects which have
+        # been created to run the instrument, so when this function returns
+        # a reference will be retained and the objects will not be
+        # garbage collected.
 
         # and return the driver
         return driver
