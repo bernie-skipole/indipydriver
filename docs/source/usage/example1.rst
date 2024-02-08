@@ -12,6 +12,8 @@ contains the temperature which is reported to the client::
 
     import asyncio
 
+    from datetime import datetime, timezone
+
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
                               getProperties, IPyServer
@@ -25,25 +27,19 @@ contains the temperature which is reported to the client::
            would control a real heater, and take temperature measurements
            from a sensor."""
 
-        def __init__(self):
-            "Set start up values"
+        def __init__(self, txque):
+            """Set start up values, txque is an asyncio.Queue object
+               used to transmit temperature readings """
             self.temperature = 20
             self.target = 15
-            self.heater = "On"
-
-        # Numbers need to be explicitly set in the indi protocol
-        # so the instrument needs to give a string version of numbers
-
-        @property
-        def stringtemperature(self):
-            "Gives temperature as a string to two decimal places"
-            return '{:.2f}'.format(self.temperature)
+            self.heater = "Off"
+            self.txque = txque
 
         async def poll_thermostat(self):
             """This simulates temperature increasing/decreasing, and turns
                on/off a heater if moving too far from the target."""
             while True:
-                await asyncio.sleep(1)
+                await asyncio.sleep(10)
                 if self.heater == "On":
                     # increasing temperature if the heater is on
                     self.temperature += 0.2
@@ -59,14 +55,22 @@ contains the temperature which is reported to the client::
                     # too cold
                     self.heater = "On"
 
+                # transmit the temperature and timestamp back to the client
+                timestamp = datetime.now(tz=timezone.utc)
+                senddata = (timestamp, self.temperature)
+                try:
+                    self.txque.put_nowait(senddata)
+                except asyncio.QueueFull:
+                    # if the queue is full, perhaps due to
+                    # communications problems, simply drop the
+                    # record, but keep operating the thermostat
+                    pass
 
-    # An instance of the above class will be set as a keyword argument of
-    # the driver, and will be available in an attribute dictionary
 
     class ThermoDriver(IPyDriver):
 
         """IPyDriver is subclassed here, with two methods created to handle incoming events
-           and to control and monitor the instrument hardware"""
+           and to transmit the temperature to the client"""
 
         async def clientevent(self, event):
             """On receiving data, this is called, and should handle any necessary actions
@@ -76,7 +80,7 @@ contains the temperature which is reported to the client::
                is expected, in which the client is asking for driver information.
                """
 
-            # note: using match - case is ideal for this situation,
+            # Using match - case is ideal for this situation,
             # but requires Python v3.10 or later
 
             match event:
@@ -90,50 +94,62 @@ contains the temperature which is reported to the client::
 
 
         async def hardware(self):
-            """This is a continuously running coroutine which can be used to run the hardware
-               and to keep the temperaturevector updated with the latest temperature."""
+            """This is a continuously running coroutine which is used
+               to transmit the temperature to connected clients."""
 
-            # Get the ThermalControl instance, and run the thermostat polling task
-            control = self.driverdata["control"]
-            poll_task = asyncio.create_task(control.poll_thermostat())
-            # the poll_thermostat method is now running continuously
-
-            # report temperature to the client every ten seconds
-            device = self['Thermostat']
-            vector = device['temperaturevector']
+            txque = self.driverdata["txque"]
+            vector = self['Thermostat']['temperaturevector']
             while True:
-                await asyncio.sleep(10)
-                # get the latest temperature, and set it into the vector, then transmit
-                # this vector to the client using its send_setVector method
-                vector['temperature'] = control.stringtemperature
-                await vector.send_setVector()
+                # wait until an item is available in txque
+                timestamp,temperature = await txque.get()
+                # Numbers need to be explicitly set in the indi protocol
+                # so need to send a string version
+                stringtemperature = '{:.2f}'.format(temperature)
+                # set this new value into the vector
+                vector['temperature'] = stringtemperature
+                # and transmit it to the client
+                await vector.send_setVector(timestamp=timestamp)
+                # Notify the queue that the work has been processed.
+                txque.task_done()
 
 
     def make_driver():
-        "Uses the above classes to make an instance of the driver"
+        "Returns an instance of the driver"
 
-        # create hardware object
-        thermalcontrol = ThermalControl()
+        # create a queue to transmit from thermalcontrol
+        txque = asyncio.Queue(maxsize=5)
 
-        # create a vector with one number 'temperature' as its member
+        thermalcontrol = ThermalControl(txque)
+
+        # create a vector with one number 'temperaturemember' as its member
 
         # Note: numbers must be given as strings
-        temperature = NumberMember(name="temperature", format='%3.1f', min='-50', max='99',
-                                   membervalue=thermalcontrol.stringtemperature)
+        stringtemperature = '{:.2f}'.format(thermalcontrol.temperature)
+
+        temperaturemember = NumberMember( name="temperature",
+                                          format='%3.1f', min='-50', max='99',
+                                          membervalue=stringtemperature )
         # Create a NumberVector instance, containing the member.
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",
                                           group="Values",
                                           perm="ro",
                                           state="Ok",
-                                          numbermembers=[temperature] )
+                                          numbermembers=[temperaturemember] )
 
         # create a device with temperaturevector as its only property
         thermostat = Device( devicename="Thermostat",
                              properties=[temperaturevector] )
 
-        # Create the Driver, containing this device and the hardware control object
-        driver = ThermoDriver(devices=[thermostat], control=thermalcontrol)
+        # set the coroutine to be run with the driver
+        pollingtask = thermalcontrol.poll_thermostat()
+
+        # Create the Driver, containing this device and
+        # other objects needed to run the instrument
+        driver = ThermoDriver( devices=[thermostat],
+                               tasks=[pollingtask],
+                               txque=txque,
+                               thermalcontrol=thermalcontrol )
 
         # and return the driver
         return driver
@@ -160,6 +176,11 @@ contains the temperature which is reported to the client::
 
 In summary. You create any objects or functions needed to operate your
 hardware, and these can be inserted into the IPyDriver constructor.
+
+You should note that in the above example an asyncio.Queue was used to pass data
+from the thermometer to the driver. The Queue maxsize was arbitrarily set at five,
+since if the communications link to client was having trouble, then it would not
+be wise to allow an increasingly large number of points to be stored in the queue.
 
 You would typically create your own child class of IPyDriver, overriding methods:
 
