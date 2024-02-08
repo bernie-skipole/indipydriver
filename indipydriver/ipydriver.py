@@ -18,6 +18,11 @@ class IPyDriver(collections.UserDict):
 
        devices is a list of Device objects this driver handles.
 
+       tasks is a list of co-routines that you may have created to
+       operate your instruments, the co-routines set in this list
+       will all be started when the driver is run.
+       The tasks argument was introduced in version 1.1.0.
+
        driverdata will be an attribute dictionary of any hardware
        data that may be usefull.
        """
