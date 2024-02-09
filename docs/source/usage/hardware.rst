@@ -6,7 +6,7 @@ The driver has method::
 
     async def hardware(self)
 
-This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data.
+This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client
 
 Within this hardware method any vector can be accessed with::
 
@@ -16,6 +16,24 @@ A vectors member value can be updated, and sent to the client with::
 
      vector[membername] = newvalue
      await vector.send_setVector()
+
+The send_setVector() method of a vector is obviously useful here, its arguments are::
+
+    async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True)
+
+As default it sends the vector, including all its members to the client, the allvalues argument could be set to False::
+
+     await vector.send_setVector(allvalues=False)
+
+In which case, only values that have changed will be sent, saving bandwidth.
+
+If no values have changed, the vector will not be sent, if you need to ensure the vector message, state or time values are sent to the client, then use the more explicit send_setVectorMembers method instead::
+
+    async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[])
+
+The members list specifies the member names which will have their values sent. If the members list is empty then a vector will still be sent, empty of members, which may be required if just a state or message is to be sent.
+
+Please note that BLOBVectors do not have a send_setVector method only the more explicit send_setVectorMembers is available, this is to ensure more control over possibly large objects.
 
 
 devhardware

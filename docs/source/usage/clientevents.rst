@@ -42,11 +42,17 @@ The INDI specification describes enableBLOB when sent from a client::
 
 Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
 
-
-newVectors
-^^^^^^^^^^
-
 The following event objects indicate the client is trying to set new member values of a vector.
+
+
+.. autoclass:: indipydriver.newSwitchVector
+
+.. autoclass:: indipydriver.newTextVector
+
+.. autoclass:: indipydriver.newNumberVector
+
+.. autoclass:: indipydriver.newBLOBVector
+
 
 The event is a mapping of membername:value which the client is submitting.
 
@@ -80,18 +86,6 @@ It may be that you expect to receive multiple member values in a vector, and wan
             # followed by:
             event.vector[name] = value
         await event.vector.send_setVector()
-
-
-The new Vector events are:
-
-
-.. autoclass:: indipydriver.newSwitchVector
-
-.. autoclass:: indipydriver.newTextVector
-
-.. autoclass:: indipydriver.newNumberVector
-
-.. autoclass:: indipydriver.newBLOBVector
 
 
 devclientevent
