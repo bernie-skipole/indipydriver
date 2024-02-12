@@ -307,6 +307,7 @@ class BLOBMember(PropertyMember):
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
         xmldata.set("format", self.blobformat)
+        xmldata.set("size", str(self.blobsize))
         # the value set in the xmldata object should be a bytes object
         if isinstance(self._membervalue, bytes):
             xmldata.text = self._membervalue
@@ -331,8 +332,4 @@ class BLOBMember(PropertyMember):
             if bytescontent == b"":
                 raise ValueError(f"The BLOBMember {self.name} value is empty")
             xmldata.text = bytescontent
-        if self.blobsize:
-            xmldata.set("size", str(self.blobsize))
-        else:
-            xmldata.set("size", str(len(bytescontent)))
         return xmldata
