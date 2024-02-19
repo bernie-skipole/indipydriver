@@ -1,5 +1,5 @@
 
-import collections, io, asyncio, math
+import collections, io, asyncio, math, pathlib
 
 import xml.etree.ElementTree as ET
 
@@ -311,7 +311,12 @@ class BLOBMember(PropertyMember):
         # the value set in the xmldata object should be a bytes object
         if isinstance(self._membervalue, bytes):
             xmldata.text = self._membervalue
-        elif hasattr(self._membervalue, "read") and callable(self._membervalue.read):
+        elif isinstance(self._membervalue, pathlib.Path):
+            try:
+                xmldata.text = self._membervalue.read_bytes()
+            except:
+                raise ValueError(f"Unable to read BLOBMember {self.name}")
+        elif hasattr(self._membervalue, "seek") and hasattr(self._membervalue, "read") and callable(self._membervalue.read):
             # a file-like object
             # set seek(0) so is read from start of file
             self._membervalue.seek(0)
