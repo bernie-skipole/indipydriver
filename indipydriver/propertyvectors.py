@@ -972,6 +972,9 @@ class BLOBVector(PropertyVector):
         """Transmits the vector (setBLOBVector) and members with their values to the client.
            The members list specifies the member names which will have their values sent.
 
+           The member values can be set via vector[membername] = membervalue prior to calling
+           this send_setVectorMembers method
+
            Members contain either a bytes string, a file-like object, or a path to a file. If
            a file-like object is given, its contents will be read and its close() method
            will be called, so you do not have to close it.
