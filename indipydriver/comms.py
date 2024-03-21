@@ -235,8 +235,10 @@ class Port_TX():
             # get block of data from writerque and transmit
             txdata = await writerque.get()
             writerque.task_done()
-            if not self.blobstatus.allowed(txdata):
+            if len(txdata) and not self.blobstatus.allowed(txdata):
                 # this data should not be transmitted, discard it
+                # however if the vector has no content, but perhaps just message and state
+                # still allow it
                 continue
             # this data can be transmitted
             if txdata.tag == "setBLOBVector" and len(txdata):
