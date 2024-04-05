@@ -21,11 +21,11 @@ sys.path.insert(0, os.path.abspath('../../'))
 # -- Project information -----------------------------------------------------
 
 project = 'indipydriver'
-copyright = '2023, Bernard Czenkusz'
+copyright = '2023,2024 Bernard Czenkusz'
 author = 'Bernard Czenkusz'
 
 # The full version, including alpha/beta/rc tags
-release = '1.1.2'
+release = '1.1.3'
 
 # ---------------------- Added to get readthedocs to build, by BC
 master_doc = 'index'

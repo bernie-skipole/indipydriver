@@ -45,7 +45,7 @@ class IPyDriver(collections.UserDict):
                 value = value.lstrip("-")
             # Is the number provided in sexagesimal form?
             if value == "":
-                parts = [0, 0, 0]
+                parts = ["0", "0", "0"]
             elif " " in value:
                 parts = value.split(" ")
             elif ":" in value:
@@ -55,26 +55,24 @@ class IPyDriver(collections.UserDict):
             else:
                 # not sexagesimal
                 parts = [value, "0", "0"]
+            if len(parts) > 3:
+                raise TypeError
             # Any missing parts should have zero
+            if len(parts) == 1:
+                parts.append("0")
+                parts.append("0")
             if len(parts) == 2:
-                # assume seconds are missing, set to zero
                 parts.append("0")
             assert len(parts) == 3
-            number_strings = list(x if x else "0" for x in parts)
-            # convert strings to integers or floats
-            number_list = []
-            for part in number_strings:
-                try:
-                    num = int(part)
-                except ValueError:
-                    num = float(part)
-                number_list.append(num)
-            floatvalue = number_list[0] + (number_list[1]/60) + (number_list[2]/360)
+            # a part could be empty string, ie if 2:5: is given
+            numbers = list(float(x) if x else 0.0 for x in parts)
+            floatvalue = numbers[0] + (numbers[1]/60) + (numbers[2]/3600)
             if negative:
                 floatvalue = -1 * floatvalue
         except:
-            raise TypeError("Unable to parse the value")
+            raise TypeError("Error: Unable to parse number value")
         return floatvalue
+
 
     def __init__(self, devices, tasks=[], **driverdata):
         super().__init__()
