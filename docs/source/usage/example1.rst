@@ -159,9 +159,6 @@ contains the temperature which is reported to the client::
 
         driver = make_driver()
 
-        # In this example, set the driver to listen on a host/port
-        # rather than stdin and stdout.
-
         server = IPyServer([driver])
         asyncio.run(server.asyncrun())
 
