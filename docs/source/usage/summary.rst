@@ -146,4 +146,9 @@ If the host, port and maxconnections are not specified in the IPyServer call, th
 
 The IPyServer class takes a list of drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. The drivers must all be created from IPyDriver subclasses - this is not a general purpose server able to run third party INDI drivers created with other languages or tools.
 
+Connecting using the indipyclient terminal client gives:
+
+.. image:: ./image.png
+
+
 The next few pages of this documentation list the classes describing property vectors and members, if you wish to skip to further examples, see :ref:`example1`.
