@@ -1,6 +1,6 @@
 # indipydriver
 
-This is a pure python package, with no dependencies, providing a set of classes which can be used to create an INDI driver.
+This is a pure python package, with no dependencies, providing a set of classes which can be used to create an INDI driver and serve the INDI communications protocol on a port.
 
 INDI - Instrument Neutral Distributed Interface.
 
