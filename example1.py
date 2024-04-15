@@ -1,7 +1,5 @@
 import asyncio
 
-from datetime import datetime, timezone
-
 from indipydriver import (IPyDriver, Device,
                           NumberVector, NumberMember,
                           getProperties, IPyServer
@@ -81,7 +79,7 @@ class ThermoDriver(IPyDriver):
             # so need to set a string version into the vector
             vector['temperature'] = str(thermalcontrol.temperature)
             # and transmit it to the client
-            await vector.send_setVector(timestamp=timestamp)
+            await vector.send_setVector()
 
 def make_driver():
     "Returns an instance of the driver"

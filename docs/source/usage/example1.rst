@@ -9,10 +9,7 @@ maintains a temperature around 15C.
 In this example a NumberVector and NumberMember
 contains the temperature which is reported to the client::
 
-
     import asyncio
-
-    from datetime import datetime, timezone
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
@@ -27,25 +24,23 @@ contains the temperature which is reported to the client::
            would control a real heater, and take temperature measurements
            from a sensor."""
 
-        def __init__(self, txque):
-            """Set start up values, txque is an asyncio.Queue object
-               used to transmit temperature readings """
+        def __init__(self):
+            """Set start up values"""
             self.temperature = 20
             self.target = 15
             self.heater = "Off"
-            self.txque = txque
 
-        async def poll_thermostat(self):
+        async def run_thermostat(self):
             """This simulates temperature increasing/decreasing, and turns
                on/off a heater if moving too far from the target."""
             while True:
-                await asyncio.sleep(10)
+                await asyncio.sleep(2)
                 if self.heater == "On":
                     # increasing temperature if the heater is on
-                    self.temperature += 0.2
+                    self.temperature += 0.1
                 else:
                     # decreasing temperature if the heater is off
-                    self.temperature -= 0.2
+                    self.temperature -= 0.1
 
                 if self.temperature > self.target+0.5:
                     # too hot
@@ -54,17 +49,6 @@ contains the temperature which is reported to the client::
                 if self.temperature < self.target-0.5:
                     # too cold
                     self.heater = "On"
-
-                # transmit the temperature and timestamp back to the client
-                timestamp = datetime.now(tz=timezone.utc)
-                senddata = (timestamp, self.temperature)
-                try:
-                    self.txque.put_nowait(senddata)
-                except asyncio.QueueFull:
-                    # if the queue is full, perhaps due to
-                    # communications problems, simply drop the
-                    # record, but keep operating the thermostat
-                    pass
 
 
     class ThermoDriver(IPyDriver):
@@ -97,34 +81,26 @@ contains the temperature which is reported to the client::
             """This is a continuously running coroutine which is used
                to transmit the temperature to connected clients."""
 
-            txque = self.driverdata["txque"]
+            thermalcontrol = self.driverdata["thermalcontrol"]
             vector = self['Thermostat']['temperaturevector']
             while True:
-                # wait until an item is available in txque
-                timestamp,temperature = await txque.get()
+                await asyncio.sleep(10)
+                # Send the temperature every 10 seconds
                 # Numbers need to be explicitly set in the indi protocol
-                # so need to send a string version
-                stringtemperature = '{:.2f}'.format(temperature)
-                # set this new value into the vector
-                vector['temperature'] = stringtemperature
+                # so need to set a string version into the vector
+                vector['temperature'] = str(thermalcontrol.temperature)
                 # and transmit it to the client
-                await vector.send_setVector(timestamp=timestamp)
-                # Notify the queue that the work has been processed.
-                txque.task_done()
-
+                await vector.send_setVector()
 
     def make_driver():
         "Returns an instance of the driver"
 
-        # create a queue to transmit from thermalcontrol
-        txque = asyncio.Queue(maxsize=5)
-
-        thermalcontrol = ThermalControl(txque)
+        thermalcontrol = ThermalControl()
 
         # create a vector with one number 'temperaturemember' as its member
 
         # Note: numbers must be given as strings
-        stringtemperature = '{:.2f}'.format(thermalcontrol.temperature)
+        stringtemperature = str(thermalcontrol.temperature)
 
         temperaturemember = NumberMember( name="temperature",
                                           format='%3.1f', min='-50', max='99',
@@ -142,13 +118,12 @@ contains the temperature which is reported to the client::
                              properties=[temperaturevector] )
 
         # set the coroutine to be run with the driver
-        pollingtask = thermalcontrol.poll_thermostat()
+        runthermo = thermalcontrol.run_thermostat()
 
         # Create the Driver, containing this device and
-        # other objects needed to run the instrument
+        # the coroutine needed to run the instrument
         driver = ThermoDriver( devices=[thermostat],
-                               tasks=[pollingtask],
-                               txque=txque,
+                               tasks=[runthermo],
                                thermalcontrol=thermalcontrol )
 
         # and return the driver
@@ -172,27 +147,27 @@ contains the temperature which is reported to the client::
 
 
 In summary. You create any objects or functions needed to operate your
-hardware, and these can be inserted into the IPyDriver constructor.
-
-You should note that in the above example an asyncio.Queue was used to pass data
-from the thermometer to the driver. The Queue maxsize was arbitrarily set at five,
-since if the communications link to client was having trouble, then it would not
-be wise to allow an increasingly large number of points to be stored in the queue.
+hardware, and these can be inserted into the IPyDriver constructor and will be available
+in the dictionary of named arguments 'driverdata'.  Any tasks you wish to start together
+with the driver can be included in the 'tasks' argument.
 
 You would typically create your own child class of IPyDriver, overriding methods:
 
-async def clientevent(self, event) - to handle incoming calls from the client.
+**async def clientevent(self, event)**
 
-async def hardware(self) - to run any continuous tasks.
+To handle incoming calls from the client.
 
-You would also create members which contain values to be sent or received from
-the client, one or more members are included in vectors.
+**async def hardware(self)**
+
+To run a continuous long running loop, typically sending data to the client. Like
+all async tasks, this should be non blocking, so typically should include a call
+to await asyncio.sleep() in its loop.
 
 The driver can manage multiple devices.
 
 Each device contains one or more vectors.
 
-Eech vector contains one or more members.
+Eech vector contains one or more members which hold instrument values.
 
 Your package should include a make_driver() function which returns the driver
 and makes your package suitable for import into other possible python scripts.
@@ -202,7 +177,6 @@ Finally, if the driver is to communicate by stdin and stdout::
     if __name__ == "__main__":
 
         driver = make_driver()
-
         asyncio.run(driver.asyncrun())
 
 Alternatively, if you want the driver to listen on a port::
@@ -210,11 +184,9 @@ Alternatively, if you want the driver to listen on a port::
     if __name__ == "__main__":
 
         driver = make_driver()
-
         server = IPyServer([driver], host="localhost",
                                      port=7624,
                                      maxconnections=5)
-
         asyncio.run(server.asyncrun())
 
 The server can contain multiple drivers, the first argument to IPyServer is
