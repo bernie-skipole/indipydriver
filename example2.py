@@ -1,9 +1,3 @@
-Example2
-========
-
-This example shows how the client can set a target temperature by sending
-a 'newNumberVector', which causes the clientevent method to be called::
-
 import asyncio
 
 from indipydriver import (IPyDriver, Device,
