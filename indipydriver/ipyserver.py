@@ -65,9 +65,6 @@ class IPyServer:
             otherdrivers = [ d for d in drivers if not d is driver]
             driver.comms = _DriverComms(self.serverwriterque, self.connectionpool, otherdrivers)
 
-        for driver in drivers:
-            driver.comms.otherdrivers = [ d for d in drivers if not d is driver]
-
         self.drivers = drivers
         self.host = host
         self.port = port
