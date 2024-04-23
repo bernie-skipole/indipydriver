@@ -6,6 +6,9 @@ from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
 
+import logging
+logger = logging.getLogger(__name__)
+
 from .comms import STDINOUT, Portcomms
 from . import events
 from .propertyvectors import timestamp_string
@@ -76,6 +79,8 @@ class IPyDriver(collections.UserDict):
 
     def __init__(self, devices, tasks=[], **driverdata):
         super().__init__()
+
+        logger.info("ipydriver started")
 
         # this is a dictionary of device name to device this driver owns
         self.devices = {d.devicename:d for d in devices}
