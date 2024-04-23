@@ -80,8 +80,6 @@ class IPyDriver(collections.UserDict):
     def __init__(self, devices, tasks=[], **driverdata):
         super().__init__()
 
-        logger.info("ipydriver started")
-
         # this is a dictionary of device name to device this driver owns
         self.devices = {d.devicename:d for d in devices}
 
@@ -119,10 +117,6 @@ class IPyDriver(collections.UserDict):
         self.snoopdevices = set()       # gets set to a set of device names
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
-
-    def _reporterror(self, message):
-        "Prints message to stderr"
-        print(message, file=sys.stderr)
 
     def listen(self, host="localhost", port=7624):
         """If called, listens on the given host and port. Only one connection is accepted,
@@ -195,7 +189,7 @@ class IPyDriver(collections.UserDict):
                 # if a device name is given, check
                 # it is not in this drivers devices
                 if devicename in self.devices:
-                    self._reporterror("Cannot snoop on a device already controlled by this driver")
+                    logger.error("Cannot snoop on a device already controlled by this driver")
                     self.snoopque.task_done()
                     continue
             try:
@@ -257,7 +251,7 @@ class IPyDriver(collections.UserDict):
         "Send system wide message - without device name"
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("The timestamp given in send_message must be a datetime.datetime UTC object")
+            logger.error("The timestamp given in send_message must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('message')
         xmldata.set("timestamp", tstring)
@@ -276,7 +270,7 @@ class IPyDriver(collections.UserDict):
             self.snoopall = True
             return
         if devicename in self.devices:
-            self._reporterror("Cannot snoop on a device already controlled by this driver")
+            logger.error("Cannot snoop on a device already controlled by this driver")
             return
         xmldata.set("device", devicename)
         if vectorname is None:
@@ -320,6 +314,9 @@ class IPyDriver(collections.UserDict):
 
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
+
+        logger.warning(f"Driver {self.__class__.__name__} started")
+
         # set an object for communicating, as default this is stdin and stdout
         if self.comms is None:
             self.comms = STDINOUT()
@@ -382,10 +379,6 @@ class Device(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.propertyvectors
         # simply because 'propertyvectors' is more descriptive
 
-    def _reporterror(self, message):
-        "Prints message to stderr"
-        print(message, file=sys.stderr)
-
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
@@ -395,7 +388,7 @@ class Device(collections.UserDict):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("The timestamp given in send_device_message must be a datetime.datetime UTC object")
+            logger.error("The timestamp given in send_device_message must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('message')
         xmldata.set("device", self.devicename)
@@ -414,7 +407,7 @@ class Device(collections.UserDict):
            a UTC value will be inserted."""
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("The timestamp given in send_delProperty must be a datetime.datetime UTC object")
+            logger.error("The timestamp given in send_delProperty must be a datetime.datetime UTC object")
             return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
