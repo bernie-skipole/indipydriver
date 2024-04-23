@@ -6,6 +6,9 @@ import xml.etree.ElementTree as ET
 
 from functools import partialmethod
 
+import logging
+logger = logging.getLogger(__name__)
+
 from .ipydriver import IPyDriver
 
 from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus, TXTimer
@@ -69,8 +72,9 @@ class IPyServer:
         self.host = host
         self.port = port
 
-    async def runserver(self):
+    async def _runserver(self):
         "Runs the server on the given host and port"
+        logger.warning(f"{self.__class__.__name__} started on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
         try:
             await server.serve_forever()
@@ -95,7 +99,7 @@ class IPyServer:
         """Runs the server together with its drivers."""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         await asyncio.gather(*driverruns,
-                             self.runserver(),
+                             self._runserver(),
                              self.copyreceivedtodriversrxque(),
                              self.copytransmittedtoclienttxque()
                              )
@@ -267,6 +271,8 @@ class _ClientConnection:
         blobstatus = BLOBSstatus(self.devices)
         rx = Port_RX(blobstatus, reader)
         tx = Port_TX(blobstatus, writer, self.timer)
+        addr = writer.get_extra_info('peername')
+        logger.warning(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
@@ -278,3 +284,4 @@ class _ClientConnection:
             rxtask.cancel()
             montask.cancel()
             cleanque(self.txque)
+        logger.warning(f"Connection from {addr} closed")

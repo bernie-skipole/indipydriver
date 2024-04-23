@@ -7,6 +7,8 @@ import fcntl
 
 from base64 import standard_b64encode
 
+import logging
+logger = logging.getLogger(__name__)
 
 # All xml data received from the client, or from snooped devices should be contained in one of the following tags
 TAGS = (b'getProperties',
