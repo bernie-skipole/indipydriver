@@ -1,5 +1,5 @@
 
-import asyncio, sys, os, time
+import asyncio, sys, os, time, copy
 
 import xml.etree.ElementTree as ET
 
@@ -82,6 +82,10 @@ class STDOUT_TX:
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on stdout"""
+        if logger.isEnabledFor(logging.DEBUG):
+            logenabled = True
+        else:
+            logenabled = False
         while True:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
@@ -95,12 +99,19 @@ class STDOUT_TX:
                     sys.stdout.buffer.write(binarydata)
                     sys.stdout.buffer.flush()
                     await asyncio.sleep(0)
+                if logenabled:
+                    for element in txdata:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(txdata)
+                    logger.debug(f"TX:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on stdout
                 binarydata = ET.tostring(txdata)
                 binarydata += b"\n"
                 sys.stdout.buffer.write(binarydata)
                 sys.stdout.buffer.flush()
+                if logenabled:
+                    logger.debug(f"TX:{binarydata.decode('utf-8')}")
 
 
 class STDIN_RX:
@@ -110,6 +121,10 @@ class STDIN_RX:
     async def run_rx(self, readerque):
         "pass data to readerque"
         source = self.datasource()
+        if logger.isEnabledFor(logging.DEBUG):
+            logenabled = True
+        else:
+            logenabled = False
         while True:
             await asyncio.sleep(0)
             if readerque is None:
@@ -119,6 +134,18 @@ class STDIN_RX:
             rxdata = await anext(source)
             if rxdata is not None:
                 await readerque.put(rxdata)
+                if logenabled:
+                    if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
+                        # rxdata contains blobs
+                        copyrx = copy.deepcopy(rxdata)
+                        for element in copyrx:
+                            element.text = "NOT LOGGED"
+                        binarydata = ET.tostring(copyrx)
+                        logger.debug(f"RX:{binarydata.decode('utf-8')}")
+                    else:
+                        binarydata = ET.tostring(rxdata)
+                        logger.debug(f"RX:{binarydata.decode('utf-8')}")
+
 
     async def datasource(self):
         # get received data, parse it, and yield it as xml.etree.ElementTree object
@@ -217,6 +244,8 @@ class STDINOUT():
         rx = STDIN_RX()
         tx = STDOUT_TX()
 
+        logger.warning("Listening on STDIN")
+
         await asyncio.gather(rx.run_rx(readerque),
                              tx.run_tx(writerque)
                              )
@@ -228,7 +257,11 @@ class Port_TX():
         self.blobstatus = blobstatus
         self.writer = writer
         self.timer = timer
-
+        self.addr = writer.get_extra_info('peername')
+        if logger.isEnabledFor(logging.DEBUG):
+            self.logenabled = True
+        else:
+            self.logenabled = False
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
@@ -251,9 +284,16 @@ class Port_TX():
                     self.timer.update()
                     self.writer.write(binarydata)
                     await self.writer.drain()
+                if self.logenabled:
+                    for element in txdata:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(txdata)
+                    logger.debug(f"TX:{self.addr}:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on the port
                 binarydata = ET.tostring(txdata)
+                if self.logenabled:
+                    logger.debug(f"TX:{self.addr}:{binarydata.decode('utf-8')}")
                 # Send to the port
                 self.timer.update()
                 self.writer.write(binarydata)
@@ -265,9 +305,14 @@ class Port_RX(STDIN_RX):
        this is used by Portcomms as one half of the communications path.
        This overwrites methods of the STDIN_RX parent class."""
 
-    def __init__(self, blobstatus, reader):
+    def __init__(self, blobstatus, reader, addr):
         self.blobstatus = blobstatus
         self.reader = reader
+        self.addr = addr
+        if logger.isEnabledFor(logging.DEBUG):
+            self.logenabled = True
+        else:
+            self.logenabled = False
 
     async def run_rx(self, readerque):
         "pass data to readerque"
@@ -285,6 +330,17 @@ class Port_RX(STDIN_RX):
                     self.blobstatus.setpermissions(rxdata)
                 # and place rxdata into readerque
                 await readerque.put(rxdata)
+                if self.logenabled:
+                    if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
+                        # rxdata contains blobs
+                        copyrx = copy.deepcopy(rxdata)
+                        for element in copyrx:
+                            element.text = "NOT LOGGED"
+                        binarydata = ET.tostring(copyrx)
+                        logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
+                    else:
+                        binarydata = ET.tostring(rxdata)
+                        logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
 
 
     async def datainput(self):
@@ -351,6 +407,7 @@ class Portcomms():
         "Called from indipydriver.asyncrun() to run the communications"
         self.readerque = readerque
         self.writerque = writerque
+        logger.warning(f"Listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
         try:
             await server.serve_forever()
@@ -371,6 +428,8 @@ class Portcomms():
                 if self.timer.elapsed():
                     # no transmission in timeout seconds so send defVectors
                     for device in self.devices.values():
+                        if not device.enable:
+                            continue
                         for vector in device.values():
                             await vector.send_defVector()
 
@@ -383,8 +442,10 @@ class Portcomms():
             await writer.wait_closed()
             return
         self.connected = True
-        rx = Port_RX(self.blobstatus, reader)
+        addr = writer.get_extra_info('peername')
+        rx = Port_RX(self.blobstatus, reader, addr)
         tx = Port_TX(self.blobstatus, writer, self.timer)
+        logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(rx.run_rx(self.readerque))
@@ -396,6 +457,7 @@ class Portcomms():
             rxtask.cancel()
             montask.cancel()
             cleanque(self.writerque)
+        logger.info(f"Connection from {addr} closed")
 
 
 def cleanque(que):
