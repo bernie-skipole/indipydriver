@@ -72,7 +72,7 @@ class IPyDriver(collections.UserDict):
             floatvalue = numbers[0] + (numbers[1]/60) + (numbers[2]/3600)
             if negative:
                 floatvalue = -1 * floatvalue
-        except:
+        except Exception:
             raise TypeError("Error: Unable to parse number value")
         return floatvalue
 

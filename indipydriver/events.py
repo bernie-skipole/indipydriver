@@ -27,7 +27,7 @@ def _parse_timestamp(timestamp_string):
             else:
                 timestamp = datetime.fromisoformat(timestamp_string)
                 timestamp = timestamp.replace(tzinfo=timezone.utc)
-        except:
+        except Exception:
             timestamp = None
     else:
         timestamp = datetime.now(tz=timezone.utc)
@@ -172,7 +172,7 @@ class newBLOBVector(newVector):
                     try:
                         self.data[membername] = standard_b64decode(member.text.encode('ascii'))
                         membersize = int(member.get("size"))
-                    except:
+                    except Exception:
                         raise EventException("Unable to decode BLOB")
                     memberformat = member.get("format")
                     if not memberformat:
@@ -420,13 +420,13 @@ class defBLOBVector(SnoopEvent):
             if member.tag == "defBLOB":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped defBLOBVector")
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped defBLOBVector")
         if not self.memberlabels:
-            raise EventException
+            raise EventException("No member labels given in snooped defBLOBVector")
 
 
 class setVector(SnoopEvent, UserDict):
@@ -435,10 +435,10 @@ class setVector(SnoopEvent, UserDict):
         SnoopEvent.__init__(self, root)
         UserDict.__init__(self)
         if self.devicename is None:
-            raise EventException
+            raise EventException("No device name given in snooped setVector")
         self.vectorname = root.get("name")
         if self.vectorname is None:
-            raise EventException
+            raise EventException("No vector name given in snooped setVector")
         state = root.get("state")
         if state and (state in ('Idle','Ok','Busy','Alert')):
             self.state = state
@@ -462,18 +462,18 @@ class setSwitchVector(setVector):
             if member.tag == "oneSwitch":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped setSwitchVector")
                 value = member.text.strip()
                 if value == "On":
                     self.data[membername] = "On"
                 elif value == "Off":
                     self.data[membername] = "Off"
                 else:
-                    raise EventException
+                    raise EventException("Invalid value given in snooped setSwitchVector")
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped setSwitchVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped setSwitchVector")
 
 
 class setTextVector(setVector):
@@ -489,12 +489,12 @@ class setTextVector(setVector):
             if member.tag == "oneText":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped setTextVector")
                 self.data[membername] = member.text
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped setTextVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped setTextVector")
 
 
 class setNumberVector(setVector):
@@ -511,12 +511,13 @@ class setNumberVector(setVector):
             if member.tag == "oneNumber":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped setNumberVector")
                 self.data[membername] = member.text.strip()
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped setNumberVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped setNumberVector")
+
 
 class setLightVector(setVector):
 
@@ -529,15 +530,15 @@ class setLightVector(setVector):
             if member.tag == "oneLight":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped setLightVector")
                 value = member.text.strip()
                 if not value in ('Idle','Ok','Busy','Alert'):
                     raise EventException
                 self.data[membername] = value
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped setLightVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped setLightVector")
 
 
 class setBLOBVector(setVector):
@@ -557,20 +558,19 @@ class setBLOBVector(setVector):
             if member.tag == "oneBLOB":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
-                membersize = member.get("size")
-                if not membersize:
-                    raise EventException
+                    raise EventException("No member name given in snooped setBLOBVector")
+                if not member.get("size"):
+                    raise EventException("No member size given in snooped setBLOBVector")
                 memberformat = member.get("format")
                 if not memberformat:
-                    raise EventException
+                    raise EventException("No member format given in snooped setBLOBVector")
                 try:
                     self.data[membername] = standard_b64decode(member.text.encode('ascii'))
                     memberize = int(member.get("size"))
-                except:
-                    raise EventException
+                except Exception:
+                    raise EventException("Unable to decode snooped setBLOBVector")
                 self.sizeformat[membername] = (membersize, memberformat)
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped setBLOBVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped setBLOBVector")

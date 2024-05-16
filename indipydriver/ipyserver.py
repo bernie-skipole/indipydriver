@@ -76,11 +76,8 @@ class IPyServer:
         "Runs the server on the given host and port"
         logger.warning(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        try:
-            await server.serve_forever()
-        except KeyboardInterrupt as e:
-            server.close()
-            raise e
+        await server.serve_forever()
+
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
@@ -281,7 +278,7 @@ class _ClientConnection:
             rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
             montask = asyncio.create_task(self._monitor_connection())
             await asyncio.gather(txtask, rxtask, montask)
-        except ConnectionResetError:
+        except ConnectionError:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()

@@ -320,7 +320,7 @@ class BLOBMember(PropertyMember):
         elif isinstance(self._membervalue, pathlib.Path):
             try:
                 xmldata.text = self._membervalue.read_bytes()
-            except:
+            except Exception:
                 raise ValueError(f"Unable to read BLOBMember {self.name}")
         elif hasattr(self._membervalue, "seek") and hasattr(self._membervalue, "read") and callable(self._membervalue.read):
             # a file-like object
@@ -338,7 +338,7 @@ class BLOBMember(PropertyMember):
             try:
                 with open(self._membervalue, "rb") as fp:
                     bytescontent = fp.read()
-            except:
+            except Exception:
                 raise ValueError(f"The BLOBMember {self.name} value cannot be openned")
             if bytescontent == b"":
                 raise ValueError(f"The BLOBMember {self.name} value is empty")

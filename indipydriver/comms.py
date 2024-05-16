@@ -394,11 +394,7 @@ class Portcomms():
         self.writerque = writerque
         logger.warning(f"Listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        try:
-            await server.serve_forever()
-        except KeyboardInterrupt as e:
-            server.close()
-            raise e
+        await server.serve_forever()
 
 
     async def _monitor_connection(self):
