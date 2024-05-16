@@ -18,7 +18,8 @@ These all being instances asyncio.Queue(4).
 
 The asyncrun method of the driver contains the following::
 
-        await asyncio.gather(self.comms(self.readerque, self.writerque),   # run communications
+        await asyncio.gather(*self._tasks,           # any tasks included when creating the driver
+                             self.comms(self.readerque, self.writerque),   # run communications
                              self.hardware(),        # task to operate device hardware, and transmit updates
                              self._read_readerque(), # task to handle received xml data
                              self._snoophandler(),   # task to handle incoming snoop data
@@ -26,6 +27,21 @@ The asyncrun method of the driver contains the following::
                              *property_handlers      # each property handles its incoming data
                             )
 
+
+IPyDriver.comms
+^^^^^^^^^^^^^^^
+
+If method IPyDriver.listen() is called, attribute comms is set to Portcomms, imported from module .comms, and the driver will listen on a port.
+
+If comms is None, and IPyDriver.asyncrun() is called, attribute comms is set to STDINOUT, imported from module .comms, and the driver will communicate by stdin and stdout.
+
+If comms is None, and an IPyServer is created with this driver, it will set attribute comms to an instance of _DriverComms(), defined in module ipyserver.
+
+
+IPyDriver.hardware
+^^^^^^^^^^^^^^^^^^
+
+Initially a coroutine only containing pass. overwrite
 
 
 IPyDriver.writerque
