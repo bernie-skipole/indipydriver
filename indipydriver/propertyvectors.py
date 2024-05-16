@@ -7,6 +7,9 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
+import logging
+logger = logging.getLogger(__name__)
+
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
@@ -51,9 +54,6 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
-    def _reporterror(self, message):
-        "Prints message to stderr"
-        print(message, file=sys.stderr)
 
     @property
     def device(self):
@@ -71,7 +71,7 @@ class PropertyVector(collections.UserDict):
            a UTC value will be inserted."""
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending delProperty: The given send_delProperty timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending delProperty: The given send_delProperty timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('delProperty')
         xmldata.set("device", self.devicename)
@@ -107,13 +107,13 @@ class PropertyVector(collections.UserDict):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending defVector: The given send_defVector timeout value must be either None or a string object")
+                logger.error("Aborting sending defVector: The given send_defVector timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         xmldata = self._make_defVector(message, timestamp)
         if not xmldata is None:
@@ -135,13 +135,13 @@ class PropertyVector(collections.UserDict):
         try:
             self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     def __setitem__(self, membername, value):
         try:
             self.data[membername].membervalue = value
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     def __getitem__(self, membername):
         return self.data[membername].membervalue
@@ -179,7 +179,7 @@ class SwitchVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     @property
     def rule(self):
@@ -190,7 +190,7 @@ class SwitchVector(PropertyVector):
         try:
             self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     async def _handler(self):
         """Check received data and take action"""
@@ -206,9 +206,9 @@ class SwitchVector(PropertyVector):
                     # create event
                     event = newSwitchVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-            except EventException:
+            except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                pass
+                logger.error(str(ex))
             self.dataque.task_done()
 
 
@@ -220,7 +220,7 @@ class SwitchVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending defSwitchVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending defSwitchVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defSwitchVector')
         xmldata.set("device", self.devicename)
@@ -270,13 +270,13 @@ class SwitchVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setSwitchVector: The given send_setVector timeout value must be either None or a string object")
+                logger.error("Aborting sending setSwitchVector: The given send_setVector timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -284,7 +284,7 @@ class SwitchVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setSwitchVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setSwitchVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
@@ -331,13 +331,13 @@ class SwitchVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                logger.error("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -345,7 +345,7 @@ class SwitchVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setSwitchVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setSwitchVector')
         xmldata.set("device", self.devicename)
@@ -394,9 +394,9 @@ class LightVector(PropertyVector):
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-            except EventException:
+            except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                pass
+                logger.error(str(ex))
             self.dataque.task_done()
 
     @property
@@ -411,7 +411,7 @@ class LightVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending defLightVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending defLightVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defLightVector')
         xmldata.set("device", self.devicename)
@@ -453,7 +453,7 @@ class LightVector(PropertyVector):
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -461,7 +461,7 @@ class LightVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setLightVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setLightVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
@@ -496,7 +496,7 @@ class LightVector(PropertyVector):
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -504,7 +504,7 @@ class LightVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setLightVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setLightVector')
         xmldata.set("device", self.devicename)
@@ -543,7 +543,7 @@ class TextVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     async def _handler(self):
         """Check received data and take action"""
@@ -559,9 +559,9 @@ class TextVector(PropertyVector):
                     # create event
                     event = newTextVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-            except EventException:
+            except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                pass
+                logger.error(str(ex))
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -572,7 +572,7 @@ class TextVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending defTextVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending defTextVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defTextVector')
         xmldata.set("device", self.devicename)
@@ -619,13 +619,13 @@ class TextVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setTextVector: The given send_setVector timeout value must be either None or a string object")
+                logger.error("Aborting sending setTextVector: The given send_setVector timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -633,7 +633,7 @@ class TextVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setTextVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setTextVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
@@ -669,13 +669,13 @@ class TextVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                logger.error("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -683,7 +683,7 @@ class TextVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setTextVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setTextVector')
         xmldata.set("device", self.devicename)
@@ -721,7 +721,7 @@ class NumberVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     async def _handler(self):
         """Check received data and take action"""
@@ -737,9 +737,9 @@ class NumberVector(PropertyVector):
                     # create event
                     event = newNumberVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-            except EventException:
+            except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                pass
+                logger.error(str(ex))
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -750,7 +750,7 @@ class NumberVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending defNumberVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending defNumberVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defNumberVector')
         xmldata.set("device", self.devicename)
@@ -797,13 +797,13 @@ class NumberVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setNumberVector: The given send_setVector timeout value must be either None or a string object")
+                logger.error("Aborting sending setNumberVector: The given send_setVector timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -811,7 +811,7 @@ class NumberVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setNumberVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setNumberVector: The given send_setVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
@@ -847,13 +847,13 @@ class NumberVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                logger.error("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -861,7 +861,7 @@ class NumberVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setNumberVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setNumberVector')
         xmldata.set("device", self.devicename)
@@ -887,7 +887,7 @@ class BLOBVector(PropertyVector):
         # self.data is a dictionary of blob name : blobmember
         for blob in blobmembers:
             if not isinstance(blob, BLOBMember):
-                self._reporterror("Members of a BLOBVector must all be BLOBMembers")
+                logger.error("Members of a BLOBVector must all be BLOBMembers")
                 raise TypeError("Members of a BLOBVector must all be BLOBMembers")
             self.data[blob.name] = blob
 
@@ -898,7 +898,7 @@ class BLOBVector(PropertyVector):
            therefore if you are sending a compressed file, you should set the blobsize
            prior to compression with this method."""
         if not isinstance(blobsize, int):
-            self._reporterror("blobsize rejected, must be an integer object")
+            logger.error("blobsize rejected, must be an integer object")
             return
         member = self.data.get[membername]
         if not member:
@@ -914,7 +914,7 @@ class BLOBVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            self._reporterror(ex)
+            logger.error(str(ex))
 
     async def _handler(self):
         """Check received data and take action"""
@@ -934,9 +934,9 @@ class BLOBVector(PropertyVector):
                     # create event
                     event = newBLOBVector(self.devicename, self.name, self, root)
                     await self.driver.clientevent(event)
-            except EventException:
+            except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                pass
+                logger.error(str(ex))
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -947,7 +947,7 @@ class BLOBVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending defBLOBVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending defBLOBVector: The given send_defVector timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('defBLOBVector')
         xmldata.set("device", self.devicename)
@@ -983,13 +983,13 @@ class BLOBVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be either None or a string object")
+                logger.error("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be either None or a string object")
                 return
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
-                self._reporterror("Aborting sending setBLOBVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
+                logger.error("Aborting sending setBLOBVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         if not self.device.enable:
             return
@@ -997,7 +997,7 @@ class BLOBVector(PropertyVector):
             return
         tstring = timestamp_string(timestamp)
         if not tstring:
-            self._reporterror("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
+            logger.error("Aborting sending setBLOBVector: The given send_setVectorMembers timestamp must be a UTC datetime.datetime object")
             return
         xmldata = ET.Element('setBLOBVector')
         xmldata.set("device", self.devicename)
@@ -1013,5 +1013,5 @@ class BLOBVector(PropertyVector):
                 try:
                     xmldata.append(blob.oneblob())
                 except ValueError as ex:
-                    self._reporterror(ex)
+                    logger.error(str(ex))
         await self.driver.send(xmldata)

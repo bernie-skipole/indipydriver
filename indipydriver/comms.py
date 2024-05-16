@@ -125,26 +125,21 @@ class STDIN_RX:
             logenabled = True
         else:
             logenabled = False
-        while True:
-            await asyncio.sleep(0)
-            if readerque is None:
-                continue
+        async for rxdata in source:
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
-            rxdata = await anext(source)
-            if rxdata is not None:
-                await readerque.put(rxdata)
-                if logenabled:
-                    if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
-                        # rxdata contains blobs
-                        copyrx = copy.deepcopy(rxdata)
-                        for element in copyrx:
-                            element.text = "NOT LOGGED"
-                        binarydata = ET.tostring(copyrx)
-                        logger.debug(f"RX:{binarydata.decode('utf-8')}")
-                    else:
-                        binarydata = ET.tostring(rxdata)
-                        logger.debug(f"RX:{binarydata.decode('utf-8')}")
+            await readerque.put(rxdata)
+            if logenabled:
+                if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
+                    # rxdata contains blobs
+                    copyrx = copy.deepcopy(rxdata)
+                    for element in copyrx:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(copyrx)
+                    logger.debug(f"RX:{binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(rxdata)
+                    logger.debug(f"RX:{binarydata.decode('utf-8')}")
 
 
     async def datasource(self):
@@ -152,12 +147,7 @@ class STDIN_RX:
         data_in = self.datainput()
         message = b''
         messagetagnumber = None
-        while True:
-            await asyncio.sleep(0)
-            # get blocks of data from stdin
-            data = await anext(data_in)
-            if not data:
-                continue
+        async for data in data_in:
             if not message:
                 # data is expected to start with <tag, first strip any newlines
                 data = data.strip()
@@ -317,30 +307,25 @@ class Port_RX(STDIN_RX):
     async def run_rx(self, readerque):
         "pass data to readerque"
         source = self.datasource()
-        while True:
-            await asyncio.sleep(0)
-            if readerque is None:
-                continue
+        async for rxdata in source:
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
-            rxdata = await anext(source)
-            if rxdata is not None:
-                if rxdata.tag == "enableBLOB":
-                    # set permission flags in the blobstatus object
-                    self.blobstatus.setpermissions(rxdata)
-                # and place rxdata into readerque
-                await readerque.put(rxdata)
-                if self.logenabled:
-                    if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
-                        # rxdata contains blobs
-                        copyrx = copy.deepcopy(rxdata)
-                        for element in copyrx:
-                            element.text = "NOT LOGGED"
-                        binarydata = ET.tostring(copyrx)
-                        logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
-                    else:
-                        binarydata = ET.tostring(rxdata)
-                        logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
+            if rxdata.tag == "enableBLOB":
+                # set permission flags in the blobstatus object
+                self.blobstatus.setpermissions(rxdata)
+            # and place rxdata into readerque
+            await readerque.put(rxdata)
+            if self.logenabled:
+                if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
+                    # rxdata contains blobs
+                    copyrx = copy.deepcopy(rxdata)
+                    for element in copyrx:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(copyrx)
+                    logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(rxdata)
+                    logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
 
 
     async def datainput(self):

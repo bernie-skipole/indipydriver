@@ -241,10 +241,10 @@ class IPyDriver(collections.UserDict):
                     # create event
                     event = events.setBLOBVector(root)
                     await self.snoopevent(event)
-            except events.EventException:
+            except events.EventException as ex:
                 # if an EventException is raised, it is because received data is malformed
-                # so ignore it, and just pass
-                pass
+                # so log it
+                logger.error(str(ex))
             self.snoopque.task_done()
 
     async def send_message(self, message="", timestamp=None):

@@ -14,6 +14,8 @@ IPyDriver.readerque
 
 IPyDriver.snoopque
 
+These all being instances asyncio.Queue(4).
+
 The asyncrun method of the driver contains the following::
 
         await asyncio.gather(self.comms(self.readerque, self.writerque),   # run communications

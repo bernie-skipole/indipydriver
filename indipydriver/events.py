@@ -67,7 +67,7 @@ class enableBLOB(Event):
             self.value = value
         else:
             # unrecognised value
-            raise EventException
+            raise EventException("Invalid value for enableBLOB")
 
 
 class newVector(Event, UserDict):
@@ -99,13 +99,14 @@ class newSwitchVector(newVector):
                     elif value == "Off":
                         self.data[membername] = "Off"
                     else:
-                        raise EventException
+                        raise EventException("Received invalid value for newSwitchVector")
                 else:
-                    raise EventException
+                    raise EventException("Received membername not known for newSwitchVector")
             else:
-                raise EventException
+                raise EventException("Received tag not known for newSwitchVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents received for newSwitchVector")
+
 
 class newTextVector(newVector):
     """An event indicating a newTextVector has been received, this is a mapping
@@ -121,11 +122,11 @@ class newTextVector(newVector):
                 if membername in self.vector:
                     self.data[membername] = member.text
                 else:
-                    raise EventException
+                    raise EventException("Received membername not known for newTextVector")
             else:
-                raise EventException
+                raise EventException("Received tag not known for newTextVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents received for newTextVector")
 
 
 class newNumberVector(newVector):
@@ -143,11 +144,11 @@ class newNumberVector(newVector):
                 if membername in self.vector:
                     self.data[membername] = member.text.strip()
                 else:
-                    raise EventException
+                    raise EventException("Received membername not known for newNumberVector")
             else:
-                raise EventException
+                raise EventException("Received tag not known for newNumberVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents received for newNumberVector")
 
 
 class newBLOBVector(newVector):
@@ -172,17 +173,17 @@ class newBLOBVector(newVector):
                         self.data[membername] = standard_b64decode(member.text.encode('ascii'))
                         membersize = int(member.get("size"))
                     except:
-                        raise EventException
+                        raise EventException("Unable to decode BLOB")
                     memberformat = member.get("format")
                     if not memberformat:
-                        raise EventException
+                        raise EventException("No format received in oneBLOB")
                     self.sizeformat[membername] = (membersize, memberformat)
                 else:
-                    raise EventException
+                    raise EventException("Received tag not known for newBLOBVector")
             else:
-                raise EventException
+                raise EventException("Received tag not known for newBLOBVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents received for newBLOBVector")
 
 
 class SnoopEvent:
@@ -211,7 +212,7 @@ class delProperty(SnoopEvent):
     def __init__(self, root):
         super().__init__(root)
         if self.devicename is None:
-            raise EventException
+            raise EventException("No devicename given in snooped delProperty")
         self.vectorname = root.get("name")
         self.message = root.get("message", "")
 
@@ -223,14 +224,14 @@ class defVector(SnoopEvent, UserDict):
         UserDict.__init__(self)
         self.vectorname = root.get("name")
         if self.vectorname is None:
-            raise EventException
+            raise EventException("No vectorname given in snooped defVector")
         self.label = root.get("label", self.vectorname)
         self.group = root.get("group", "")
         state = root.get("state")
         if not state:
-            raise EventException
+            raise EventException("No state given in snooped defVector")
         if not state in ('Idle','Ok','Busy','Alert'):
-            raise EventException
+            raise EventException("Invalid state given in snooped defVector")
         self.state = state
         self.message = root.get("message", "")
 
@@ -248,14 +249,14 @@ class defSwitchVector(defVector):
         defVector.__init__(self, root)
         self.perm = root.get("perm")
         if self.perm is None:
-            raise EventException
+            raise EventException("No perm value given in snooped defSwitchVector")
         if self.perm not in ('ro', 'wo', 'rw'):
-            raise EventException
+            raise EventException("Invalid perm value given in snooped defSwitchVector")
         self.rule = root.get("rule")
         if self.rule is None:
-            raise EventException
+            raise EventException("No rule value given in snooped defSwitchVector")
         if self.rule not in ('OneOfMany', 'AtMostOne', 'AnyOfMany'):
-            raise EventException
+            raise EventException("Invalid rule value given in snooped defSwitchVector")
         self.timeout = root.get("timeout", "0")
         # create object dictionary of member name to value
         # and another dictionary of self.memberlabels with key member name and value being label
@@ -264,7 +265,7 @@ class defSwitchVector(defVector):
             if member.tag == "defSwitch":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped defSwitchVector")
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
                 value = member.text.strip()
@@ -273,11 +274,11 @@ class defSwitchVector(defVector):
                 elif value == "Off":
                     self.data[membername] = "Off"
                 else:
-                    raise EventException
+                    raise EventException("Invalid member value given in snooped defSwitchVector")
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped defSwitchVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped defSwitchVector")
 
 
 class defTextVector(defVector):
@@ -290,9 +291,9 @@ class defTextVector(defVector):
         defVector.__init__(self, root)
         self.perm = root.get("perm")
         if self.perm is None:
-            raise EventException
+            raise EventException("No perm value given in snooped defTextVector")
         if self.perm not in ('ro', 'wo', 'rw'):
-            raise EventException
+            raise EventException("Invalid perm value given in snooped defTextVector")
         self.timeout = root.get("timeout", "0")
         # create object dictionary of member name to value
         # and another dictionary of self.memberlabels with key member name and value being label
@@ -301,14 +302,14 @@ class defTextVector(defVector):
             if member.tag == "defText":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped defTextVector")
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
                 self.data[membername] = member.text
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped defTextVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped defTextVector")
 
 
 class defNumberVector(defVector):
@@ -321,9 +322,9 @@ class defNumberVector(defVector):
         defVector.__init__(self, root)
         self.perm = root.get("perm")
         if self.perm is None:
-            raise EventException
+            raise EventException("No perm value given in snooped defNumberVector")
         if self.perm not in ('ro', 'wo', 'rw'):
-            raise EventException
+            raise EventException("Invalid perm value given in snooped defNumberVector")
         self.timeout = root.get("timeout", "0")
         # create object dictionary of member name to value
         # and another dictionary of self.memberlabels with key member name and
@@ -333,26 +334,26 @@ class defNumberVector(defVector):
             if member.tag == "defNumber":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped defNumberVector")
                 label = member.get("label", membername)
                 memberformat = member.get("format")
                 if not memberformat:
-                    raise EventException
+                    raise EventException("No format string given in snooped defNumberVector")
                 membermin = member.get("min")
                 if not membermin:
-                    raise EventException
+                    raise EventException("No minimum given in snooped defNumberVector")
                 membermax = member.get("max")
                 if not membermax:
-                    raise EventException
+                    raise EventException("No maximum given in snooped defNumberVector")
                 memberstep = member.get("step")
                 if not memberstep:
-                    raise EventException
+                    raise EventException("No step given in snooped defNumberVector")
                 self.memberlabels[membername] = (label, memberformat, membermin, membermax, memberstep)
                 self.data[membername] = member.text.strip()
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped defNumberVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped defNumberVector")
 
 
 class defLightVector(defVector):
@@ -369,17 +370,17 @@ class defLightVector(defVector):
             if member.tag == "defLight":
                 membername = member.get("name")
                 if not membername:
-                    raise EventException
+                    raise EventException("No member name given in snooped defLightVector")
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
                 value = member.text.strip()
                 if not value in ('Idle','Ok','Busy','Alert'):
-                    raise EventException
+                    raise EventException("Invalid value given in snooped defLightVector")
                 self.data[membername] = value
             else:
-                raise EventException
+                raise EventException("Invalid tag given in snooped defLightVector")
         if not self.data:
-            raise EventException
+            raise EventException("No contents given in snooped defLightVector")
 
 
 class defBLOBVector(SnoopEvent):
@@ -394,24 +395,24 @@ class defBLOBVector(SnoopEvent):
     def __init__(self, root):
         SnoopEvent.__init__(self, root)
         if self.devicename is None:
-            raise EventException
+            raise EventException("No devicename given in snooped defBLOBVector")
         self.vectorname = root.get("name")
         if self.vectorname is None:
-            raise EventException
+            raise EventException("No vectorname given in snooped defBLOBVector")
         self.label = root.get("label", self.vectorname)
         self.group = root.get("group", "")
         state = root.get("state")
         if not state:
-            raise EventException
+            raise EventException("No state given in snooped defBLOBVector")
         if not state in ('Idle','Ok','Busy','Alert'):
-            raise EventException
+            raise EventException("Invalid state given in snooped defBLOBVector")
         self.state = state
         self.message = root.get("message", "")
         self.perm = root.get("perm")
         if self.perm is None:
-            raise EventException
+            raise EventException("No perm value given in snooped defBLOBVector")
         if self.perm not in ('ro', 'wo', 'rw'):
-            raise EventException
+            raise EventException("Invalid perm value given in snooped defBLOBVector")
         self.timeout = root.get("timeout", "0")
         # create a dictionary of self.memberlabels with key member name and value being label
         self.memberlabels = {}
