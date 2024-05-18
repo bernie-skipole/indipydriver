@@ -41,7 +41,7 @@ If comms is None, and an IPyServer is created with this driver, it will set attr
 IPyDriver.hardware
 ^^^^^^^^^^^^^^^^^^
 
-Initially a coroutine only containing pass. overwrite
+Initially a coroutine only containing pass. overwrite this if required to control your hardware.
 
 
 IPyDriver.writerque
@@ -75,13 +75,9 @@ If listen() is used, the comms.Port_RX places the data into the IPyDriver.reader
 
 If IPyServer is used, comms.Port_RX places the parsed xmldata into an IPyServer.serverreaderque.
 
-An ipyserver._DriverComms object is created for each driver. Each has a _DriverComms.rxque.
+An ipyserver._DriverComms object is created for each driver.
 
-The IPyServer.asyncrun() coroutine creates a task copyreceivedtodriversrxque which reads data from IPyServer.serverreaderque and copies it to each drivers _DriverComms.rxque, this copy function checks the xmldata to get it to the right driver.
-
-Each driver is calling its _DriverComms object, which places its rxque contents into the drivers IPyDriver.readerque
-
-So in both cases, the single driver, or each individual driver now has received data in its IPyDriver.readerque.
+The IPyServer.asyncrun() coroutine reads data from IPyServer.serverreaderque and copies it to each drivers readerque, this copy function checks the xmldata gets to the right driver.
 
 The drivers _read_readerque() co-routine reads the IPyDriver.readerque and checks it, and either puts the data either into a device 'dataque', or into the drivers snoopque, where it is immediately handled by the drivers _snoophandler() coroutine where snoopevents are created, and the driver snoopevent(event) coroutine is called where the event is handled by user code.
 
