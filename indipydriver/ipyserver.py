@@ -103,7 +103,7 @@ class IPyServer:
 
 
     async def copyreceivedtodriversrxque(self):
-        "For every driver, get rxque and copy data into it from serverreaderque"
+        "For every driver, get readerque and copy data into it from serverreaderque"
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
@@ -115,9 +115,8 @@ class IPyServer:
                     await driver.readerque.put(xmldata)
             elif devicename in self.devices:
                 # self.devices is a dictionary of device name to device
-                driver = self.devices[devicename].driver
-                # data is intended for this driver
-                await driver.readerque.put(xmldata)
+                # data is intended for the driver this device belongs to
+                await self.devices[devicename].driver.readerque.put(xmldata)
             else:
                 # devicename is unknown, check if driver is snooping on this device, vector
                 for driver in self.drivers:

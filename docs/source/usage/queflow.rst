@@ -6,7 +6,7 @@ These notes are not user instructions, but are development notes for the indipyd
 
 The package has data flows passing between communications ports and devices by various asyncio.Queue() objects.
 
-The driver IPyDriver class, defines queues:
+The IPyDriver class defines queues:
 
 IPyDriver.writerque
 
@@ -28,20 +28,44 @@ The asyncrun method of the driver contains the following::
                             )
 
 
+IPyDriver._tasks
+^^^^^^^^^^^^^^^
+
+This is an optional list of user defined coroutines/tasks passed in the IPyDriver constructor.
+
+
 IPyDriver.comms
 ^^^^^^^^^^^^^^^
 
-If method IPyDriver.listen() is called, attribute comms is set to Portcomms, imported from module .comms, and the driver will listen on a port.
+If method IPyDriver.listen() is called, attribute IPyDriver.comms is set to Portcomms, imported from module indipydriver.comms, and the driver will listen on a port.
 
-If comms is None, and IPyDriver.asyncrun() is called, attribute comms is set to STDINOUT, imported from module .comms, and the driver will communicate by stdin and stdout.
+If IPyDriver.comms is None, and IPyDriver.asyncrun() is called, attribute IPyDriver.comms is set to STDINOUT, imported from module indipydriver.comms, and the driver will communicate by stdin and stdout.
 
-If comms is None, and an IPyServer is created with this driver, it will set attribute comms to an instance of _DriverComms(), defined in module ipyserver.
+If IPyDriver.comms is None, and an IPyServer is created with this driver, it will set attribute comms to an instance of _DriverComms(), defined in module indipydriver.ipyserver.
 
 
 IPyDriver.hardware
 ^^^^^^^^^^^^^^^^^^
 
-Initially a coroutine only containing pass. overwrite this if required to control your hardware.
+Initially a coroutine only containing pass. Overwrite this if required to control your hardware.
+
+
+IPyDriver snooper attributes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The IPyDriver class defines attributes::
+
+    self.snoopall = False           # gets set to True if it is snooping everything
+    self.snoopdevices = set()       # gets set to a set of device names
+    self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+
+snoopall gets set to True if the driver sends a getProperties without defining a devicename. In other words it wants to snoop on everything.
+
+snoopdevices gets devicenames added to it if the driver sends a getProperties with a devicename but no vectorname. In other words it wants to snoop on everything sent by that device.
+
+snoopvectors get (devicename, vectorname) tuples added if the driver sends a getProperties with a devicename and a vectorname. In other words it wants to snoop on a particular vector.
+
+Note: devices are not added to these sets if they are devices already owned by the driver. There is no point in a driver snooping on its own devices.
 
 
 IPyDriver.writerque
@@ -57,7 +81,7 @@ If the listen method is used, the writerque is read in module comms.Port_TX, it 
 
 If IPyServer is used, possibly with multiple drivers, an IPyServer.serverwriterque is created.
 
-Multiple ipyserver._DriverComms objects are created, one for each driver, and assigned to the driver.comms attribute, each reads the driver.writerque and puts the data into the IPyServer.serverwriterque.  This combines all the driver writer queues into one queue. The data from the driver.writerque is also tested against other drivers snooping requirements, and if another driver wants to snoop it, a copy is placed into the other drivers _DriverComms.rxque.
+Multiple ipyserver._DriverComms objects are created, one for each driver, and assigned to the driver.comms attribute, each reads the driver.writerque and puts the data into the IPyServer.serverwriterque.  This combines all the driver writer queues into one queue. The data from the driver.writerque is also tested against other drivers snooping requirements, (by testing the other drivers snoopall, snoopdevices, snoopvectors attributes) and if another driver wants to snoop it, a copy is placed into the other drivers readerque.
 
 A pool of ipyserver._ClientConnection objects is created, and one is assigned per client connection. Each has a _ClientConnection.txque queue.
 
@@ -75,11 +99,15 @@ If listen() is used, the comms.Port_RX places the data into the IPyDriver.reader
 
 If IPyServer is used, comms.Port_RX places the parsed xmldata into an IPyServer.serverreaderque.
 
-An ipyserver._DriverComms object is created for each driver.
+The IPyServer.asyncrun() coroutine reads data from IPyServer.serverreaderque, it checks the xmldata, and if ok, passes it to the right driver readerque.
 
-The IPyServer.asyncrun() coroutine reads data from IPyServer.serverreaderque and copies it to each drivers readerque, this copy function checks the xmldata gets to the right driver.
+If received devicename is not given (getProperties) it is passed to every driver readerque.
 
-The drivers _read_readerque() co-routine reads the IPyDriver.readerque and checks it, and either puts the data either into a device 'dataque', or into the drivers snoopque, where it is immediately handled by the drivers _snoophandler() coroutine where snoopevents are created, and the driver snoopevent(event) coroutine is called where the event is handled by user code.
+If received devicename matches a device in a driver served by IPyServer, the received data is passed to that driver.
+
+If the devicename does not belong to this server, check if any driver is snooping on this device (by testing the other drivers snoopall, snoopdevices, snoopvectors attributes), and if so, places a copy in that drivers readerque.
+
+The drivers _read_readerque() co-routine reads the IPyDriver.readerque and checks it, and either puts the data into a device 'dataque', or into the drivers snoopque, where it is immediately handled by the drivers _snoophandler() coroutine where snoopevents are created, and the driver snoopevent(event) coroutine is called where the event is handled by user code.
 
 If set into a device.dataque, the device coroutine _handler() gets the data, checks it, and puts it into the correct propertyvector.dataque
 
