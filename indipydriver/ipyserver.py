@@ -112,25 +112,25 @@ class IPyServer:
             if devicename is None:
                 # if no devicename - goes to every driver (getproperties)
                 for driver in self.drivers:
-                    await driver.comms.rxque.put(xmldata)
+                    await driver.readerque.put(xmldata)
             elif devicename in self.devices:
                 # self.devices is a dictionary of device name to device
                 driver = self.devices[devicename].driver
                 # data is intended for this driver
-                await driver.comms.rxque.put(xmldata)
+                await driver.readerque.put(xmldata)
             else:
                 # devicename is unknown, check if driver is snooping on this device, vector
                 for driver in self.drivers:
                     if driver.snoopall:
-                        await driver.comms.rxque.put(xmldata)
+                        await driver.readerque.put(xmldata)
                     elif devicename in driver.snoopdevices:
-                        await driver.comms.rxque.put(xmldata)
+                        await driver.readerque.put(xmldata)
                     elif not propertyname is None:
                         if (devicename, propertyname) in driver.snoopvectors:
-                            await driver.comms.rxque.put(xmldata)
+                            await driver.readerque.put(xmldata)
                     # else not snooping, so don't bother sending it to the driver
             self.serverreaderque.task_done()
-            # now every driver.comms object which needs it has this xmldata in its rxque
+            # now every driver which needs it has this xmldata in its readerque
 
 
     async def copytransmittedtoclienttxque(self):
@@ -149,17 +149,12 @@ class IPyServer:
 class _DriverComms:
 
     """An instance of this is created for each driver, which calls the __call__
-       method, expecting xmldata to be received from the client and placed
-       in readerque, and any data the driver wishes to be sent should
+       method.  Any data the driver wishes to be send should
        be taken from the writerque and transmitted to the client by placing it
        into the serverwriterque"""
 
     def __init__(self, serverwriterque, connectionpool, otherdrivers):
 
-        # self.rxque will have data received from the network
-        # inserted into it from the IPyServer.copyreceivedtodriversrxque()
-        # method
-        self.rxque = asyncio.Queue(6)
         self.serverwriterque = serverwriterque
         # connectionpool is a list of ClientConnection objects, which is used
         # to test if a client is connected
@@ -174,21 +169,8 @@ class _DriverComms:
 
 
     async def __call__(self, readerque, writerque):
-        "Called by the driver, should run continuously to add and read the queues"
-        await asyncio.gather(self.handleread(readerque),
-                             self.handlewrite(writerque))
-
-    async def handleread(self, readerque):
-        "reads rxque, and sends xml data to the driver"
-        while True:
-            await asyncio.sleep(0)
-            xmldata = await self.rxque.get()
-            await readerque.put(xmldata)
-            # task completed
-            self.rxque.task_done()
-
-    async def handlewrite(self, writerque):
-        "reads writerque from the driver, and sends xml data to the network"
+        """Called by the driver, should run continuously.
+           reads writerque from the driver, and sends xml data to the network"""
         while True:
             await asyncio.sleep(0)
             xmldata = await writerque.get()
@@ -198,16 +180,16 @@ class _DriverComms:
             if devicename is None:
                 # if no devicename - goes to every other driver (getproperties)
                 for driver in self.otherdrivers:
-                    await driver.comms.rxque.put(xmldata)
+                    await driver.readerque.put(xmldata)
             else:
                 for driver in self.otherdrivers:
                     if driver.snoopall:
-                        await driver.comms.rxque.put(xmldata)
+                        await driver.readerque.put(xmldata)
                     elif devicename in driver.snoopdevices:
-                        await driver.comms.rxque.put(xmldata)
+                        await driver.readerque.put(xmldata)
                     elif not propertyname is None:
                         if (devicename, propertyname) in driver.snoopvectors:
-                            await driver.comms.rxque.put(xmldata)
+                            await driver.readerque.put(xmldata)
             # traffic from one driver has been sent to other drivers if they want to snoop
             # the traffic must also now be sent to the clients
             # If no clients are connected, do not put this data into
