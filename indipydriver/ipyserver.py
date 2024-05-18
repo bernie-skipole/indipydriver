@@ -148,8 +148,8 @@ class IPyServer:
 class _DriverComms:
 
     """An instance of this is created for each driver, which calls the __call__
-       method.  Any data the driver wishes to be send should
-       be taken from the writerque and transmitted to the client by placing it
+       method.  Any data the driver wishes to be send will be taken
+       from the drivers writerque and transmitted to the client by placing it
        into the serverwriterque"""
 
     def __init__(self, serverwriterque, connectionpool, otherdrivers):

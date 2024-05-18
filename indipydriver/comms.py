@@ -100,9 +100,10 @@ class STDOUT_TX:
                     sys.stdout.buffer.flush()
                     await asyncio.sleep(0)
                 if logenabled:
-                    for element in txdata:
+                    copytx = copy.deepcopy(txdata)
+                    for element in copytx:
                         element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(txdata)
+                    binarydata = ET.tostring(copytx)
                     logger.debug(f"TX:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on stdout
@@ -275,9 +276,10 @@ class Port_TX():
                     self.writer.write(binarydata)
                     await self.writer.drain()
                 if self.logenabled:
-                    for element in txdata:
+                    copytx = copy.deepcopy(txdata)
+                    for element in copytx:
                         element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(txdata)
+                    binarydata = ET.tostring(copytx)
                     logger.debug(f"TX:{self.addr}:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on the port
