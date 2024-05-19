@@ -82,10 +82,6 @@ class STDOUT_TX:
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on stdout"""
-        if logger.isEnabledFor(logging.DEBUG):
-            logenabled = True
-        else:
-            logenabled = False
         while True:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
@@ -99,20 +95,12 @@ class STDOUT_TX:
                     sys.stdout.buffer.write(binarydata)
                     sys.stdout.buffer.flush()
                     await asyncio.sleep(0)
-                if logenabled:
-                    copytx = copy.deepcopy(txdata)
-                    for element in copytx:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(copytx)
-                    logger.debug(f"TX:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on stdout
                 binarydata = ET.tostring(txdata)
                 binarydata += b"\n"
                 sys.stdout.buffer.write(binarydata)
                 sys.stdout.buffer.flush()
-                if logenabled:
-                    logger.debug(f"TX:{binarydata.decode('utf-8')}")
 
 
 class STDIN_RX:
@@ -122,25 +110,10 @@ class STDIN_RX:
     async def run_rx(self, readerque):
         "pass data to readerque"
         source = self.datasource()
-        if logger.isEnabledFor(logging.DEBUG):
-            logenabled = True
-        else:
-            logenabled = False
         async for rxdata in source:
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
             await readerque.put(rxdata)
-            if logenabled:
-                if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
-                    # rxdata contains blobs
-                    copyrx = copy.deepcopy(rxdata)
-                    for element in copyrx:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(copyrx)
-                    logger.debug(f"RX:{binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(rxdata)
-                    logger.debug(f"RX:{binarydata.decode('utf-8')}")
 
 
     async def datasource(self):
@@ -235,7 +208,7 @@ class STDINOUT():
         rx = STDIN_RX()
         tx = STDOUT_TX()
 
-        logger.warning("Listening on STDIN")
+        logger.info("Listening on STDIN")
 
         await asyncio.gather(rx.run_rx(readerque),
                              tx.run_tx(writerque)
@@ -248,11 +221,7 @@ class Port_TX():
         self.blobstatus = blobstatus
         self.writer = writer
         self.timer = timer
-        self.addr = writer.get_extra_info('peername')
-        if logger.isEnabledFor(logging.DEBUG):
-            self.logenabled = True
-        else:
-            self.logenabled = False
+
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
@@ -275,17 +244,9 @@ class Port_TX():
                     self.timer.update()
                     self.writer.write(binarydata)
                     await self.writer.drain()
-                if self.logenabled:
-                    copytx = copy.deepcopy(txdata)
-                    for element in copytx:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(copytx)
-                    logger.debug(f"TX:{self.addr}:{binarydata.decode('utf-8')}")
             else:
                 # its straight xml, send it out on the port
                 binarydata = ET.tostring(txdata)
-                if self.logenabled:
-                    logger.debug(f"TX:{self.addr}:{binarydata.decode('utf-8')}")
                 # Send to the port
                 self.timer.update()
                 self.writer.write(binarydata)
@@ -297,14 +258,10 @@ class Port_RX(STDIN_RX):
        this is used by Portcomms as one half of the communications path.
        This overwrites methods of the STDIN_RX parent class."""
 
-    def __init__(self, blobstatus, reader, addr):
+    def __init__(self, blobstatus, reader):
         self.blobstatus = blobstatus
         self.reader = reader
-        self.addr = addr
-        if logger.isEnabledFor(logging.DEBUG):
-            self.logenabled = True
-        else:
-            self.logenabled = False
+
 
     async def run_rx(self, readerque):
         "pass data to readerque"
@@ -317,17 +274,7 @@ class Port_RX(STDIN_RX):
                 self.blobstatus.setpermissions(rxdata)
             # and place rxdata into readerque
             await readerque.put(rxdata)
-            if self.logenabled:
-                if (rxdata.tag == "setBLOBVector" or rxdata.tag == "newBLOBVector") and len(rxdata):
-                    # rxdata contains blobs
-                    copyrx = copy.deepcopy(rxdata)
-                    for element in copyrx:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(copyrx)
-                    logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(rxdata)
-                    logger.debug(f"RX:{self.addr}:{binarydata.decode('utf-8')}")
+
 
 
     async def datainput(self):
@@ -394,7 +341,7 @@ class Portcomms():
         "Called from indipydriver.asyncrun() to run the communications"
         self.readerque = readerque
         self.writerque = writerque
-        logger.warning(f"Listening on {self.host} : {self.port}")
+        logger.info(f"Listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
         await server.serve_forever()
 
@@ -426,7 +373,7 @@ class Portcomms():
             return
         self.connected = True
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(self.blobstatus, reader, addr)
+        rx = Port_RX(self.blobstatus, reader)
         tx = Port_TX(self.blobstatus, writer, self.timer)
         logger.info(f"Connection received from {addr}")
         try:

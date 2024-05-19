@@ -135,13 +135,13 @@ class PropertyVector(collections.UserDict):
         try:
             self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid state value")
 
     def __setitem__(self, membername, value):
         try:
             self.data[membername].membervalue = value
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Unable to set value")
 
     def __getitem__(self, membername):
         return self.data[membername].membervalue
@@ -179,7 +179,7 @@ class SwitchVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid permission value")
 
     @property
     def rule(self):
@@ -190,7 +190,7 @@ class SwitchVector(PropertyVector):
         try:
             self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid rule value")
 
     async def _handler(self):
         """Check received data and take action"""
@@ -208,7 +208,7 @@ class SwitchVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                logger.error(str(ex))
+                logger.exception("Unable to create event from received data")
             self.dataque.task_done()
 
 
@@ -396,7 +396,7 @@ class LightVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                logger.error(str(ex))
+                logger.exception("Unable to create event from received data")
             self.dataque.task_done()
 
     @property
@@ -543,7 +543,7 @@ class TextVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid permission value")
 
     async def _handler(self):
         """Check received data and take action"""
@@ -561,7 +561,7 @@ class TextVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                logger.error(str(ex))
+                logger.exception("Unable to create event from received data")
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -721,7 +721,7 @@ class NumberVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid permission value")
 
     async def _handler(self):
         """Check received data and take action"""
@@ -739,7 +739,7 @@ class NumberVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                logger.error(str(ex))
+                logger.exception("Unable to create event from received data")
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -914,7 +914,7 @@ class BLOBVector(PropertyVector):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
         except ValueError as ex:
-            logger.error(str(ex))
+            logger.exception("Invalid permission value")
 
     async def _handler(self):
         """Check received data and take action"""
@@ -936,7 +936,7 @@ class BLOBVector(PropertyVector):
                     await self.driver.clientevent(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
-                logger.error(str(ex))
+                logger.exception("Unable to create event from received data")
             self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
@@ -1013,5 +1013,5 @@ class BLOBVector(PropertyVector):
                 try:
                     xmldata.append(blob.oneblob())
                 except ValueError as ex:
-                    logger.error(str(ex))
+                    logger.exception("Unable to create setBLOBVector")
         await self.driver.send(xmldata)

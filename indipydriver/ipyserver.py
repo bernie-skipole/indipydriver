@@ -74,7 +74,7 @@ class IPyServer:
 
     async def _runserver(self):
         "Runs the server on the given host and port"
-        logger.warning(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
+        logger.info(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
         await server.serve_forever()
 
@@ -251,7 +251,7 @@ class _ClientConnection:
         self.connected = True
         blobstatus = BLOBSstatus(self.devices)
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(blobstatus, reader, addr)
+        rx = Port_RX(blobstatus, reader)
         tx = Port_TX(blobstatus, writer, self.timer)
         logger.info(f"Connection received from {addr}")
         try:

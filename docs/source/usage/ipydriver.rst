@@ -25,3 +25,33 @@ The driver is also a mapping, of devicename:deviceobject, so your code in the ha
 Similarly a Device object is a mapping to a vector, so to access a vector you could use self['devicename']['vectorname'].
 
 The 'snooping' capabilities enable one driver to receive data transmitted by another, possibly remote driver. For a simple instrument this will probably not be used.
+
+
+Logging
+=======
+
+This indipydriver package uses the Python standard library logging module, it uses logger with name "indipyclient" and emits logs at levels:
+
+**ERROR**
+
+Logs errors including tracebacks from exceptions
+
+**INFO**
+
+Logs informational messages and error messages as above.
+
+**DEBUG**
+
+Logs xml data transmitted and received, and the info and error messages as above.
+
+As default, only the logging.NullHandler() is added, so no logs are generated. To create logs you will need to add a handler, and a logging level, for example::
+
+    import logging
+    logger = logging.getLogger('indipydriver')
+
+    fh = logging.FileHandler("logfile.log")
+    logger.addHandler(fh)
+
+    logger.setLevel(logging.DEBUG)
+
+This leaves you with the flexibility to add any available loghandler, and to set your own formats if required.

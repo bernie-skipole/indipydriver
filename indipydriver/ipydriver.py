@@ -117,6 +117,9 @@ class IPyDriver(collections.UserDict):
         self.snoopdevices = set()       # gets set to a set of device names
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
+        # If True, xmldata will be logged at DEBUG level
+        self.debug_enable = True
+
 
     def listen(self, host="localhost", port=7624):
         """If called, listens on the given host and port. Only one connection is accepted,
@@ -132,6 +135,17 @@ class IPyDriver(collections.UserDict):
         "Transmits xmldata, this is an internal method, not normally called by a user."
         if self.comms.connected:
             await self.writerque.put(xmldata)
+        if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+            if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                data = copy.deepcopy(xmldata)
+                for element in data:
+                    element.text = "NOT LOGGED"
+                binarydata = ET.tostring(data)
+                logger.debug(f"TX:{binarydata.decode('utf-8')}\n")
+            else:
+                binarydata = ET.tostring(xmldata)
+                logger.debug(f"TX:{binarydata.decode('utf-8')}\n")
+
 
     def __setitem__(self, devicename):
         raise KeyError
@@ -145,6 +159,17 @@ class IPyDriver(collections.UserDict):
             await asyncio.sleep(0)
             # reads readerque, and sends xml data to the device via its dataque
             root = await self.readerque.get()
+            # log the received data
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                if ((root.tag == "setBLOBVector") or (root.tag == "newBLOBVector")) and len(root):
+                    data = copy.deepcopy(root)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(data)
+                    logger.debug(f"RX:{binarydata.decode('utf-8')}\n")
+                else:
+                    binarydata = ET.tostring(root)
+                    logger.debug(f"RX:{binarydata.decode('utf-8')}\n")
             if root.tag == "getProperties":
                 version = root.get("version")
                 if version != "1.7":
@@ -244,7 +269,7 @@ class IPyDriver(collections.UserDict):
             except events.EventException as ex:
                 # if an EventException is raised, it is because received data is malformed
                 # so log it
-                logger.error(str(ex))
+                logger.exception("An exception occurred creating a snoop event")
             self.snoopque.task_done()
 
     async def send_message(self, message="", timestamp=None):
@@ -315,7 +340,7 @@ class IPyDriver(collections.UserDict):
     async def asyncrun(self):
         """Gathers tasks to be run simultaneously"""
 
-        logger.warning(f"Driver {self.__class__.__name__} started")
+        logger.info(f"Driver {self.__class__.__name__} started")
 
         # set an object for communicating, as default this is stdin and stdout
         if self.comms is None:
