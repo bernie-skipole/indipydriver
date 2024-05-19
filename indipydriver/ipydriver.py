@@ -135,16 +135,16 @@ class IPyDriver(collections.UserDict):
         "Transmits xmldata, this is an internal method, not normally called by a user."
         if self.comms.connected:
             await self.writerque.put(xmldata)
-        if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-            if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                data = copy.deepcopy(xmldata)
-                for element in data:
-                    element.text = "NOT LOGGED"
-                binarydata = ET.tostring(data)
-                logger.debug(f"TX:{binarydata.decode('utf-8')}\n")
-            else:
-                binarydata = ET.tostring(xmldata)
-                logger.debug(f"TX:{binarydata.decode('utf-8')}\n")
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                    data = copy.deepcopy(xmldata)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(data)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
     def __setitem__(self, devicename):
@@ -166,10 +166,10 @@ class IPyDriver(collections.UserDict):
                     for element in data:
                         element.text = "NOT LOGGED"
                     binarydata = ET.tostring(data)
-                    logger.debug(f"RX:{binarydata.decode('utf-8')}\n")
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
                 else:
                     binarydata = ET.tostring(root)
-                    logger.debug(f"RX:{binarydata.decode('utf-8')}\n")
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
             if root.tag == "getProperties":
                 version = root.get("version")
                 if version != "1.7":
