@@ -42,7 +42,7 @@ Logs informational messages and error messages as above.
 
 **DEBUG**
 
-Logs xml data transmitted and received by each driver, and the info and error messages as above.
+Logs xml data transmitted and received by each driver, and the info and error messages as above. The logs of BLOB tags do not include contents.
 
 The driver has attribute self.debug_enable, which defaults to True.
 
