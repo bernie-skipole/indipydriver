@@ -104,6 +104,7 @@ a 'newNumberVector', which causes the clientevent method to be called::
         "Returns an instance of the driver"
 
         thermalcontrol = ThermalControl()
+        runthermo = thermalcontrol.run_thermostat()
 
         # create a vector with one number 'temperaturemember' as its member
         stringtemperature = str(thermalcontrol.temperature)
@@ -135,11 +136,8 @@ a 'newNumberVector', which causes the clientevent method to be called::
         thermostat = Device( devicename="Thermostat",
                              properties=[temperaturevector, targetvector] )
 
-        # set the coroutine to be run with the driver
-        runthermo = thermalcontrol.run_thermostat()
-
-        # Create the Driver, containing this device and
-        # the coroutine needed to run the instrument
+        # Create the Driver, containing this Device and instrument
+        # controlling objects
         driver = ThermoDriver( devices=[thermostat],
                                tasks=[runthermo],
                                thermalcontrol=thermalcontrol )
@@ -152,7 +150,6 @@ a 'newNumberVector', which causes the clientevent method to be called::
 
         driver = make_driver()
 
-        # In this example, set the driver to listen on a host/port
         server = IPyServer([driver], host="localhost",
                                      port=7624,
                                      maxconnections=5)

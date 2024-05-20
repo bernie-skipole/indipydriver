@@ -24,6 +24,8 @@ class WindowControl:
             self.window = "Open"
         if temperature < 18:
             self.window = "Closed"
+        # An update time is recorded to ensure the received
+        # temperature is regularly obtained.
         self.update_time = time.time()
 
 
@@ -59,7 +61,10 @@ class WindowDriver(IPyDriver):
                 # getProperties just in case it is reconnected
                 await self.send_getProperties(devicename="Thermostat",
                                               vectorname="temperaturevector")
+                # It would also be possible to set an alarm
+                # to indicate the failure of received temperature
 
+            # get the current window status
             statusvector['status'] = windowcontrol.window
             # and transmit it to the client
             await statusvector.send_setVector(allvalues=False)
@@ -89,7 +94,7 @@ class WindowDriver(IPyDriver):
 def make_driver():
     "Creates the driver"
 
-    # create hardware object
+    # make the instrument controlling object
     windowcontrol = WindowControl()
 
     status = TextMember( name="status",
@@ -102,11 +107,12 @@ def make_driver():
                                state="Ok",
                                textmembers=[status] )
 
-    # create a Device with these vectors
+    # make a Device with this vector
     window = Device( devicename="Window",
                      properties=[windowstatus] )
 
-    # Create the WindowDriver (inherited from IPyDriver) containing this device
+    # Make the WindowDriver containing this Device
+    # and the window controlling object
     windowdriver = WindowDriver( devices=[window],
                                  windowcontrol=windowcontrol )
 

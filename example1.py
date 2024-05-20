@@ -42,11 +42,12 @@ class ThermalControl:
 
 class ThermoDriver(IPyDriver):
 
-    """IPyDriver is subclassed here, with two methods created to handle incoming events
+    """IPyDriver is subclassed here, with methods created to handle incoming events
        and to transmit the temperature to the client"""
 
     async def clientevent(self, event):
-        """On receiving data, this is called, and should handle any necessary actions
+        """On receiving data from the client this is called, and should handle any
+           necessary actions.
            The event object has property 'vector' which is the propertyvector being
            updated or requested by the client.
            Different types of event could be produced, in this case only getProperties
@@ -70,7 +71,10 @@ class ThermoDriver(IPyDriver):
         """This is a continuously running coroutine which is used
            to transmit the temperature to connected clients."""
 
+        # get the object controlling the instrument, which is available
+        # in the named arguments dictionary 'self.driverdata'.
         thermalcontrol = self.driverdata["thermalcontrol"]
+
         vector = self['Thermostat']['temperaturevector']
         while True:
             await asyncio.sleep(10)
@@ -84,33 +88,31 @@ class ThermoDriver(IPyDriver):
 def make_driver():
     "Returns an instance of the driver"
 
+    # Make an instance of the object controlling the instrument
     thermalcontrol = ThermalControl()
-
-    # create a vector with one number 'temperaturemember' as its member
+    # and a coroutine which will run the instrument
+    runthermo = thermalcontrol.run_thermostat()
 
     # Note: numbers must be given as strings
     stringtemperature = str(thermalcontrol.temperature)
 
+    # Make a NumberMember holding the temperature value
     temperaturemember = NumberMember( name="temperature",
                                       format='%3.1f', min='-50', max='99',
                                       membervalue=stringtemperature )
-    # Create a NumberVector instance, containing the member.
+    # Make a NumberVector instance, containing the member.
     temperaturevector = NumberVector( name="temperaturevector",
                                       label="Temperature",
                                       group="Values",
                                       perm="ro",
                                       state="Ok",
                                       numbermembers=[temperaturemember] )
-
-    # create a device with temperaturevector as its only property
+    # Make a Device with temperaturevector as its only property
     thermostat = Device( devicename="Thermostat",
                          properties=[temperaturevector] )
 
-    # set the coroutine to be run with the driver
-    runthermo = thermalcontrol.run_thermostat()
-
-    # Create the Driver, containing this device and
-    # the coroutine needed to run the instrument
+    # Create the Driver which will contain this Device, the coroutine needed
+    # to run the instrument, and the instrument controlling object
     driver = ThermoDriver( devices=[thermostat],
                            tasks=[runthermo],
                            thermalcontrol=thermalcontrol )
@@ -133,4 +135,3 @@ if __name__ == "__main__":
 
     # You should see the vector definition xml returned followed by the
     # temperature being reported every ten seconds.
-
