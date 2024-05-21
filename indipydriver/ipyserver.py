@@ -13,6 +13,8 @@ from .ipydriver import IPyDriver
 
 from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus, TXTimer
 
+from .remote import RemoteConnection
+
 
 class IPyServer:
 
@@ -71,6 +73,12 @@ class IPyServer:
         self.drivers = drivers
         self.host = host
         self.port = port
+
+
+    def add_remote(self, host, port, debug_enable=False):
+        "Adds a connection to a remote server"
+        remcon = RemoteConnection(host, port, debug_enable)
+
 
     async def _runserver(self):
         "Runs the server on the given host and port"
