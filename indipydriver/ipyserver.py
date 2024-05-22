@@ -70,6 +70,10 @@ class IPyServer:
             otherdrivers = [ d for d in drivers if not d is driver]
             driver.comms = _DriverComms(self.serverwriterque, self.connectionpool, otherdrivers)
 
+        # self.remotes is a list of RemoteConnection objects running connections to remote servers
+        # this list is populated by calling self.add_remote(host, port, debug_enable)
+        self.remotes = []
+
         self.drivers = drivers
         self.host = host
         self.port = port
@@ -77,7 +81,28 @@ class IPyServer:
 
     def add_remote(self, host, port, debug_enable=False):
         "Adds a connection to a remote server"
-        remcon = RemoteConnection(host, port, debug_enable)
+
+
+        snoopall = False           # gets set to True if it is snooping everything
+        snoopdevices = set()       # gets set to a set of device names
+        snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+
+        remcon = RemoteConnection(indihost=host, indiport=port,
+                                  devices = self.devices,
+                                  drivers = self.drivers,
+                                  remotes = self.remotes,
+                                  serverwriterque = self.serverwriterque,
+                                  connectionpool = self.connectionpool,
+                                  snoopall = snoopall,
+                                  snoopdevices = snoopdevices,
+                                  snoopvectors = snoopvectors )
+
+        if debug_enable:
+            remcon.debug_verbosity(2) # turn on xml logs
+        else:
+            remcon.debug_verbosity(0) # turn off xml logs
+        # store this object
+        self.remotes.append(remcon)
 
 
     async def _runserver(self):
@@ -101,9 +126,11 @@ class IPyServer:
             await writer.wait_closed()
 
     async def asyncrun(self):
-        """Runs the server together with its drivers."""
+        """Runs the server together with its drivers and any remote connections."""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
+        remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
         await asyncio.gather(*driverruns,
+                             *remoteruns,
                              self._runserver(),
                              self.copyreceivedtodriversrxque(),
                              self.copytransmittedtoclienttxque()
@@ -111,7 +138,9 @@ class IPyServer:
 
 
     async def copyreceivedtodriversrxque(self):
-        "For every driver, get readerque and copy data into it from serverreaderque"
+        """Gets data from serverreaderque.
+           For every driver, copy data, if applicable, to driver.readerque
+           And for every remote connection if applicable, send data"""
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
@@ -125,19 +154,48 @@ class IPyServer:
                 # self.devices is a dictionary of device name to device
                 # data is intended for the driver this device belongs to
                 await self.devices[devicename].driver.readerque.put(xmldata)
-            else:
-                # devicename is unknown, check if driver is snooping on this device, vector
+            elif not xmldata.tag.startswith("new"):
+                # devicename is unknown, check if driver is snooping on this device/vector
+                # only forward def's and set's, not 'new' vectors which
+                # do not come from a device, but only from a client to the target device.
                 for driver in self.drivers:
                     if driver.snoopall:
                         await driver.readerque.put(xmldata)
                     elif devicename in driver.snoopdevices:
                         await driver.readerque.put(xmldata)
-                    elif not propertyname is None:
+                    elif propertyname:
                         if (devicename, propertyname) in driver.snoopvectors:
                             await driver.readerque.put(xmldata)
                     # else not snooping, so don't bother sending it to the driver
+
+            # do the same for remote connections
+            if devicename is None:
+                # if no devicename - goes to every remote (getproperties)
+                for remcon in self.remotes:
+                    remcon.send(xmldata)
+            else:
+                for remcon in self.remotes:
+                    if devicename in remcon:
+                        # this devicename has been found
+                        remcon.send(xmldata)
+                    elif xmldata.tag.startswith("get") and not (devicename in self.devices):
+                        # getproperties for an unknown device always get sent
+                        remcon.send(xmldata)
+                    elif not xmldata.tag.startswith("new"):
+                        # a remote device could be snooping on this devicename
+                        # only send def's and set's, not 'new' vectors which
+                        # do not come from a device, but only from a client
+                        if remcon.clientdata['snoopall']:
+                            remcon.send(xmldata)
+                        elif devicename in remcon.clientdata['snoopdevices']
+                            remcon.send(xmldata)
+                        elif propertyname:
+                            if (devicename, propertyname) in remcon.clientdata['snoopvectors']:
+                                remcon.send(xmldata)
+                        # else not snooping, so don't bother sending it
+
             self.serverreaderque.task_done()
-            # now every driver which needs it has this xmldata in its readerque
+            # now every driver which needs it has this xmldata
 
 
     async def copytransmittedtoclienttxque(self):
