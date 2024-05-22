@@ -22,7 +22,7 @@ class RemoteConnection(IPyClient):
 
 
     async def rxevent(self, event):
-        "Gets events as they are received"
+        "Handle events as they are received on this connection"
         rxdata = event.root
         if rxdata is None:
             return
@@ -38,7 +38,7 @@ class RemoteConnection(IPyClient):
             else:
                 self.clientdata['snoopvectors'].append((event.devicename,event.vectorname))
 
-            # if getproperties is tragetted at a known device, send it to that device
+            # if getproperties is targetted at a known device, send it to that device
             if event.devicename:
                 if event.devicename in self.clientdata["devices"]:
                     # this getProperties request is meant for an attached device
@@ -54,7 +54,8 @@ class RemoteConnection(IPyClient):
                         # no need to transmit this anywhere else
                         return
 
-        # transmit rxdata out to other connections if they are snooping, or if a getProperties is received
+        # transmit rxdata out to other connections if they are snooping,
+        # or if a getProperties is received for an unknown device
         for remcon in self.clientdata["remotes"]:
             if remcon is self:
                 continue
