@@ -132,12 +132,79 @@ class IPyServer:
         await asyncio.gather(*driverruns,
                              *remoteruns,
                              self._runserver(),
-                             self.copyreceivedtodriversrxque(),
+                             self.copyfromserver(),
                              self.copytransmittedtoclienttxque()
                              )
 
 
-    async def copyreceivedtodriversrxque(self):
+    async def copyfromserver(self):
+        """Gets data from serverreaderque.
+           For every driver, copy data, if applicable, to driver.readerque
+           And for every remote connection if applicable, send data"""
+        while True:
+            await asyncio.sleep(0)
+            xmldata = await self.serverreaderque.get()
+            devicename = xmldata.get("device")
+            propertyname = xmldata.get("name")
+
+            # check for a getProperties
+            if xmldata.tag == "getProperties":
+                remconfound = False
+                # if getproperties is targetted at a known device, send it to that device
+                if devicename:
+                    if devicename in self.devices:
+                        # this getProperties request is meant for an attached device
+                        await self.devices[devicename].driver.readerque.put(xmldata)
+                        # no need to transmit this anywhere else, continue the while loop
+                        self.serverreaderque.task_done()
+                        continue
+                    for remcon in self.remotes:
+                        if devicename in remcon:
+                            # this getProperties request is meant for a remote connection
+                            remcon.send(xmldata)
+                            remconfound = True
+                            break
+                    if remconfound:
+                        # no need to transmit this anywhere else, continue the while loop
+                        self.serverreaderque.task_done()
+                        continue
+
+
+            # transmit xmldata out to remote connections if they are snooping,
+            # or if a getProperties is received for an unknown device
+            for remcon in self.remotes:
+                if devicename and (devicename in remcon):
+                    # this devicename has been found on this remote
+                    remcon.send(xmldata)
+                elif xmldata.tag == "getProperties":
+                    remcon.send(xmldata)
+                elif remcon.clientdata["snoopall"]:
+                    remcon.send(xmldata)
+                elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                    remcon.send(xmldata)
+                elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                    remcon.send(xmldata)
+
+            # transmit rxdata out to drivers if they are snooping, or if a getProperties is received
+            for driver in self.drivers:
+                if devicename and (devicename in self.devices):
+                    # self.devices is a dictionary of device name to device
+                    # data is intended for the driver this device belongs to
+                    await self.devices[devicename].driver.readerque.put(xmldata)
+                elif xmldata.tag == "getProperties":
+                    await driver.readerque.put(xmldata)
+                elif driver.snoopall:
+                    await driver.readerque.put(xmldata)
+                elif devicename and (devicename in driver.snoopdevices):
+                    await driver.readerque.put(xmldata)
+                elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
+                    await driver.readerque.put(xmldata)
+
+            self.serverreaderque.task_done()
+            # now every driver/remcon which needs it has this xmldata
+
+
+    async def oldcopyreceivedtodriversrxque(self):
         """Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, send data"""
@@ -178,7 +245,7 @@ class IPyServer:
                     if devicename in remcon:
                         # this devicename has been found
                         remcon.send(xmldata)
-                    elif xmldata.tag.startswith("get") and not (devicename in self.devices):
+                    elif xmldata.tag == "getProperties" and not (devicename in self.devices):
                         # getproperties for an unknown device always get sent
                         remcon.send(xmldata)
                     elif not xmldata.tag.startswith("new"):
