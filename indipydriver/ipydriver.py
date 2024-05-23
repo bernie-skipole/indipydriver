@@ -28,6 +28,8 @@ class IPyDriver(collections.UserDict):
 
        driverdata will be an attribute dictionary of any hardware
        data that may be usefull.
+
+       This object is also a mapping, of devicename:deviceobject
        """
 
     @staticmethod

@@ -132,15 +132,15 @@ class IPyServer:
         await asyncio.gather(*driverruns,
                              *remoteruns,
                              self._runserver(),
-                             self.copyfromserver(),
-                             self.copytransmittedtoclienttxque()
+                             self._copyfromserver(),
+                             self._sendtoclient()
                              )
 
 
-    async def copyfromserver(self):
+    async def _copyfromserver(self):
         """Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
-           And for every remote connection if applicable, send data"""
+           And for every remote connection if applicable, to remote connection send data"""
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
@@ -170,102 +170,57 @@ class IPyServer:
                         continue
 
 
-            # transmit xmldata out to remote connections if they are snooping,
-            # or if a getProperties is received for an unknown device
+            # transmit xmldata out to remote connections
             for remcon in self.remotes:
                 if devicename and (devicename in remcon):
                     # this devicename has been found on this remote
+                    # data is intended for this connection
+                    # it is not snoopable, since it is data to a device, not from it.
                     remcon.send(xmldata)
                 elif xmldata.tag == "getProperties":
+                    # either no devicename, or an unknown device
+                    # if it were a known devicename the previous block would have handled it.
+                    # so send it on all connections
                     remcon.send(xmldata)
-                elif remcon.clientdata["snoopall"]:
-                    remcon.send(xmldata)
-                elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
-                    remcon.send(xmldata)
-                elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
-                    remcon.send(xmldata)
+                elif not xmldata.tag.startswith("new"):
+                    # either devicename is unknown, or this data is to/from another driver.
+                    # So check if this remcon is snooping on this device/vector
+                    # only forward def's and set's, not 'new' vectors which
+                    # do not come from a device, but only from a client to the target device.
+                    if remcon.clientdata["snoopall"]:
+                        remcon.send(xmldata)
+                    elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                        remcon.send(xmldata)
+                    elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                        remcon.send(xmldata)
 
-            # transmit rxdata out to drivers if they are snooping, or if a getProperties is received
+            # transmit rxdata out to drivers
             for driver in self.drivers:
-                if devicename and (devicename in self.devices):
-                    # self.devices is a dictionary of device name to device
-                    # data is intended for the driver this device belongs to
-                    await self.devices[devicename].driver.readerque.put(xmldata)
+                if devicename and (devicename in driver):
+                    # data is intended for this driver
+                    # it is not snoopable, since it is data to a device, not from it.
+                    await driver.readerque.put(xmldata)
                 elif xmldata.tag == "getProperties":
+                    # either no devicename, or an unknown device
                     await driver.readerque.put(xmldata)
-                elif driver.snoopall:
-                    await driver.readerque.put(xmldata)
-                elif devicename and (devicename in driver.snoopdevices):
-                    await driver.readerque.put(xmldata)
-                elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                    await driver.readerque.put(xmldata)
+                elif not xmldata.tag.startswith("new"):
+                    # either devicename is unknown, or this data is to/from another driver.
+                    # So check if this driver is snooping on this device/vector
+                    # only forward def's and set's, not 'new' vectors which
+                    # do not come from a device, but only from a client to the target device.
+                    if driver.snoopall:
+                        await driver.readerque.put(xmldata)
+                    elif devicename and (devicename in driver.snoopdevices):
+                        await driver.readerque.put(xmldata)
+                    elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
+                        await driver.readerque.put(xmldata)
 
             self.serverreaderque.task_done()
             # now every driver/remcon which needs it has this xmldata
 
 
-    async def oldcopyreceivedtodriversrxque(self):
-        """Gets data from serverreaderque.
-           For every driver, copy data, if applicable, to driver.readerque
-           And for every remote connection if applicable, send data"""
-        while True:
-            await asyncio.sleep(0)
-            xmldata = await self.serverreaderque.get()
-            devicename = xmldata.get("device")
-            propertyname = xmldata.get("name")
-            if devicename is None:
-                # if no devicename - goes to every driver (getproperties)
-                for driver in self.drivers:
-                    await driver.readerque.put(xmldata)
-            elif devicename in self.devices:
-                # self.devices is a dictionary of device name to device
-                # data is intended for the driver this device belongs to
-                await self.devices[devicename].driver.readerque.put(xmldata)
-            elif not xmldata.tag.startswith("new"):
-                # devicename is unknown, check if driver is snooping on this device/vector
-                # only forward def's and set's, not 'new' vectors which
-                # do not come from a device, but only from a client to the target device.
-                for driver in self.drivers:
-                    if driver.snoopall:
-                        await driver.readerque.put(xmldata)
-                    elif devicename in driver.snoopdevices:
-                        await driver.readerque.put(xmldata)
-                    elif propertyname:
-                        if (devicename, propertyname) in driver.snoopvectors:
-                            await driver.readerque.put(xmldata)
-                    # else not snooping, so don't bother sending it to the driver
 
-            # do the same for remote connections
-            if devicename is None:
-                # if no devicename - goes to every remote (getproperties)
-                for remcon in self.remotes:
-                    remcon.send(xmldata)
-            else:
-                for remcon in self.remotes:
-                    if devicename in remcon:
-                        # this devicename has been found
-                        remcon.send(xmldata)
-                    elif xmldata.tag == "getProperties" and not (devicename in self.devices):
-                        # getproperties for an unknown device always get sent
-                        remcon.send(xmldata)
-                    elif not xmldata.tag.startswith("new"):
-                        # a remote device could be snooping on this devicename
-                        # only send def's and set's, not 'new' vectors which
-                        # do not come from a device, but only from a client
-                        if remcon.clientdata['snoopall']:
-                            remcon.send(xmldata)
-                        elif devicename in remcon.clientdata['snoopdevices']
-                            remcon.send(xmldata)
-                        elif propertyname:
-                            if (devicename, propertyname) in remcon.clientdata['snoopvectors']:
-                                remcon.send(xmldata)
-                        # else not snooping, so don't bother sending it
-
-            self.serverreaderque.task_done()
-            # now every driver which needs it has this xmldata
-
-
-    async def copytransmittedtoclienttxque(self):
+    async def _sendtoclient(self):
         "For every clientconnection, get txque and copy data into it from serverwriterque"
         while True:
             await asyncio.sleep(0)
@@ -330,7 +285,7 @@ class _DriverComms:
                 if clientconnection.connected:
                     # at least one is connected, so this data is put into
                     # serverwriterque, and is then sent to each client by
-                    # the copytransmittedtoclienttxque method.
+                    # the _sendtoclient method.
                     await self.serverwriterque.put(xmldata)
                     break
             # task completed
@@ -343,7 +298,7 @@ class _ClientConnection:
 
     def __init__(self, devices, serverreaderque):
         # self.txque will have data to be transmitted
-        # inserted into it from the IPyServer.copytransmittedtoclienttxque()
+        # inserted into it from the IPyServer._sendtoclient()
         # method
         self.txque = asyncio.Queue(6)
 
