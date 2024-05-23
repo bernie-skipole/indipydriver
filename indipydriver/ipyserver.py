@@ -47,6 +47,10 @@ class IPyServer:
         # this is a dictionary of device name to device
         self.devices = {}
 
+        # self.remotes is a list of RemoteConnection objects running connections to remote servers
+        # this list is populated by calling self.add_remote(host, port, debug_enable)
+        self.remotes = []
+
         for driver in drivers:
             if not isinstance(driver, IPyDriver):
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
@@ -68,11 +72,7 @@ class IPyServer:
             # each _DriverComms object has a list of drivers, not including its own driver
             # these will be used to send snooping traffic, sent by its own driver
             otherdrivers = [ d for d in drivers if not d is driver]
-            driver.comms = _DriverComms(self.serverwriterque, self.connectionpool, otherdrivers)
-
-        # self.remotes is a list of RemoteConnection objects running connections to remote servers
-        # this list is populated by calling self.add_remote(host, port, debug_enable)
-        self.remotes = []
+            driver.comms = _DriverComms(self.serverwriterque, self.connectionpool, otherdrivers, self.remotes)
 
         self.drivers = drivers
         self.host = host
@@ -194,7 +194,7 @@ class IPyServer:
                     elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
                         remcon.send(xmldata)
 
-            # transmit rxdata out to drivers
+            # transmit xmldata out to drivers
             for driver in self.drivers:
                 if devicename and (devicename in driver):
                     # data is intended for this driver
@@ -240,7 +240,7 @@ class _DriverComms:
        from the drivers writerque and transmitted to the client by placing it
        into the serverwriterque"""
 
-    def __init__(self, serverwriterque, connectionpool, otherdrivers):
+    def __init__(self, serverwriterque, connectionpool, otherdrivers, remotes):
 
         self.serverwriterque = serverwriterque
         # connectionpool is a list of ClientConnection objects, which is used
@@ -253,6 +253,8 @@ class _DriverComms:
         # self.otherdrivers is set to a list of drivers, not including the driver
         # this object is attached to.
         self.otherdrivers = otherdrivers
+        # self.remotes is a list of connections to remote servers
+        self.remotes = remotes
 
 
     async def __call__(self, readerque, writerque):
@@ -261,24 +263,75 @@ class _DriverComms:
         while True:
             await asyncio.sleep(0)
             xmldata = await writerque.get()
-            # Check if other drivers wants to snoop this traffic
+            # Check if other drivers/remotes wants to snoop this traffic
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
-            if devicename is None:
-                # if no devicename - goes to every other driver (getproperties)
-                for driver in self.otherdrivers:
+
+            # check for a getProperties
+            if xmldata.tag == "getProperties":
+                foundflag = False
+                # if getproperties is targetted at a known device, send it to that device
+                if devicename:
+                    for driver in self.otherdrivers:
+                        if devicename in driver:
+                            # this getProperties request is meant for an attached driver/device
+                            await driver.readerque.put(xmldata)
+                            foundflag = True
+                            break
+                    if foundflag:
+                        # no need to transmit this anywhere else, continue the while loop
+                        writerque.task_done()
+                        continue
+                    for remcon in self.remotes:
+                        if devicename in remcon:
+                            # this getProperties request is meant for a remote connection
+                            remcon.send(xmldata)
+                            foundflag = True
+                            break
+                    if foundflag:
+                        # no need to transmit this anywhere else, continue the while loop
+                        writerque.task_done()
+                        continue
+
+            # transmit xmldata out to remote connections
+            for remcon in self.remotes:
+                if xmldata.tag == "getProperties":
+                    # either no devicename, or an unknown device
+                    # if it were a known devicename the previous block would have handled it.
+                    # so send it on all connections
+                    remcon.send(xmldata)
+                elif not xmldata.tag.startswith("new"):
+                    # Check if this remcon is snooping on this device/vector
+                    # only forward def's and set's, not 'new' vectors which
+                    # do not come from a device, but only from a client to the target device.
+                    # In fact 'new' request should never appear on this writerque, but the test does no harm
+                    if remcon.clientdata["snoopall"]:
+                        remcon.send(xmldata)
+                    elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                        remcon.send(xmldata)
+                    elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                        remcon.send(xmldata)
+
+            # transmit xmldata out to other drivers
+            for driver in self.otherdrivers:
+                if xmldata.tag == "getProperties":
+                    # either no devicename, or an unknown device
                     await driver.readerque.put(xmldata)
-            else:
-                for driver in self.otherdrivers:
+                elif not xmldata.tag.startswith("new"):
+                    # Check if this driver is snooping on this device/vector
+                    # only forward def's and set's, not 'new' vectors which
+                    # do not come from a device, but only from a client to the target device.
+                    # In fact 'new' request should never appear on this writerque, but the test does no harm
                     if driver.snoopall:
                         await driver.readerque.put(xmldata)
-                    elif devicename in driver.snoopdevices:
+                    elif devicename and (devicename in driver.snoopdevices):
                         await driver.readerque.put(xmldata)
-                    elif not propertyname is None:
-                        if (devicename, propertyname) in driver.snoopvectors:
-                            await driver.readerque.put(xmldata)
-            # traffic from one driver has been sent to other drivers if they want to snoop
-            # the traffic must also now be sent to the clients
+                    elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
+                        await driver.readerque.put(xmldata)
+
+
+            # traffic from this driver writerque has been sent to other drivers/remotes if they want to snoop
+            # the traffic must also now be sent to the clients.
             # If no clients are connected, do not put this data into
             # the serverwriterque
             for clientconnection in self.connectionpool:
