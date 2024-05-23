@@ -37,9 +37,9 @@ class RemoteConnection(IPyClient):
             if devicename is None:
                 self.clientdata["snoopall"] = True
             elif vectorname is None:
-                self.clientdata["snoopdevices"].append(devicename)
+                self.clientdata["snoopdevices"].add(devicename)
             else:
-                self.clientdata['snoopvectors'].append((devicename,vectorname))
+                self.clientdata['snoopvectors'].add((devicename,vectorname))
 
             # if getproperties is targetted at a known device, send it to that device
             if devicename:
