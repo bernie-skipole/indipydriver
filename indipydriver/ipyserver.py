@@ -79,7 +79,7 @@ class IPyServer:
         self.port = port
 
 
-    def add_remote(self, host, port, debug_enable=False):
+    def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
         "Adds a connection to a remote server"
 
 
@@ -93,6 +93,7 @@ class IPyServer:
                                   remotes = self.remotes,
                                   serverwriterque = self.serverwriterque,
                                   connectionpool = self.connectionpool,
+                                  blob_enable = blob_enable,
                                   snoopall = snoopall,
                                   snoopdevices = snoopdevices,
                                   snoopvectors = snoopvectors )
@@ -174,6 +175,9 @@ class IPyServer:
 
             # transmit xmldata out to remote connections
             for remcon in self.remotes:
+                if xmldata.tag == "enableBLOB":
+                    # enableBLOB instructions are not forwarded to remcon's
+                    continue
                 if devicename and (devicename in remcon):
                     # this devicename has been found on this remote
                     # data is intended for this connection

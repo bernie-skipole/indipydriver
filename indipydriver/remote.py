@@ -7,7 +7,7 @@ import asyncio
 
 from indipyclient import IPyClient
 
-from indipyclient.events import getProperties
+from indipyclient.events import getProperties, defVector
 
 
 class RemoteConnection(IPyClient):
@@ -31,6 +31,12 @@ class RemoteConnection(IPyClient):
         vectorname = event.vectorname
 
         # rxdata is the xml data received
+
+
+   #     if isinstance(event, defVector):
+   #         if devicename and (devicename in self):
+   #             self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
+
 
         # check for a getProperties event, record what is being snooped
         if isinstance(event, getProperties):
