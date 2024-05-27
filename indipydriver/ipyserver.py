@@ -101,6 +101,8 @@ class IPyServer:
             remcon.debug_verbosity(2) # turn on xml logs
         else:
             remcon.debug_verbosity(0) # turn off xml logs
+        # turn off timers, these are more appropriate to a client
+        remcon.set_vector_timeouts(timeout_enable=False)
         # store this object
         self.remotes.append(remcon)
 

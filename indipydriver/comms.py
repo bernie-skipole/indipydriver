@@ -419,6 +419,11 @@ class BLOBSstatus:
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
+        ##########
+        # temp fix
+        ##############
+        return True
+        #######################
         devicename = xmldata.get("device")
         if devicename is None:
             # either a getproperties or message, only deny it if ALL Other allowed are False
