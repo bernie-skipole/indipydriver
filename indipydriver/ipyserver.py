@@ -174,31 +174,30 @@ class IPyServer:
 
 
             # transmit xmldata out to remote connections
-            for remcon in self.remotes:
-                if xmldata.tag == "enableBLOB":
-                    # enableBLOB instructions are not forwarded to remcon's
-                    continue
-                if devicename and (devicename in remcon):
-                    # this devicename has been found on this remote
-                    # data is intended for this connection
-                    # it is not snoopable, since it is data to a device, not from it.
-                    remcon.send(xmldata)
-                elif xmldata.tag == "getProperties":
-                    # either no devicename, or an unknown device
-                    # if it were a known devicename the previous block would have handled it.
-                    # so send it on all connections
-                    remcon.send(xmldata)
-                elif not xmldata.tag.startswith("new"):
-                    # either devicename is unknown, or this data is to/from another driver.
-                    # So check if this remcon is snooping on this device/vector
-                    # only forward def's and set's, not 'new' vectors which
-                    # do not come from a device, but only from a client to the target device.
-                    if remcon.clientdata["snoopall"]:
+            if xmldata.tag != "enableBLOB":
+                # enableBLOB instructions are not forwarded to remcon's
+                for remcon in self.remotes:
+                    if devicename and (devicename in remcon):
+                        # this devicename has been found on this remote
+                        # data is intended for this connection
+                        # it is not snoopable, since it is data to a device, not from it.
                         remcon.send(xmldata)
-                    elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                    elif xmldata.tag == "getProperties":
+                        # either no devicename, or an unknown device
+                        # if it were a known devicename the previous block would have handled it.
+                        # so send it on all connections
                         remcon.send(xmldata)
-                    elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
-                        remcon.send(xmldata)
+                    elif not xmldata.tag.startswith("new"):
+                        # either devicename is unknown, or this data is to/from another driver.
+                        # So check if this remcon is snooping on this device/vector
+                        # only forward def's and set's, not 'new' vectors which
+                        # do not come from a device, but only from a client to the target device.
+                        if remcon.clientdata["snoopall"]:
+                            remcon.send(xmldata)
+                        elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                            remcon.send(xmldata)
+                        elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                            remcon.send(xmldata)
 
             # transmit xmldata out to drivers
             for driver in self.drivers:
@@ -273,6 +272,12 @@ class _DriverComms:
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
+            if rxdata.tag.startswith("new"):
+                # drivers should never transmit a new
+                # but just in case
+                writerque.task_done()
+                continue
+
             # check for a getProperties
             if xmldata.tag == "getProperties":
                 foundflag = False
@@ -306,11 +311,8 @@ class _DriverComms:
                     # if it were a known devicename the previous block would have handled it.
                     # so send it on all connections
                     remcon.send(xmldata)
-                elif not xmldata.tag.startswith("new"):
+                else:
                     # Check if this remcon is snooping on this device/vector
-                    # only forward def's and set's, not 'new' vectors which
-                    # do not come from a device, but only from a client to the target device.
-                    # In fact 'new' request should never appear on this writerque, but the test does no harm
                     if remcon.clientdata["snoopall"]:
                         remcon.send(xmldata)
                     elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
@@ -323,11 +325,8 @@ class _DriverComms:
                 if xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
                     await driver.readerque.put(xmldata)
-                elif not xmldata.tag.startswith("new"):
+                else:
                     # Check if this driver is snooping on this device/vector
-                    # only forward def's and set's, not 'new' vectors which
-                    # do not come from a device, but only from a client to the target device.
-                    # In fact 'new' request should never appear on this writerque, but the test does no harm
                     if driver.snoopall:
                         await driver.readerque.put(xmldata)
                     elif devicename and (devicename in driver.snoopdevices):
