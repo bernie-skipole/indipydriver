@@ -1,7 +1,3 @@
-import sys
-
-sys.path.insert(0, "/home/bernard/git/indipyclient")
-
 
 import asyncio
 
