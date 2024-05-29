@@ -143,16 +143,17 @@ class IPyServer:
     async def _copyfromserver(self):
         """Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
-           And for every remote connection if applicable, to remote connection send data"""
+           And for every remote connection if applicable, to its send method"""
         while True:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
+            remconfound = False
+
             # check for a getProperties
             if xmldata.tag == "getProperties":
-                remconfound = False
                 # if getproperties is targetted at a known device, send it to that device
                 if devicename:
                     if devicename in self.devices:
@@ -167,21 +168,23 @@ class IPyServer:
                             remcon.send(xmldata)
                             remconfound = True
                             break
-                    if remconfound:
-                        # no need to transmit this anywhere else, continue the while loop
-                        self.serverreaderque.task_done()
-                        continue
 
+            if remconfound:
+                # no need to transmit this anywhere else, continue the while loop
+                self.serverreaderque.task_done()
+                continue
 
             # transmit xmldata out to remote connections
             if xmldata.tag != "enableBLOB":
                 # enableBLOB instructions are not forwarded to remcon's
                 for remcon in self.remotes:
                     if devicename and (devicename in remcon):
-                        # this devicename has been found on this remote
-                        # data is intended for this connection
+                        # this devicename has been found on this remote,
+                        # so it must be a 'new' intended for this connection and
                         # it is not snoopable, since it is data to a device, not from it.
                         remcon.send(xmldata)
+                        remconfound = True
+                        break
                     elif xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
                         # if it were a known devicename the previous block would have handled it.
@@ -199,12 +202,18 @@ class IPyServer:
                         elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
                             remcon.send(xmldata)
 
+            if remconfound:
+                # no need to transmit this anywhere else, continue the while loop
+                self.serverreaderque.task_done()
+                continue
+
             # transmit xmldata out to drivers
             for driver in self.drivers:
                 if devicename and (devicename in driver):
                     # data is intended for this driver
                     # it is not snoopable, since it is data to a device, not from it.
                     await driver.readerque.put(xmldata)
+                    break
                 elif xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
                     await driver.readerque.put(xmldata)

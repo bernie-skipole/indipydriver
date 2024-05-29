@@ -28,11 +28,6 @@ class RemoteConnection(IPyClient):
 
         # rxdata is the xml data received
 
-        if rxdata.tag.startswith("new"):
-            # the indipyclient library does not allow this
-            # but just in case
-            return
-
         if isinstance(event, defVector):
             if devicename and (devicename in self):
                 self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
