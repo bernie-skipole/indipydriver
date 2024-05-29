@@ -65,7 +65,7 @@ class IPyServer:
 
         self.connectionpool = []
         for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(self.devices, self.serverreaderque))
+            self.connectionpool.append(_ClientConnection(self.devices, self.remotes, self.serverreaderque))
 
         for driver in drivers:
             # an instance of _DriverComms is created for each driver
@@ -363,7 +363,7 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, devices, serverreaderque):
+    def __init__(self, devices, remotes, serverreaderque):
         # self.txque will have data to be transmitted
         # inserted into it from the IPyServer._sendtoclient()
         # method
@@ -371,6 +371,7 @@ class _ClientConnection:
 
         # devices is a dictionary of device name to device
         self.devices = devices
+        self.remotes = remotes
         self.serverreaderque = serverreaderque
         # self.connected is True if this pool object is running a connection
         self.connected = False
@@ -388,8 +389,17 @@ class _ClientConnection:
         while True:
             await asyncio.sleep(5)
             # this is tested every five seconds
+            # If a remcon is connected, leave the send def vectors to the remcon
+            if self.remotes:
+                remconlive = False
+                for remcon in self.remotes:
+                    if remcon.connected:
+                        remconlive = True
+                        break
+                if remconlive:
+                    continue
             if self.connected and self.txque.empty():
-                 # only need to test if the queue is empty
+                # only need to test if the queue is empty
                 if self.timer.elapsed():
                     # no transmission in timeout seconds so send defVectors
                     for device in self.devices.values():
