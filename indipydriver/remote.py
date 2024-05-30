@@ -33,7 +33,7 @@ class RemoteConnection(IPyClient):
         if isinstance(event, defVector):
             # on receiving a defvector, send the blobenabled status for that device
             # but record it, so it is not being sent repeatedly
-            if devicename and (devicename in self) and (devicename in self.clientdata["blobenablesent"]):
+            if devicename and (devicename in self) and (not (devicename in self.clientdata["blobenablesent"])):
                 self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
                 self.clientdata["blobenablesent"].append(devicename)
 
