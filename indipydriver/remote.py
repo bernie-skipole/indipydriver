@@ -18,6 +18,13 @@ class RemoteConnection(IPyClient):
         # a list of devicenames that have blobenable sent
         self.clientdata["blobenablesent"] = []
 
+    async def hardware(self):
+        """If connection fails, clear blobenablesent list"""
+        while True:
+            await asyncio.sleep(0)
+            if not self.connected:
+                self.clientdata["blobenablesent"].clear()
+
 
     async def rxevent(self, event):
         "Handle events as they are received on this connection"

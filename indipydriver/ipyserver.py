@@ -178,6 +178,8 @@ class IPyServer:
             if xmldata.tag != "enableBLOB":
                 # enableBLOB instructions are not forwarded to remcon's
                 for remcon in self.remotes:
+                    if not remcon.connected:
+                        continue
                     if devicename and (devicename in remcon):
                         # this devicename has been found on this remote,
                         # so it must be a 'new' intended for this connection and
@@ -304,6 +306,8 @@ class _DriverComms:
                         writerque.task_done()
                         continue
                     for remcon in self.remotes:
+                        if not remcon.connected:
+                            continue
                         if devicename in remcon:
                             # this getProperties request is meant for a remote connection
                             remcon.send(xmldata)
