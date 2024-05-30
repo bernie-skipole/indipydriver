@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, BLOBSstatus, TXTimer
+from .comms import Port_RX, Port_TX, cleanque, SendChecker, TXTimer
 
 from .remote import RemoteConnection
 
@@ -390,14 +390,14 @@ class _ClientConnection:
             await asyncio.sleep(5)
             # this is tested every five seconds
             # If a remcon is connected, leave the send def vectors to the remcon
+            # by increasing the timeout, so the remcon timer times out first
             if self.remotes:
-                remconlive = False
                 for remcon in self.remotes:
                     if remcon.connected:
-                        remconlive = True
+                        self.timer.timeout = 25
                         break
-                if remconlive:
-                    continue
+                else:
+                    self.timer.timeout = 15
             if self.connected and self.txque.empty():
                 # only need to test if the queue is empty
                 if self.timer.elapsed():
@@ -414,10 +414,10 @@ class _ClientConnection:
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
-        blobstatus = BLOBSstatus(self.devices)
+        sendchecker = SendChecker(self.devices, self.remotes)
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(blobstatus, reader)
-        tx = Port_TX(blobstatus, writer, self.timer)
+        rx = Port_RX(sendchecker, reader)
+        tx = Port_TX(sendchecker, writer, self.timer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))

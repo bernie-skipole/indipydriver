@@ -217,8 +217,8 @@ class STDINOUT():
 class Port_TX():
     "An object that transmits data on a port, used by Portcomms as one half of the communications path"
 
-    def __init__(self, blobstatus, writer, timer):
-        self.blobstatus = blobstatus
+    def __init__(self, sendchecker, writer, timer):
+        self.sendchecker = sendchecker
         self.writer = writer
         self.timer = timer
 
@@ -230,10 +230,8 @@ class Port_TX():
             # get block of data from writerque and transmit
             txdata = await writerque.get()
             writerque.task_done()
-            if len(txdata) and not self.blobstatus.allowed(txdata):
+            if not self.sendchecker.allowed(txdata):
                 # this data should not be transmitted, discard it
-                # however if the vector has no content, but perhaps just message and state
-                # still allow it
                 continue
             # this data can be transmitted
             if txdata.tag == "setBLOBVector" and len(txdata):
@@ -258,8 +256,8 @@ class Port_RX(STDIN_RX):
        this is used by Portcomms as one half of the communications path.
        This overwrites methods of the STDIN_RX parent class."""
 
-    def __init__(self, blobstatus, reader):
-        self.blobstatus = blobstatus
+    def __init__(self, sendchecker, reader):
+        self.sendchecker = sendchecker
         self.reader = reader
 
 
@@ -270,8 +268,8 @@ class Port_RX(STDIN_RX):
             # get block of xml.etree.ElementTree data
             # from source and append it to  readerque
             if rxdata.tag == "enableBLOB":
-                # set permission flags in the blobstatus object
-                self.blobstatus.setpermissions(rxdata)
+                # set permission flags in the sendchecker object
+                self.sendchecker.setpermissions(rxdata)
             # and place rxdata into readerque
             await readerque.put(rxdata)
 
@@ -327,7 +325,7 @@ class Portcomms():
     def __init__(self, devices, host="localhost", port=7624):
         # devices is a dictionary of device name to device this driver owns
         self.devices = devices
-        self.blobstatus = BLOBSstatus(devices)
+        self.sendchecker = SendChecker(devices)
         self.host = host
         self.port = port
         self.connected = False
@@ -373,8 +371,8 @@ class Portcomms():
             return
         self.connected = True
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(self.blobstatus, reader)
-        tx = Port_TX(self.blobstatus, writer, self.timer)
+        rx = Port_RX(self.sendchecker, reader)
+        tx = Port_TX(self.sendchecker, writer, self.timer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
@@ -401,11 +399,14 @@ def cleanque(que):
         pass
 
 
-class BLOBSstatus:
-    "Carries the enableBLOB status on a device or property"
+class SendChecker:
+    """Carries the enableBLOB status on a device or property, and does checks
+       to ensure valid data is being transmitted"""
 
-    def __init__(self, devices):
+    def __init__(self, devices, remotes=None):
         "For every device, propertyvector create a status list of (Other allowed, BLOB allowed)"
+        self.remotes = remotes
+        self.devices = devices
         self.devicestatus = {}
         # create a dictionary of devicenames : list of propertynames for that device
         self.deviceproperties = {}
@@ -419,22 +420,44 @@ class BLOBSstatus:
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
-        ##########
-        # temp fix
-        ##############
-        return True
-        #######################
+        if xmldata.tag.startswith("new"):
+            # new tags are sent from client to server, not from server back to client
+            return False
+        # allow anything with zero contents, such as getProperties
+        if not len(xmldata):
+            return True
         devicename = xmldata.get("device")
         if devicename is None:
-            # either a getproperties or message, only deny it if ALL Other allowed are False
+            # deny it if ALL Other allowed are False
             # so this connection is dedictated to BLOBs only
             for status in self.devicestatus.values():
                 if status[0]:
                     return True
             return False
         if not (devicename in self.deviceproperties):
+            # devicename not recognised, check if it is in remotes
+            if not self.remotes:
+                return False
+            for remcon in self.remotes:
+                for devicename, device in remcon.items():
+                    if devicename in self.devices:
+                        # A duplicate address, this should never occur
+                        logger.error(f"Duplicate device name {devicename}")
+                        return False
+                    if devicename in self.deviceproperties:
+                        continue
+                    # so this devicename not recorded, add it
+                    self.deviceproperties[devicename] = []
+                    for propertyvector in device.values():
+                        # Initially set with BLOBs not allowed
+                        self.devicestatus[(devicename, propertyvector.name)] = (True, False)
+                        self.deviceproperties[devicename].append(propertyvector.name)
+
+        # self.deviceproperties should now include all known device names
+        if not (devicename in self.deviceproperties):
             # devicename not recognised
             return False
+
         # so we have a devicename, get propertyname
         name = xmldata.get("name")
         # if name missing, could be a message, cannot be a setBLOBVector
@@ -469,7 +492,26 @@ class BLOBSstatus:
             # invalid
             return
         if not (devicename in self.deviceproperties):
-            # devicename not recognised
+            # devicename not recognised, check if it is in remotes
+            if not self.remotes:
+                return
+            for remcon in self.remotes:
+                for devicename, device in remcon.items():
+                    if devicename in self.devices:
+                        # A duplicate address, this should never occur
+                        logger.error(f"Duplicate device name {devicename}")
+                        return
+                    if devicename in self.deviceproperties:
+                        continue
+                    # so this devicename not recorded, add it
+                    self.deviceproperties[devicename] = []
+                    for propertyvector in device.values():
+                        # Initially set with BLOBs not allowed
+                        self.devicestatus[(devicename, propertyvector.name)] = (True, False)
+                        self.deviceproperties[devicename].append(propertyvector.name)
+
+        if not (devicename in self.deviceproperties):
+            # devicename not recognised, cannot set any permissions
             return
         value = rxdata.text.strip()
         if value == "Never":
