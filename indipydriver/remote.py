@@ -15,6 +15,8 @@ class RemoteConnection(IPyClient):
         IPyClient.__init__(self, indihost, indiport, **clientdata)
         # do not add info to client messages
         self.enable_reports = False
+        # a list of devicenames that have blobenable sent
+        self.clientdata["blobenablesent"] = []
 
 
     async def rxevent(self, event):
@@ -29,8 +31,11 @@ class RemoteConnection(IPyClient):
         # rxdata is the xml data received
 
         if isinstance(event, defVector):
-            if devicename and (devicename in self):
+            # on receiving a defvector, send the blobenabled status for that device
+            # but record it, so it is not being sent repeatedly
+            if devicename and (devicename in self) and (devicename in self.clientdata["blobenablesent"]):
                 self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
+                self.clientdata["blobenablesent"].append(devicename)
 
         # check for a getProperties event, record what is being snooped
         if isinstance(event, getProperties):

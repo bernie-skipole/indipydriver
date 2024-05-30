@@ -281,10 +281,11 @@ class _DriverComms:
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
-            if rxdata.tag.startswith("new"):
+            if xmldata.tag.startswith("new"):
                 # drivers should never transmit a new
                 # but just in case
                 writerque.task_done()
+                logger.error(f"Driver transmitted invalid tag {xmldata.tag}")
                 continue
 
             # check for a getProperties
@@ -379,11 +380,12 @@ class _ClientConnection:
         # timer used to force a data transmission after timeout seconds
         # this will cause an exception if the connection is broken and will shut down
         # the connection
-        self.timer = TXTimer(timeout = 15)
+        self.txtimer = TXTimer(timeout = 15)
+        self.rxtimer = TXTimer(timeout = 15)
 
 
     async def _monitor_connection(self):
-        """If connected and self.txque is empty, send def vectors every timeout seconds
+        """If connected, send def vectors every timeout seconds
            This ensures that if the connection has failed, due to the client disconnecting, the write
            to the port operation will cause a failure exception which will close the connection"""
         while True:
@@ -394,21 +396,23 @@ class _ClientConnection:
             if self.remotes:
                 for remcon in self.remotes:
                     if remcon.connected:
-                        self.timer.timeout = 25
+                        self.txtimer.timeout = 25
+                        self.rxtimer.timeout = 25
                         break
                 else:
-                    self.timer.timeout = 15
-            if self.connected and self.txque.empty():
-                # only need to test if the queue is empty
-                if self.timer.elapsed():
-                    # no transmission in timeout seconds so send defVectors
-                    for device in self.devices.values():
-                        if not device.enable:
+                    self.txtimer.timeout = 15
+                    self.rxtimer.timeout = 15
+            if self.connected and self.txtimer.elapsed() and self.rxtimer.elapsed():
+                # no transmission in timeout seconds so send defVectors
+                for device in self.devices.values():
+                    if not device.enable:
+                        continue
+                    for vector in device.values():
+                        if not vector.enable:
                             continue
-                        for vector in device.values():
-                            xmldata =  vector._make_defVector()
-                            if xmldata:
-                                await self.txque.put(xmldata)
+                        xmldata =  vector._make_defVector()
+                        if xmldata:
+                            await self.txque.put(xmldata)
 
 
     async def handle_data(self, reader, writer):
@@ -416,8 +420,8 @@ class _ClientConnection:
         self.connected = True
         sendchecker = SendChecker(self.devices, self.remotes)
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(sendchecker, reader)
-        tx = Port_TX(sendchecker, writer, self.timer)
+        rx = Port_RX(sendchecker, reader, self.rxtimer)
+        tx = Port_TX(sendchecker, writer, self.txtimer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.txque))

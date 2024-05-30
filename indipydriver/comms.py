@@ -256,9 +256,13 @@ class Port_RX(STDIN_RX):
        this is used by Portcomms as one half of the communications path.
        This overwrites methods of the STDIN_RX parent class."""
 
-    def __init__(self, sendchecker, reader):
+    def __init__(self, sendchecker, reader, timer):
         self.sendchecker = sendchecker
         self.reader = reader
+        # update timer every time something received
+        # in the last 15 seconds
+        # this can be read to see if it has elapsed
+        self.timer = timer
 
 
     async def run_rx(self, readerque):
@@ -272,6 +276,7 @@ class Port_RX(STDIN_RX):
                 self.sendchecker.setpermissions(rxdata)
             # and place rxdata into readerque
             await readerque.put(rxdata)
+            self.timer.update()
 
 
 
@@ -333,7 +338,8 @@ class Portcomms():
         # timer used to force a data transmission after timeout seconds
         # this will cause an exception if the connection is broken and will shut down
         # the connection
-        self.timer = TXTimer(timeout = 15)
+        self.txtimer = TXTimer()
+        self.rxtimer = TXTimer()
 
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
@@ -351,15 +357,15 @@ class Portcomms():
         while True:
             await asyncio.sleep(5)
             # this is tested every five seconds
-            if self.connected and self.writerque.empty() and self.readerque.empty():
-                # only need to test if the queue are empty
-                if self.timer.elapsed():
-                    # no transmission in timeout seconds so send defVectors
-                    for device in self.devices.values():
-                        if not device.enable:
+            if self.connected and self.txtimer.elapsed() and self.rxtimer.elapsed():
+                # Nothing recently transmitted or received so send defVectors
+                for device in self.devices.values():
+                    if not device.enable:
+                        continue
+                    for vector in device.values():
+                        if not vector.enable:
                             continue
-                        for vector in device.values():
-                            await vector.send_defVector()
+                        await vector.send_defVector()
 
 
     async def handle_data(self, reader, writer):
@@ -371,8 +377,8 @@ class Portcomms():
             return
         self.connected = True
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(self.sendchecker, reader)
-        tx = Port_TX(self.sendchecker, writer, self.timer)
+        rx = Port_RX(self.sendchecker, reader, self.rxtimer)
+        tx = Port_TX(self.sendchecker, writer, self.txtimer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(tx.run_tx(self.writerque))
