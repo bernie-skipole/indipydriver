@@ -20,7 +20,7 @@ In this example the device object will contain a single switch vector, with a si
 
 The keyword argument 'driverdata' contains any data you wish to set into the class, in this example it is not used.
 
-The class IPyDriver should be subclassed with your own 'clientevent(event)' coroutine method::
+The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
 
     import asyncio
     import indipydriver as ipd
@@ -33,7 +33,7 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' coro
 
         """IPyDriver is subclassed here."""
 
-        async def clientevent(self, event):
+        async def rxevent(self, event):
             "On receiving data from the client, this is called"
             global LED
 
@@ -57,8 +57,8 @@ The class IPyDriver should be subclassed with your own 'clientevent(event)' coro
                     await event.vector.send_setVector()
 
 
-clientevent method
-^^^^^^^^^^^^^^^^^^
+rxevent method
+^^^^^^^^^^^^^^
 
 The event object is triggered by data received from the client, and is one of "enableBLOB", "getProperties", "newSwitchVector", "newNumberVector", "newTextVector" or "newBLOBVector".
 

@@ -11,7 +11,7 @@ indipydriver = Python tools to create INDI drivers
    usage/propertyvectors
    usage/device
    usage/ipydriver
-   usage/clientevents
+   usage/rxevents
    usage/hardware
    usage/snoopevents
    usage/ipyserver

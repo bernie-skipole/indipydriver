@@ -2,7 +2,7 @@ Example2
 ========
 
 This example shows how the client can set a target temperature by sending
-a 'newNumberVector', which causes the clientevent method to be called::
+a 'newNumberVector', which causes the rxevent method to be called::
 
     import asyncio
 
@@ -51,7 +51,7 @@ a 'newNumberVector', which causes the clientevent method to be called::
         """IPyDriver is subclassed here, with two methods created to handle incoming events
            and to transmit the temperature to the client"""
 
-        async def clientevent(self, event):
+        async def rxevent(self, event):
             """On receiving data, this is called, and should handle any necessary actions
                The event object has property 'vector' which is the propertyvector being
                updated or requested by the client.

@@ -3,7 +3,7 @@ import asyncio
 
 from indipyclient import IPyClient
 
-from indipyclient.events import getProperties, defVector
+from indipyclient.events import getProperties
 
 
 class RemoteConnection(IPyClient):
@@ -20,7 +20,7 @@ class RemoteConnection(IPyClient):
 
     async def hardware(self):
         """If connection fails, clear blobenablesent list"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             if not self.connected:
                 self.clientdata["blobenablesent"].clear()
@@ -37,8 +37,8 @@ class RemoteConnection(IPyClient):
 
         # rxdata is the xml data received
 
-        if isinstance(event, defVector):
-            # on receiving a defvector, send the blobenabled status for that device
+        if event.eventtype == "Define" or event.eventtype == "DefineBLOB":
+            # on receiving a define vector, send the blobenabled status for that device
             # but record it, so it is not being sent repeatedly
             if devicename and (devicename in self) and (not (devicename in self.clientdata["blobenablesent"])):
                 self.send_enableBLOB(self.clientdata["blob_enable"], devicename)

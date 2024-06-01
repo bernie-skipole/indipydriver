@@ -320,7 +320,7 @@ class IPyDriver(collections.UserDict):
         pass
 
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
         """Override this. On receiving data, this is called, and should
            handle any necessary actions.
            event is an object describing the event, with attributes
@@ -453,11 +453,11 @@ class Device(collections.UserDict):
         pass
 
 
-    async def devclientevent(self, event, *args, **kwargs):
+    async def devrxevent(self, event, *args, **kwargs):
         """As default, does nothing and is not called.
 
            If required, override this to handle any necessary device actions.
-           This should be called from the driver 'clientevent' method if it is used."""
+           This should be called from the driver 'rxevent' method if it is used."""
         pass
 
 

@@ -38,7 +38,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
         """IPyDriver is subclassed here"""
 
-        async def clientevent(self, event):
+        async def rxevent(self, event):
             """On receiving data from the client, this is called,
                Only a 'getProperties' is expected."""
             match event:

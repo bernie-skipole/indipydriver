@@ -45,7 +45,7 @@ class ThermoDriver(IPyDriver):
     """IPyDriver is subclassed here, with methods created to handle incoming events
        and to transmit the temperature to the client"""
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
         """On receiving data from the client this is called, and should handle any
            necessary actions.
            The event object has property 'vector' which is the propertyvector being

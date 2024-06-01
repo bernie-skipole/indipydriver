@@ -111,4 +111,4 @@ The drivers _read_readerque() co-routine reads the IPyDriver.readerque and check
 
 If set into a device.dataque, the device coroutine _handler() gets the data, checks it, and puts it into the correct propertyvector.dataque
 
-The propertyvector _handler() co-routine, receives the data, creates an event containing properties extracted from the data, and calls the driver clientevent(event) co-routine, where the event is handled by the users code.
+The propertyvector _handler() co-routine, receives the data, creates an event containing properties extracted from the data, and calls the driver rxevent(event) co-routine, where the event is handled by the users code.

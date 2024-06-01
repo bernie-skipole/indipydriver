@@ -20,7 +20,7 @@ This also listens on a host and port, but with a single connection only, may be 
         driver.listen(host="localhost", port=7624)
         asyncio.run(driver.asyncrun())
 
-The driver is also a mapping, of devicename:deviceobject, so your code in the hardware or clientevent methods could access a specific device using self['devicename'].
+The driver is also a mapping, of devicename:deviceobject, so your code in the hardware or rxevent methods could access a specific device using self['devicename'].
 
 Similarly a Device object is a mapping to a vector, so to access a vector you could use self['devicename']['vectorname'].
 

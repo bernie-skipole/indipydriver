@@ -31,7 +31,7 @@ Typically you would create a subclass of IPyDriver.
 
 The driver has methods which should be overwritten.
 
-**async def clientevent(self, event)**
+**async def rxevent(self, event)**
 
 This is called whenever data is received from the client, typically to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
 

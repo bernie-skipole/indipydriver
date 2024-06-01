@@ -33,7 +33,7 @@ class WindowDriver(IPyDriver):
 
     """IPyDriver is subclassed here"""
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
         """On receiving data from the client, this is called,
            Only a 'getProperties' is expected."""
         match event:

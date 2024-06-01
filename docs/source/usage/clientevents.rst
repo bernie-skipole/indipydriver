@@ -1,16 +1,16 @@
-ClientEvents
-============
+RxEvents
+========
 
 
 The driver has method::
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
 
 When a request is received from the client, an event is produced, and this method is called. You should use this to check the event and take the appropriate action.
 
 Typically you would start with::
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
         match event:
             case getProperties():
                 await event.vector.send_defVector()
@@ -88,25 +88,25 @@ It may be that you expect to receive multiple member values in a vector, and wan
         await event.vector.send_setVector()
 
 
-devclientevent
-^^^^^^^^^^^^^^
+devrxevent
+^^^^^^^^^^
 
 If your driver contains several devices, you may find it simpler to delegate the event control to each device.
 
 The Device class has method::
 
-    async def devclientevent(self, event, *args, **kwargs)
+    async def devrxevent(self, event, *args, **kwargs)
 
 If desired you could subclass Device, and overwrite this method to handle events pertaining to this device. You would then
-ensure devclientevent(event) is called using something like the code below in the driver::
+ensure devrxevent(event) is called using something like the code below in the driver::
 
-    async def clientevent(self, event):
+    async def rxevent(self, event):
         await asyncio.sleep(0)
         match event:
             case getProperties():
                 await event.vector.send_defVector()
 
             case newNumberVector(devicename='Thermostat'):
-                await self['Thermostat'].devclientevent(event)
+                await self['Thermostat'].devrxevent(event)
 
-The Thermostat device method devclientevent(event) then handles those events targeted at devicename Thermostat.
+The Thermostat device method devrxevent(event) then handles those events targeted at devicename Thermostat.
