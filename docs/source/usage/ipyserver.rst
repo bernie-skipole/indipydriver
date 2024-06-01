@@ -5,7 +5,7 @@ This server class is not a general purpose INDI server such as is available at i
 
 
 .. autoclass:: indipydriver.IPyServer
-   :members: asyncrun
+   :members: asyncrun, add_remote
 
 
 Assuming you have two importable modules containing drivers, thermostat.py and windowcontrol.py::
