@@ -1,7 +1,7 @@
 Logging
 =======
 
-This indipydriver package uses the Python standard library logging module, it uses logger with name "indipydriver" and emits logs at levels:
+This indipydriver package uses the Python standard library logging module, and emits logs at levels:
 
 **ERROR**
 
@@ -13,16 +13,16 @@ Logs informational messages and error messages as above.
 
 **DEBUG**
 
-Logs xml data transmitted and received by each driver, and the info and error messages as above. The logs of BLOB tags do not include contents.
+Logs xml data transmitted and received, and the info and error messages as above. The logs of BLOB tags do not include contents.
 
-The driver has attribute self.debug_enable, which defaults to True.
+The package uses two loggers with names "indipydriver" and "indipyclient".
 
-If multiple drivers are in use, and possibly snooping on each other, then in DEBUG mode, this may result in duplicate xml logs, transmitted by one driver and received by another. In which case setting debug_enable to False on drivers you are not interested in, will help isolate just your desired logs.
+The "indipydriver" logger logs driver data, the "indipyclient" logger logs remote server connections data, this because IPyServer is acting as a client when connecting to a remote server.
 
-As default, only the logging.NullHandler() is added, so no logs are generated. To create logs you will need to add a handler, and a logging level, for example::
+To create logs from both loggers in a single file you could add a handler and a logging level to the 'root' logger, for example::
 
     import logging
-    logger = logging.getLogger('indipydriver')
+    logger = logging.getLogger()
 
     fh = logging.FileHandler("logfile.log")
     logger.addHandler(fh)
@@ -30,3 +30,14 @@ As default, only the logging.NullHandler() is added, so no logs are generated. T
     logger.setLevel(logging.DEBUG)
 
 This leaves you with the flexibility to add any available loghandler, and to set your own formats if required.
+
+If you want to add a file handler to "indipydriver" and another to "indipyclient" to log to two different files you would need to obtain the two loggers rather than the root logger::
+
+     driverlogger = logging.getLogger("indipydriver")
+     remotelogger = logging.getLogger("indipyclient")
+
+You could then add file handlers and set logging levels to each logger separately.
+
+If you are running multiple drivers, and multiple remote connections, then logged xml traffic may become confusing. To aid this, drivers have attribute self.debug_enable, if only one driver has this set to True, then only the one driver will have its traffic logged.
+
+Similarly the IPyServer add_remote method has a debug_enable argument which can be used to limit logged traffic to a single remote connection.

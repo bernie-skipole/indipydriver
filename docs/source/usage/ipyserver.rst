@@ -1,7 +1,7 @@
 IPyServer
 =========
 
-This server class is not a general purpose INDI server such as is available at indilib.org which can run third party drivers as executable programes. Rather it is used with IPyDriver instances only. It provides the snooping ability between drivers, implements enableBLOB instructions received from the client, and allows up to ten client connections.
+This server class is used to run IPyDriver instances and create a listening port service. It provides the snooping ability between drivers, enables connections to other remote INDI servers so a branching tree network of drivers can be made, it implements enableBLOB instructions received from the client, and allows up to ten client connections.
 
 
 .. autoclass:: indipydriver.IPyServer

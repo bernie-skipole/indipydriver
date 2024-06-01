@@ -18,19 +18,26 @@ from .remote import RemoteConnection
 
 class IPyServer:
 
-    """An instance should be created with:
+    """Once as instance of his class is created, the asyncrun method
+       should be awaited which will open a listening port, and the
+       INDI service will be available for clients to connect.
 
-       drivers is a list of IPyDriver objects this driver handles.
-
+       drivers is a list of IPyDriver objects this driver handles,
        host and port are "localhost" and 7624 as default
 
        maxconnections is the number of simultaneous client connections
        accepted, with a default of 5. The number given should be
        between 1 and 10 inclusive.
 
-       The awaitable asyncrun method should be run in an async loop.
-       """
+       If, prior to asyncrun being awaited, the add_remote method is called,
+       then a connection will be made to a remote INDI server and any of its
+       drivers. A client connected to this server will be able to control all
+       drivers, and the drivers will be able to snoop on each other.
 
+       The add_remote method can be called more than once to create a branching
+       tree of servers and drivers.
+
+       """
 
 
     def __init__(self, drivers, *, host="localhost", port=7624, maxconnections=5):
@@ -80,7 +87,15 @@ class IPyServer:
 
 
     def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
-        "Adds a connection to a remote server"
+        """Adds a connection to a remote server.
+           blob_enable can be Never, Also or Only.
+           If Never BLOBs will not be sent from the remote server to this one.
+           If Also BLOBs and other vectors can all be sent.
+           If Only, then only BLOB traffic will be sent.
+
+           If debug_enable is True, then DEBUG level logging will record xml
+           traffic, if False, the xml traffic will not be logged. This can be
+           used to prevent multiple such connections all logging xml traffic together."""
 
 
         snoopall = False           # gets set to True if it is snooping everything
