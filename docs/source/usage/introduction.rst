@@ -56,6 +56,4 @@ A connected client can then control all the drivers.
 Issues
 ^^^^^^
 
-The driver also has a method of comunicating Using stdin/stdout which has required some linux/unix specific commands, and which will probably not work on Windows. However using IPyServer should work on Windows, but is untested. (I don't have a Windows machine.)
-
-When transmitting or receiving BLOBS the entire BLOB is loaded into memory, which may cause issues if the BLOB is large. It is suggested that very large binary objects should be transferred by some other method.
+The driver also has a method of comunicating Using stdin/stdout which has required some linux/unix specific commands, and which will probably not work on Windows. However using IPyServer should work on Windows, but is untested.
