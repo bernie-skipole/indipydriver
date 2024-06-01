@@ -29,7 +29,7 @@ The asyncrun method of the driver contains the following::
 
 
 IPyDriver._tasks
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
 
 This is an optional list of user defined coroutines/tasks passed in the IPyDriver constructor.
 

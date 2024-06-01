@@ -4,13 +4,15 @@ IPyDriver
 .. autoclass:: indipydriver.IPyDriver
    :members:
 
+----
+
 There are three ways a driver can be run, assuming 'driver' is an instance of this class.
 
 This outputs the xml data on stdout, and reads it on stdin::
 
         asyncio.run(driver.asyncrun())
 
-This listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
+Using indipydriver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
 
         server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
         asyncio.run(server.asyncrun())

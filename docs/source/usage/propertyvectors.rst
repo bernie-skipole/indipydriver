@@ -1,5 +1,5 @@
-Properties
-==========
+Property Vectors
+================
 
 A property vector is an object containing one or more 'members'.  For example a NumberVector will contain one or more NumberMember objects, each containing a number value.
 
