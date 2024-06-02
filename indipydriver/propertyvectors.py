@@ -94,11 +94,9 @@ class PropertyVector(collections.UserDict):
            timestamp should be a datetime.datetime object or None, in which
            case a UTC value will be inserted.
 
-           If the timeout value is a string of a numeric value it will set this vectors
-           timeout attribute. If it is None, the timeout attribute will remain unchanged.
-
+           If the timeout value is None, the timeout attribute will remain unchanged.
            This timeout indicates to the client how long it takes to effect a change of
-           this vector.
+           this vector. Its value will be converted to a string and set as the timeout attribute.
 
            The state should be either None - in which case no change to the state attribute
            will be made, or one of Idle, Ok, Busy or Alert.
@@ -107,8 +105,7 @@ class PropertyVector(collections.UserDict):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending defVector: The given send_defVector timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -250,11 +247,9 @@ class SwitchVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            UTC value will be inserted.
 
-           If the timeout value is a string of a numeric value it will set this vectors
-           timeout attribute. If it is None, the timeout attribute will remain unchanged.
-
+           If the timeout value is None, the timeout attribute will remain unchanged.
            This timeout indicates to the client how long it takes to effect a change of
-           this vector.
+           this vector. Its value will be converted to a string and set as the timeout attribute.
 
            The state should be either None - in which case no change to the state attribute
            will be made, or one of Idle, Ok, Busy or Alert.
@@ -270,8 +265,7 @@ class SwitchVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setSwitchVector: The given send_setVector timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -331,8 +325,7 @@ class SwitchVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setSwitchVector: The given send_setVectorMembers timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -599,11 +592,9 @@ class TextVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            UTC value will be inserted.
 
-           If the timeout value is a string of a numeric value it will set this vectors
-           timeout attribute. If it is None, the timeout attribute will remain unchanged.
-
+           If the timeout value is None, the timeout attribute will remain unchanged.
            This timeout indicates to the client how long it takes to effect a change of
-           this vector.
+           this vector. Its value will be converted to a string and set as the timeout attribute.
 
            The state should be either None - in which case no change to the state attribute
            will be made, or one of Idle, Ok, Busy or Alert.
@@ -619,8 +610,7 @@ class TextVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setTextVector: The given send_setVector timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -669,8 +659,7 @@ class TextVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setTextVector: The given send_setVectorMembers timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -777,11 +766,9 @@ class NumberVector(PropertyVector):
            timestamp should be a datetime.datetime object or None, in which case a
            UTC value will be inserted.
 
-           If the timeout value is a string of a numeric value it will set this vectors
-           timeout attribute. If it is None, the timeout attribute will remain unchanged.
-
+           If the timeout value is None, the timeout attribute will remain unchanged.
            This timeout indicates to the client how long it takes to effect a change of
-           this vector.
+           this vector. Its value will be converted to a string and set as the timeout attribute.
 
            The state should be either None - in which case no change to the state attribute
            will be made, or one of Idle, Ok, Busy or Alert.
@@ -797,8 +784,7 @@ class NumberVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setNumberVector: The given send_setVector timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -847,8 +833,7 @@ class NumberVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setNumberVector: The given send_setVectorMembers timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -983,8 +968,7 @@ class BLOBVector(PropertyVector):
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
-                logger.error("Aborting sending setBLOBVector: The given send_setVectorMembers timeout value must be either None or a string object")
-                return
+                self.timeout = str(timeout)
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state

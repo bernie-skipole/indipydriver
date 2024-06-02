@@ -156,7 +156,7 @@ class NumberMember(PropertyMember):
     def __init__(self, name, label=None, format='', min='0', max='0', step='0', membervalue='0'):
         super().__init__(name, label)
         self.format = format
-        if isinstance(min, str)
+        if isinstance(min, str):
             self.min = min
         else:
             self.min = str(min)
