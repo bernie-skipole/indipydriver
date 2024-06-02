@@ -18,9 +18,9 @@ from .remote import RemoteConnection
 
 class IPyServer:
 
-    """Once as instance of his class is created, the asyncrun method
-       should be awaited which will open a listening port, and the
-       INDI service will be available for clients to connect.
+    """Once an instance of his class is created, the asyncrun method
+       should be awaited which will open a port, and the INDI service
+       will be available for clients to connect.
 
        drivers is a list of IPyDriver objects this driver handles,
        host and port are "localhost" and 7624 as default
@@ -33,7 +33,8 @@ class IPyServer:
        then a connection will be made to a remote INDI server and any of its
        drivers.
 
-       The add_remote method can be called more than once to create a branching
+       The add_remote method can be called multiple times to create
+       connections to different servers making a branching
        tree of servers and drivers.
 
        """
