@@ -31,8 +31,7 @@ class IPyServer:
 
        If, prior to asyncrun being awaited, the add_remote method is called,
        then a connection will be made to a remote INDI server and any of its
-       drivers. A client connected to this server will be able to control all
-       drivers, and the drivers will be able to snoop on each other.
+       drivers.
 
        The add_remote method can be called more than once to create a branching
        tree of servers and drivers.
