@@ -5,7 +5,8 @@ A property vector is an object containing one or more 'members'.  For example a 
 
 This section documents the property vectors created and set into the device, and also the associated members.
 
-All these vectors have arguments name, label, group, perm, state except for LightVector which does not have permission (being a read only value).
+Common Attributes
+^^^^^^^^^^^^^^^^^
 
 **name** is the vector name, any unique name consistent with xml can be used (normal ascii characters), however if you are working with astronomical instruments, and want compatability with other drivers and clients, see the site:
 
@@ -17,22 +18,17 @@ Which provides a convention for property and member names.
 
 **group** is a further label used by the client, which can be used to group properties together. It can be left blank if not used.
 
-**perm** is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them.
+**perm** is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them. Not applicable for the LightVector which does not have permission (being a read only value).
 
 **state** can be set to one of 'Idle', 'Ok', 'Busy' or 'Alert'. Typically the client displays this in an appropriate colour.
 
 The state can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument state=None (the default), then the state attribute remains unchanged, however if the argument is set to one of the state values, then the state attribute is changed, and the client will receive the new state.
 
-Further attributes
-^^^^^^^^^^^^^^^^^^
-
-The timeout attribute is not set in the arguments, but is always initially set to '0'.
-
 **timeout** indicates to the client the worst-case time it might take to change the value to something else.
 
 The default of '0' implies that the vector will be updated in a minimal time should the client request it.
 
-This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
+This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the argument default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
 
 From the indi specification
 
@@ -50,7 +46,7 @@ Each vector is also a mapping of membername to memberVALUE  - note, not member o
 
     event.vector["ledswitchmember"] = newvalue
 
-Numeric values are set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol, the only exception is blobsize, where the number should be an integer.
+Numeric values are preferably set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol. If given as floats or integers they will be converted to strings. The only exception is blobsize, where the number should be an integer.
 
 Each member has a name and label, the label is a string which can be used by the client, if not given it will be set equal to the name.
 

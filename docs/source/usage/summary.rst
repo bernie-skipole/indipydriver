@@ -148,7 +148,7 @@ The IPyServer class takes a list of drivers, only one in this example, and serve
 
 Connecting using the indipyclient terminal client gives:
 
-.. image:: ./image.png
+.. image:: ./images/led.png
 
 
 The next few pages of this documentation list the classes describing property vectors and members, if you wish to skip to further examples, see :ref:`example1`.

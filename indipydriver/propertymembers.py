@@ -146,27 +146,32 @@ class NumberMember(PropertyMember):
 
        max is the maximum, if min is equal to max, the client should ignore these.
 
-       step is incremental step values, set to string of zero if not used.
+       step is incremental step values, set to zero if not used.
 
-       The above numbers, and the member value must be set as a string, this explicitly
-       controls how numbers are placed in the xml protocol.
+       The above numbers, and the member value can be given as strings, which explicitly
+       controls how numbers are placed in the xml protocol. If given as integers or floats
+       they will be converted and set as strings.
     """
 
     def __init__(self, name, label=None, format='', min='0', max='0', step='0', membervalue='0'):
         super().__init__(name, label)
         self.format = format
-        if not isinstance(min, str):
-            raise ValueError("The given min value must be a string object")
-        self.min = min
-        if not isinstance(max, str):
-            raise ValueError("The given max value must be a string object")
-        self.max = max
-        if not isinstance(step, str):
-            raise ValueError("The given step value must be a string object")
-        self.step = step
-        if not isinstance(membervalue, str):
-            raise ValueError("The given membervalue value must be a string object")
-        self._membervalue = membervalue
+        if isinstance(min, str)
+            self.min = min
+        else:
+            self.min = str(min)
+        if isinstance(max, str):
+            self.max = max
+        else:
+            self.max = str(max)
+        if isinstance(step, str):
+            self.step = step
+        else:
+            self.step = str(step)
+        if isinstance(membervalue, str):
+            self._membervalue = membervalue
+        else:
+            self._membervalue = str(membervalue)
 
 
     @property
@@ -176,9 +181,7 @@ class NumberMember(PropertyMember):
     @membervalue.setter
     def membervalue(self, value):
         if not isinstance(value, str):
-            raise ValueError("The NumberMember {self.name} value must be a string object")
-        if not value:
-            raise ValueError(f"The NumberMember {self.name} value cannot be empty")
+            value = str(value)
         if self._membervalue != value:
             # when a value has changed, set the changed flag
             self.changed = True
