@@ -28,7 +28,7 @@ The state can be changed when calling a send_defVector, or send_setVector method
 
 The default of '0' implies that the vector will be updated in a minimal time should the client request it.
 
-This attribute is a string numeric value which can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument timeout=None (the argument default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, then the timeout attribute is changed, and the client will receive the new timeout.
+This attribute can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has timeout set to None (the argument default), then the timeout attribute remains unchanged, however if the argument is set to a numeric string, or to an integer or float - in which case it will be converted to string, then the timeout attribute is changed, and the client will receive the new timeout.
 
 From the indi specification
 
