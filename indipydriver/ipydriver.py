@@ -328,7 +328,7 @@ class IPyDriver(collections.UserDict):
            where vector is the properties vector the event refers to, and
            root is an xml.etree.ElementTree object of the received xml"""
         match event:
-            case getProperties():
+            case events.getProperties():
                 await event.vector.send_defVector()
 
 
