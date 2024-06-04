@@ -1,3 +1,4 @@
+
 import asyncio
 
 from indipydriver import (IPyDriver, Device,
@@ -79,9 +80,7 @@ class ThermoDriver(IPyDriver):
         while True:
             await asyncio.sleep(10)
             # Send the temperature every 10 seconds
-            # Numbers need to be explicitly set in the indi protocol
-            # so need to set a string version into the vector
-            vector['temperature'] = str(thermalcontrol.temperature)
+            vector['temperature'] = thermalcontrol.temperature
             # and transmit it to the client
             await vector.send_setVector()
 
@@ -93,13 +92,10 @@ def make_driver():
     # and a coroutine which will run the instrument
     runthermo = thermalcontrol.run_thermostat()
 
-    # Note: numbers must be given as strings
-    stringtemperature = str(thermalcontrol.temperature)
-
     # Make a NumberMember holding the temperature value
     temperaturemember = NumberMember( name="temperature",
-                                      format='%3.1f', min='-50', max='99',
-                                      membervalue=stringtemperature )
+                                      format='%3.1f', min=-50, max=99,
+                                      membervalue=thermalcontrol.temperature )
     # Make a NumberVector instance, containing the member.
     temperaturevector = NumberVector( name="temperaturevector",
                                       label="Temperature",
@@ -127,11 +123,3 @@ if __name__ == "__main__":
 
     server = IPyServer([driver])
     asyncio.run(server.asyncrun())
-
-    # To see this working, in another terminal try "telnet localhost 7624" and
-    # Copy and paste the following xml into the terminal:
-
-    # <getProperties version="1.7" />
-
-    # You should see the vector definition xml returned followed by the
-    # temperature being reported every ten seconds.

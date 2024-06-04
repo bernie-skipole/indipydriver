@@ -1,3 +1,4 @@
+
 import asyncio
 
 from indipydriver import (IPyDriver, Device,
@@ -74,7 +75,7 @@ class ThermoDriver(IPyDriver):
                 thermalcontrol.target = target
                 # and set the new target value into the vector,
                 # then transmit the vector back to client.
-                event.vector['target'] = str(target)
+                event.vector['target'] = target
                 await event.vector.send_setVector()
 
 
@@ -87,9 +88,7 @@ class ThermoDriver(IPyDriver):
         while True:
             await asyncio.sleep(10)
             # Send the temperature every 10 seconds
-            # Numbers need to be explicitly set in the indi protocol
-            # so need to set a string version into the vector
-            vector['temperature'] = str(thermalcontrol.temperature)
+            vector['temperature'] = thermalcontrol.temperature
             # and transmit it to the client
             await vector.send_setVector()
 
@@ -101,10 +100,9 @@ def make_driver():
     runthermo = thermalcontrol.run_thermostat()
 
     # create a vector with one number 'temperaturemember' as its member
-    stringtemperature = str(thermalcontrol.temperature)
     temperaturemember = NumberMember( name="temperature",
-                                      format='%3.1f', min='-50', max='99',
-                                      membervalue=stringtemperature )
+                                      format='%3.1f', min=-50, max=99,
+                                      membervalue=thermalcontrol.temperature )
     temperaturevector = NumberVector( name="temperaturevector",
                                       label="Temperature",
                                       group="Values",
@@ -113,10 +111,9 @@ def make_driver():
                                       numbermembers=[temperaturemember] )
 
     # create a vector with one number 'targetmember' as its member
-    stringtarget = str(thermalcontrol.target)
     targetmember = NumberMember( name="target",
-                                 format='%3.1f', min='-50', max='99',
-                                 membervalue=stringtarget )
+                                 format='%3.1f', min=-50, max=99,
+                                 membervalue=thermalcontrol.target )
     targetvector = NumberVector( name="targetvector",
                                  label="Target",
                                  group="Values",

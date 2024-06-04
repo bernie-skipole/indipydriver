@@ -4,6 +4,7 @@ Example2
 This example shows how the client can set a target temperature by sending
 a 'newNumberVector', which causes the rxevent method to be called::
 
+
     import asyncio
 
     from indipydriver import (IPyDriver, Device,
@@ -80,7 +81,7 @@ a 'newNumberVector', which causes the rxevent method to be called::
                     thermalcontrol.target = target
                     # and set the new target value into the vector,
                     # then transmit the vector back to client.
-                    event.vector['target'] = str(target)
+                    event.vector['target'] = target
                     await event.vector.send_setVector()
 
 
@@ -93,9 +94,7 @@ a 'newNumberVector', which causes the rxevent method to be called::
             while True:
                 await asyncio.sleep(10)
                 # Send the temperature every 10 seconds
-                # Numbers need to be explicitly set in the indi protocol
-                # so need to set a string version into the vector
-                vector['temperature'] = str(thermalcontrol.temperature)
+                vector['temperature'] = thermalcontrol.temperature
                 # and transmit it to the client
                 await vector.send_setVector()
 
@@ -107,10 +106,9 @@ a 'newNumberVector', which causes the rxevent method to be called::
         runthermo = thermalcontrol.run_thermostat()
 
         # create a vector with one number 'temperaturemember' as its member
-        stringtemperature = str(thermalcontrol.temperature)
         temperaturemember = NumberMember( name="temperature",
-                                          format='%3.1f', min='-50', max='99',
-                                          membervalue=stringtemperature )
+                                          format='%3.1f', min=-50, max=99,
+                                          membervalue=thermalcontrol.temperature )
         temperaturevector = NumberVector( name="temperaturevector",
                                           label="Temperature",
                                           group="Values",
@@ -119,10 +117,9 @@ a 'newNumberVector', which causes the rxevent method to be called::
                                           numbermembers=[temperaturemember] )
 
         # create a vector with one number 'targetmember' as its member
-        stringtarget = str(thermalcontrol.target)
         targetmember = NumberMember( name="target",
-                                     format='%3.1f', min='-50', max='99',
-                                     membervalue=stringtarget )
+                                     format='%3.1f', min=-50, max=99,
+                                     membervalue=thermalcontrol.target )
         targetvector = NumberVector( name="targetvector",
                                      label="Target",
                                      group="Values",
