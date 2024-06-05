@@ -1,6 +1,10 @@
 
 import asyncio
 
+import xml.etree.ElementTree as ET
+
+from datetime import datetime, timezone
+
 from indipyclient import IPyClient
 
 from indipyclient.events import getProperties
@@ -19,11 +23,40 @@ class RemoteConnection(IPyClient):
         self.clientdata["blobenablesent"] = []
 
     async def hardware(self):
-        """If connection fails, clear blobenablesent list"""
+        """If connection fails, clear blobenablesent list
+           and for each device learnt, disable it"""
         while not self._stop:
             await asyncio.sleep(0)
-            if not self.connected:
-                self.clientdata["blobenablesent"].clear()
+            if self.connected:
+                continue
+            self.clientdata["blobenablesent"].clear()
+            if self.enabledlen():
+                # some devices are enabled, disable them
+                timestamp = datetime.now(tz=timezone.utc)
+                timestamp = timestamp.replace(tzinfo = None)
+                tstring = timestamp.isoformat(sep='T')
+                connectionpool = self.clientdata['connectionpool']
+                # If no clients are connected, do not send data into
+                # the serverwriterque
+                clientconnected = False
+                for clientconnection in connectionpool:
+                    if clientconnection.connected:
+                        clientconnected = True
+                        break
+                # send a message
+                if clientconnected:
+                    messagedata = ET.Element('message')
+                    messagedata.set("timestamp", tstring)
+                    messagedata.set("message", "Remote connection lost")
+                    await serverwriterque.put(messagedata)
+                for devicename, device in self.items():
+                    device.disable()
+                    if clientconnected:
+                        xmldata = ET.Element('delProperty')
+                        xmldata.set("device", devicename)
+                        xmldata.set("timestamp", tstring)
+                        xmldata.set("message", f"Remote Connection lost, {devicename} disabled")
+                        await serverwriterque.put(xmldata)
 
 
     async def rxevent(self, event):

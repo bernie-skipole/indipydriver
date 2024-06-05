@@ -7,12 +7,12 @@ name = "indipydriver"
 authors = [{name = "Bernard Czenkusz", email = "bernie@skipole.co.uk"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License", "Operating System :: POSIX :: Linux","Topic :: Scientific/Engineering :: Astronomy", "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator"]
-version = "1.3.1"
+version = "1.3.2"
 description="Pure python package, with no dependencies, providing a set of classes which can be used to create an INDI driver."
 readme = "README.md"
 requires-python = ">=3.10"
 keywords=['indi', 'driver', 'astronomy', 'instrument']
-dependencies = ["indipyclient>=0.2.0"]
+dependencies = ["indipyclient>=0.2.2"]
 
 [project.urls]
 Documentation = "https://indipydriver.readthedocs.io"
