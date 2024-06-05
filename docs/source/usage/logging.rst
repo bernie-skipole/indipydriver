@@ -19,7 +19,7 @@ The package uses two loggers with names "indipydriver" and "indipyclient".
 
 The "indipydriver" logger logs driver data, the "indipyclient" logger logs remote server connections data, this because IPyServer is acting as a client when connecting to a remote server.
 
-To create logs from both loggers in a single file you could add a handler and a logging level to the 'root' logger, for example::
+To create logs from both loggers in a single file you could add a handler and a logging level to the 'root' logger, for example, at the top of your script::
 
     import logging
     logger = logging.getLogger()
@@ -29,7 +29,9 @@ To create logs from both loggers in a single file you could add a handler and a 
 
     logger.setLevel(logging.DEBUG)
 
-This leaves you with the flexibility to add any available loghandler, and to set your own formats if required.
+This leaves you with the flexibility to add any available loghandler, and to set your own formats if required. In the absence of any logging configuration, errors will be shown on stderr. If you want to suppress any error reporting, you could add a NullHandler instead of the FileHandler shown above::
+
+     logger.addHandler(logging.NullHandler())
 
 If you want to add a file handler to "indipydriver" and another to "indipyclient" to log to two different files you would need to obtain the two loggers rather than the root logger::
 

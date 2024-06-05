@@ -136,3 +136,33 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
         server = IPyServer([thermodriver, windowdriver])
         asyncio.run(server.asyncrun())
+
+Alternatively if example2 was running on a remote machine, then this script could be altered to remotely connect to it.  Example2 would need one minor modification::
+
+    if __name__ == "__main__":
+        driver = make_driver()
+        server = IPyServer([driver], host="0.0.0.0",
+                                     port=7624,
+                                     maxconnections=5)
+        asyncio.run(server.asyncrun())
+
+The server host would have to be changed from 'localhost' to either the machines IP address, or to "0.0.0.0" indicating it is listenning on all IP addresses.
+
+The machine operating the window would then need to be changed to::
+
+    if __name__ == "__main__":
+        windowdriver = make_driver()
+        server = IPyServer([windowdriver])
+        server.add_remote(host='raspberrypi', port=7624)
+        asyncio.run(server.asyncrun())
+
+Where the machine running the thermostat has name 'raspberrypi', and this connects the two. If indipyclient is then run on the machine running the windowdriver, it is able to control both drivers as before.
+
+As a further variation, the thermostat of Example 2 on the Raspberry pi could have configuration::
+
+    if __name__ == "__main__":
+        driver = make_driver()
+        driver.listen(host="0.0.0.0", port=7624)
+        asyncio.run(driver.asyncrun())
+
+This accepts the remote call from the machine running the window driver, but is a lighter option as it does not use IPyServer. Since it has no
