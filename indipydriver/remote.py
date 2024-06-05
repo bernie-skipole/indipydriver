@@ -25,6 +25,7 @@ class RemoteConnection(IPyClient):
     async def hardware(self):
         """If connection fails, clear blobenablesent list
            and for each device learnt, disable it"""
+        serverwriterque = self.clientdata['serverwriterque']
         while not self._stop:
             await asyncio.sleep(0)
             if self.connected:
