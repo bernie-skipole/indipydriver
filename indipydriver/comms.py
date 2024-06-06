@@ -405,24 +405,31 @@ def cleanque(que):
         pass
 
 
+# Command to control whether setBLOBs should be sent to this channel from a given Device. They can
+# be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
+# commands by setting Also or made the only command by setting Only.
+
+# <!ELEMENT enableBLOB %BLOBenable >
+# <!ATTLIST enableBLOB
+# device %nameValue; #REQUIRED  name of Device
+# name %nameValue; #IMPLIED name of BLOB Property, or all if absent
+# >
+
+
+
 class SendChecker:
-    """Carries the enableBLOB status on a device or property, and does checks
+    """Carries the enableBLOB status on a device, and does checks
        to ensure valid data is being transmitted"""
 
     def __init__(self, devices, remotes=None):
-        "For every device, propertyvector create a status list of (Other allowed, BLOB allowed)"
+        "For every device create a dictionary"
         self.remotes = remotes
         self.devices = devices
         self.devicestatus = {}
-        # create a dictionary of devicenames : list of propertynames for that device
-        self.deviceproperties = {}
-        for devicename, device in devices.items():
-            self.deviceproperties[devicename] = []
-            for propertyvector in device.values():
-                # Initially set with BLOBs not allowed
-                self.devicestatus[(devicename, propertyvector.name)] = (True, False)
-                self.deviceproperties[devicename].append(propertyvector.name)
-
+        # create a dictionary of devicenames :
+        for devicename in devices:
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+                                                                             # dictionary of propertyname:status
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
@@ -434,108 +441,97 @@ class SendChecker:
             return True
         devicename = xmldata.get("device")
         if devicename is None:
-            # deny it if ALL Other allowed are False
-            # so this connection is dedictated to BLOBs only
-            for status in self.devicestatus.values():
-                if status[0]:
-                    return True
-            return False
-        if not (devicename in self.deviceproperties):
-            # devicename not recognised, check if it is in remotes
-            if not self.remotes:
-                return False
-            for remcon in self.remotes:
-                for devicename, device in remcon.items():
-                    if devicename in self.devices:
-                        # A duplicate address, this should never occur
-                        logger.error(f"Duplicate device name {devicename}")
-                        return False
-                    if devicename in self.deviceproperties:
-                        continue
-                    # so this devicename not recorded, add it
-                    self.deviceproperties[devicename] = []
-                    for propertyvector in device.values():
-                        # Initially set with BLOBs not allowed
-                        self.devicestatus[(devicename, propertyvector.name)] = (True, False)
-                        self.deviceproperties[devicename].append(propertyvector.name)
+            # enableBLOB only appliesto a specified device, not applicable here
+            return True
+        if not (devicename in self.devicestatus):
+            # devicename not recognised, add it
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
-        # self.deviceproperties should now include all known device names
-        if not (devicename in self.deviceproperties):
-            # devicename not recognised
-            return False
+        devicedict = self.devicestatus[devicename]
 
         # so we have a devicename, get propertyname
         name = xmldata.get("name")
         # if name missing, could be a message, cannot be a setBLOBVector
         if name is None:
-            # only deny it if ALL other allowed are False for this device
-            properties = self.deviceproperties[devicename]
-            for name in properties:
-                status = self.devicestatus[devicename, name]
-                if status[0]:
-                    return True
-            return False
-        # so we have a devicename, propertyname
-        status = self.devicestatus.get((devicename, name))
-        if status is None:
-            # this property is not recognised as belonging to the device
-            return False
+            # If any property of this device has 'Only' set, then do not transmit
+            if devicedict["Default"] == "Only":
+                return False
+            for value in devicedict["Properties"].values():  # gets status of each property
+                if value == "Only":
+                    return False
+            return True
+
+        # so we have a devicename, property name, is this xml a setBLOBVector
         if xmldata.tag == "setBLOBVector":
-            return status[1]
-        else:
-            return status[0]
+            if name in devicedict["Properties"]:
+                if devicedict["Properties"][name] == "Never:
+                    return False
+                else:
+                    return True
+            elif devicedict["Default"] == "Never":
+                return False
+            else:
+                return True
+
+        # so not a setBLOBVector
+        # If any property of this device has 'Only' set, then do not transmit
+        if devicedict["Default"] == "Only":
+            return False
+        for value in devicedict["Properties"].values():  # gets status of each property
+            if value == "Only":
+                return False
+        return True
 
 
     def setpermissions(self, rxdata):
         "Read the received enableBLOB xml and set permission in self.devicestatus"
-
-        # Command to control whether setBLOBs should be sent to this channel from a given Device. They can
-        # be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
-        # commands by setting Also or made the only command by setting Only.
-
         devicename = rxdata.get("device")
         if devicename is None:
             # invalid
             return
-        if not (devicename in self.deviceproperties):
-            # devicename not recognised, check if it is in remotes
-            if not self.remotes:
+        if not (devicename in self.devicestatus):
+            # devicename not recognised, add it
+            if (devicename not in self.devices) and (devicename not in self.remotes):
+                # unknown device
                 return
-            for remcon in self.remotes:
-                for devicename, device in remcon.items():
-                    if devicename in self.devices:
-                        # A duplicate address, this should never occur
-                        logger.error(f"Duplicate device name {devicename}")
-                        return
-                    if devicename in self.deviceproperties:
-                        continue
-                    # so this devicename not recorded, add it
-                    self.deviceproperties[devicename] = []
-                    for propertyvector in device.values():
-                        # Initially set with BLOBs not allowed
-                        self.devicestatus[(devicename, propertyvector.name)] = (True, False)
-                        self.deviceproperties[devicename].append(propertyvector.name)
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
-        if not (devicename in self.deviceproperties):
-            # devicename not recognised, cannot set any permissions
+        # get the status of Never, Also, Only
+        status = rxdata.text.strip()
+        if status not in ("Never", "Also", "Only"):
+            # invalid
             return
-        value = rxdata.text.strip()
-        if value == "Never":
-            perm = (True, False)    # (Other allowed, BLOB not allowed)
-        elif value == "Also":
-            perm = (True, True)     # (Other allowed, BLOB allowed)
-        elif value == "Only":
-            perm = (False, True)   # (Only not allowed, BLOB allowed)
-        else:
-            # value not recognised
+
+        devicedict = self.devicestatus[devicename]
+
+        # property name
+        name = rxdata.get("name")
+        if name is None:
+            # This applies to the device rather than to a particular property
+            devicedict["Default"] = status
             return
-        propertyname = rxdata.get("name")
-        if propertyname is None:
-            # This applies to all properties of the device
-            properties = self.deviceproperties[devicename]
-            for name in properties:
-                self.devicestatus[devicename, name] = perm
-        elif (devicename, propertyname) in self.devicestatus:
-            self.devicestatus[devicename, propertyname] = perm
-        # otherwise the (devicename, propertyname) are not recognised
-        # so return without setting any permissions
+
+        if name in devicedict["Properties"]:
+            devicedict["Properties"][name] = status
+            return
+
+        # So this applies to a property that is not in self.devicestatus
+        # check property is known, and add it
+        propertyknown = False
+        if devicename in self.devices:
+            for propertyname in self.devices[devicename]:
+                if name == propertyname:
+                    propertyknown = True
+                    break
+        elif devicename in self.remotes:
+            for propertyname in self.remotes[devicename]:
+                if name == propertyname:
+                    propertyknown = True
+                    break
+
+        if not propertyknown:
+            # property not known about, reject this
+            return
+
+        # add it to devicedict, and hence to self.devicestatus
+        devicedict["Properties"][name] = status

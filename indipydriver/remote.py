@@ -26,17 +26,36 @@ class RemoteConnection(IPyClient):
         """If connection fails, clear blobenablesent list
            and for each device learnt, disable it"""
         serverwriterque = self.clientdata['serverwriterque']
+        connectionpool = self.clientdata['connectionpool']
+        isconnected = False
         while not self._stop:
             await asyncio.sleep(0)
             if self.connected:
+                if isconnected:
+                    continue
+                isconnected = True
+                # a new connection has been made
+                self.send_getProperties()
+                for clientconnection in connectionpool:
+                    if clientconnection.connected:
+                        # a client is connected, send a message
+                        timestamp = datetime.now(tz=timezone.utc)
+                        timestamp = timestamp.replace(tzinfo = None)
+                        tstring = timestamp.isoformat(sep='T')
+                        messagedata = ET.Element('message')
+                        messagedata.set("timestamp", tstring)
+                        messagedata.set("message", f"Remote connection made to {self.indihost}:{self.indiport}")
+                        await serverwriterque.put(messagedata)
+                        break
                 continue
+            # The connection has failed
+            isconnected = False
             self.clientdata["blobenablesent"].clear()
             if self.enabledlen():
                 # some devices are enabled, disable them
                 timestamp = datetime.now(tz=timezone.utc)
                 timestamp = timestamp.replace(tzinfo = None)
                 tstring = timestamp.isoformat(sep='T')
-                connectionpool = self.clientdata['connectionpool']
                 # If no clients are connected, do not send data into
                 # the serverwriterque
                 clientconnected = False
@@ -48,16 +67,17 @@ class RemoteConnection(IPyClient):
                 if clientconnected:
                     messagedata = ET.Element('message')
                     messagedata.set("timestamp", tstring)
-                    messagedata.set("message", "Remote connection lost")
+                    messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
                     await serverwriterque.put(messagedata)
                 for devicename, device in self.items():
-                    device.disable()
-                    if clientconnected:
-                        xmldata = ET.Element('delProperty')
-                        xmldata.set("device", devicename)
-                        xmldata.set("timestamp", tstring)
-                        xmldata.set("message", f"Remote Connection lost, {devicename} disabled")
-                        await serverwriterque.put(xmldata)
+                    if device.enable:
+                        device.disable()
+                        if clientconnected:
+                            xmldata = ET.Element('delProperty')
+                            xmldata.set("device", devicename)
+                            xmldata.set("timestamp", tstring)
+                            xmldata.set("message", f"Remote Connection lost, {devicename} disabled")
+                            await serverwriterque.put(xmldata)
 
 
     async def rxevent(self, event):
