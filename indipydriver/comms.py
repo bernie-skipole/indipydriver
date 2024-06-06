@@ -464,7 +464,7 @@ class SendChecker:
         # so we have a devicename, property name, is this xml a setBLOBVector
         if xmldata.tag == "setBLOBVector":
             if name in devicedict["Properties"]:
-                if devicedict["Properties"][name] == "Never:
+                if devicedict["Properties"][name] == "Never":
                     return False
                 else:
                     return True
