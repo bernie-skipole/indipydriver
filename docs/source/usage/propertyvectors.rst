@@ -14,6 +14,8 @@ https://indilib.org/develop/developer-manual/101-standard-properties.html
 
 Which provides a convention for property and member names.
 
+**vectortype** Is equal to self.__class__.__name__ such as "SwitchVector" etc.,
+
 **label** is a string which can be used by the client, if not given it will be set equal to the name.
 
 **group** is a further label used by the client, which can be used to group properties together. It can be left blank if not used.

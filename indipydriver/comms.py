@@ -423,13 +423,16 @@ class SendChecker:
 
     def __init__(self, devices, remotes=None):
         "For every device create a dictionary"
-        self.remotes = remotes
+        if remotes is None:
+            self.remotes = {}
+        else:
+            self.remotes = remotes
         self.devices = devices
         self.devicestatus = {}
         # create a dictionary of devicenames :
         for devicename in devices:
             self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
-                                                                             # dictionary of propertyname:status
+            # The Properties value is a dictionary of propertyname:status
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
@@ -517,20 +520,23 @@ class SendChecker:
 
         # So this applies to a property that is not in self.devicestatus
         # check property is known, and add it
-        propertyknown = False
+        propertyobject = None
         if devicename in self.devices:
             for propertyname in self.devices[devicename]:
                 if name == propertyname:
-                    propertyknown = True
+                    propertyobject = self.devices[devicename][name]
                     break
         elif devicename in self.remotes:
             for propertyname in self.remotes[devicename]:
                 if name == propertyname:
-                    propertyknown = True
+                    propertyobject = self.remotes[devicename][name]
                     break
 
-        if not propertyknown:
+        if propertyobject is None:
             # property not known about, reject this
+            return
+        # confirm propertyobject is a BLOBVector
+        if propertyobject.vectortype != "BLOBVector":
             return
 
         # add it to devicedict, and hence to self.devicestatus

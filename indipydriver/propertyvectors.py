@@ -41,6 +41,7 @@ class PropertyVector(collections.UserDict):
         self.group = group
         self.state = state
         self.timeout = "0"
+        self.vectortype = self.__class__.__name__
         # if self.enable is False, this property ignores incoming traffic
         # and (apart from delProperty) does not transmit anything
         self.enable = True
