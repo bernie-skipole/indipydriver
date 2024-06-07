@@ -182,6 +182,7 @@ class STDIN_RX:
             await asyncio.sleep(0)
             indata = sys.stdin.buffer.read(100)
             if indata is None:
+                await asyncio.sleep(0.02)
                 continue
             data = data + indata
             while b">" in data:
