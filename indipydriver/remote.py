@@ -29,7 +29,7 @@ class RemoteConnection(IPyClient):
         connectionpool = self.clientdata['connectionpool']
         isconnected = False
         while not self._stop:
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.1)
             if self.connected:
                 if isconnected:
                     continue
