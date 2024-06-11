@@ -318,7 +318,6 @@ class BLOBMember(PropertyMember):
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
         xmldata.set("format", self.blobformat)
-        xmldata.set("size", str(self.blobsize))
         # the value set in the xmldata object should be a bytes object
         if isinstance(self._membervalue, bytes):
             bytescontent = self._membervalue
