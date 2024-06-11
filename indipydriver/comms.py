@@ -5,8 +5,6 @@ import xml.etree.ElementTree as ET
 
 import fcntl
 
-from base64 import standard_b64encode
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -51,28 +49,23 @@ def _makestart(element):
     return "".join(attriblist)
 
 
-def blob_xml_bytes(xmldata):
+def blob_chunks(xmldata):
     """A generator yielding blob xml byte strings
        for a setBLOBVector.
-       reads member bytes, b64 encodes the data
-       and yields the byte string including tags."""
+       yields the byte string as chunks including tags."""
 
     # yield initial setBLOBVector
     setblobvector = _makestart(xmldata)
     yield setblobvector.encode()
     for oneblob in xmldata.iter('oneBLOB'):
         bytescontent = oneblob.text
-        size = oneblob.get("size")
-        if size == "0":
-            oneblob.set("size", str(len(bytescontent)))
         # yield start of oneblob
         start = _makestart(oneblob)
         yield start.encode()
-        # yield body, b64 encoded, in chunks
-        encoded_data = standard_b64encode(bytescontent)
+        # yield content in chunks
         chunksize = 1000
-        for b in range(0, len(encoded_data), chunksize):
-            yield encoded_data[b:b+chunksize]
+        for b in range(0, len(bytescontent), chunksize):
+            yield bytescontent[b:b+chunksize]
         yield b"</oneBLOB>"
     yield b"</setBLOBVector>\n"
 
@@ -89,8 +82,8 @@ class STDOUT_TX:
             writerque.task_done()
             if (txdata.tag == "setBLOBVector") and len(txdata):
                 # txdata is a setBLOBVector containing blobs
-                # the generator blob_xml_bytes yields bytes
-                for binarydata in blob_xml_bytes(txdata):
+                # the generator blob_chunks yields byte chunks
+                for binarydata in blob_chunks(txdata):
                     # transmit the data
                     sys.stdout.buffer.write(binarydata)
                     sys.stdout.buffer.flush()
@@ -235,21 +228,11 @@ class Port_TX():
                 # this data should not be transmitted, discard it
                 continue
             # this data can be transmitted
-            if txdata.tag == "setBLOBVector" and len(txdata):
-                # txdata is a setBLOBVector containing blobs
-                # the generator blob_xml_bytes yields bytes
-                for binarydata in blob_xml_bytes(txdata):
-                    # Send to the port
-                    self.timer.update()
-                    self.writer.write(binarydata)
-                    await self.writer.drain()
-            else:
-                # its straight xml, send it out on the port
-                binarydata = ET.tostring(txdata)
-                # Send to the port
-                self.timer.update()
-                self.writer.write(binarydata)
-                await self.writer.drain()
+            binarydata = ET.tostring(txdata)
+            # Send to the port
+            self.timer.update()
+            self.writer.write(binarydata)
+            await self.writer.drain()
 
 
 class Port_RX(STDIN_RX):

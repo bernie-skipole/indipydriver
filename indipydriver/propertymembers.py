@@ -3,6 +3,8 @@ import collections, io, asyncio, math, pathlib
 
 import xml.etree.ElementTree as ET
 
+from base64 import standard_b64encode
+
 
 class PropertyMember:
     "Parent class of SwitchMember etc"
@@ -319,10 +321,10 @@ class BLOBMember(PropertyMember):
         xmldata.set("size", str(self.blobsize))
         # the value set in the xmldata object should be a bytes object
         if isinstance(self._membervalue, bytes):
-            xmldata.text = self._membervalue
+            bytescontent = self._membervalue
         elif isinstance(self._membervalue, pathlib.Path):
             try:
-                xmldata.text = self._membervalue.read_bytes()
+                bytescontent = self._membervalue.read_bytes()
             except Exception:
                 raise ValueError(f"Unable to read BLOBMember {self.name}")
         elif hasattr(self._membervalue, "seek") and hasattr(self._membervalue, "read") and callable(self._membervalue.read):
@@ -335,7 +337,6 @@ class BLOBMember(PropertyMember):
                 raise ValueError(f"On being read, the BLOBMember {self.name} does not give bytes")
             if bytescontent == b"":
                 raise ValueError(f"The BLOBMember {self.name} value is empty")
-            xmldata.text = bytescontent
         else:
             # could be a path to a file
             try:
@@ -345,5 +346,8 @@ class BLOBMember(PropertyMember):
                 raise ValueError(f"The BLOBMember {self.name} value cannot be openned")
             if bytescontent == b"":
                 raise ValueError(f"The BLOBMember {self.name} value is empty")
-            xmldata.text = bytescontent
+        if not self.blobsize:
+            self.blobsize = len(bytescontent)
+        xmldata.set("size", str(self.blobsize))
+        xmldata.text = standard_b64encode(bytescontent).decode("utf-8")
         return xmldata
