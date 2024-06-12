@@ -15,6 +15,8 @@ from .comms import Port_RX, Port_TX, cleanque, SendChecker, TXTimer
 
 from .remote import RemoteConnection
 
+from .exdriver import ExDriver
+
 
 class IPyServer:
 
@@ -57,6 +59,10 @@ class IPyServer:
         # self.remotes is a list of RemoteConnection objects running connections to remote servers
         # this list is populated by calling self.add_remote(host, port, debug_enable)
         self.remotes = []
+
+        # self.exdrivers is a list of ExDriver objects running external drivers
+        # this list is populated by calling self.add_exdriver(program, *args, debug_enable=False)
+        self.exdrivers = []
 
         for driver in drivers:
             if not isinstance(driver, IPyDriver):
@@ -123,6 +129,13 @@ class IPyServer:
         self.remotes.append(remcon)
 
 
+    def add_exdriver(self, program, *args, debug_enable=False):
+        """Adds an external driver program, communicating via stdin and stdout."""
+        exd = ExDriver(program, *args)
+        # store this object
+        self.exdrivers.append(exd)
+
+
     async def _runserver(self):
         "Runs the server on the given host and port"
         logger.info(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
@@ -147,8 +160,10 @@ class IPyServer:
         """Runs the server together with its drivers and any remote connections."""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
+        externalruns = [ exd.asyncrun() for exd in self.exdrivers ]
         await asyncio.gather(*driverruns,
                              *remoteruns,
+                             *externalruns,
                              self._runserver(),
                              self._copyfromserver(),
                              self._sendtoclient()
