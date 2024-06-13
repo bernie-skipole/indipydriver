@@ -199,8 +199,9 @@ class ExDriver:
                 message = b''
                 messagetagnumber = None
 
+
     async def datainput(self):
-        """Generator producing binary string of data from exdriver proc
+        """Generator producing binary string of data from exdriver proc.stdout
            this yields blocks of data whenever a ">" character is received."""
         data = b""
         while True:
@@ -217,6 +218,19 @@ class ExDriver:
                 yield binarydata
 
 
+    async def run_err(self):
+        """gets binary string of data from exdriver proc.stderr
+           and logs it to logging.error."""
+        data = b""
+        while True:
+            await asyncio.sleep(0)
+            bindata = await self.proc.stderr.readline()
+            if not bindata:
+                await asyncio.sleep(0.02)
+                continue
+            logger.error(bindata.decode('utf-8'))
+
+
     async def asyncrun(self):
         "Runs the external driver"
 
@@ -228,4 +242,7 @@ class ExDriver:
 
         await asyncio.gather(self.comms(self.readerque, self.writerque),
                              self.run_rx(),
-                             self.run_tx())
+                             self.run_tx(),
+                             self.run_err())
+
+#
