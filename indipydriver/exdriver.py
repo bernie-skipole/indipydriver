@@ -34,8 +34,15 @@ _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
 _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
+class ExVector:
 
-class ExDriver():
+    def __init__(self, name, deftag):
+        "Object which only holds a name and vectortype"
+        self.name = name
+        self.vectortype = deftag[3:]
+
+
+class ExDriver:
 
     def __init__(self, program, *args):
 
@@ -50,7 +57,9 @@ class ExDriver():
         # An object for communicating can be set
         self.comms = None
 
-        self.devicenames = set()
+        # This dictionary will be populated with devicename:{vectorname:vector}
+        # where vector is an ExVector object
+        self.devicenames = {}
 
         self.snoopall = False           # gets set to True if it is snooping everything
         self.snoopdevices = set()       # gets set to a set of device names
@@ -87,8 +96,13 @@ class ExDriver():
             devicename = txdata.get("device")
             if devicename and txdata.tag in DEFTAGS:
                 # its a definition
-                if not devicename in self.devicenames:
-                    self.devicenames.add(devicename)
+                if not (devicename in self.devicenames):
+                    self.devicenames[devicename] = {}
+                vectorname = txdata.get("name")
+                if vectorname:
+                    if not vectorname in self.devicenames[devicename]:
+                        # add this vector to the self.devicenames[devicename] dictionary
+                        self.devicenames[devicename][vectorname] = ExVector(vectorname, txdata.tag)
             # check for a getProperties being sent, record what is being snooped
             if txdata.tag == "getProperties":
                 vectorname = txdata.get("name")

@@ -405,12 +405,16 @@ class SendChecker:
     """Carries the enableBLOB status on a device, and does checks
        to ensure valid data is being transmitted"""
 
-    def __init__(self, devices, remotes=None):
+    def __init__(self, devices, exdrivers=None, remotes=None):
         "For every device create a dictionary"
         if remotes is None:
-            self.remotes = {}
+            self.remotes = []
         else:
             self.remotes = remotes
+        if exdrivers is None:
+            self.exdrivers = []
+        else:
+            self.exdrivers = exdrivers
         self.devices = devices
         self.devicestatus = {}
         # create a dictionary of devicenames :
@@ -476,12 +480,27 @@ class SendChecker:
         if devicename is None:
             # invalid
             return
-        if not (devicename in self.devicestatus):
+        if devicename not in self.devicestatus:
             # devicename not recognised, add it
-            if (devicename not in self.devices) and (devicename not in self.remotes):
+            devicefound = False
+            if (devicename in self.devices):
+                devicefound = True
+            if not devicefound:
+                for exd in self.exdrivers:
+                    if devicename in exd:
+                        devicefound = True
+                        break
+            if not devicefound:
+                for remcon in self.remotes:
+                    if devicename in remcon:
+                        devicefound = True
+                        break
+            if devicefound:
+                self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+            else:
                 # unknown device
                 return
-            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+
 
         # get the status of Never, Also, Only
         status = rxdata.text.strip()
@@ -506,19 +525,36 @@ class SendChecker:
         # check property is known, and add it
         propertyobject = None
         if devicename in self.devices:
-            for propertyname in self.devices[devicename]:
-                if name == propertyname:
-                    propertyobject = self.devices[devicename][name]
-                    break
-        elif devicename in self.remotes:
-            for propertyname in self.remotes[devicename]:
-                if name == propertyname:
-                    propertyobject = self.remotes[devicename][name]
-                    break
+            if name in self.devices[devicename]:
+                propertyobject = self.devices[devicename][name]
+            else:
+                # devicename is in self.devices, but property not found
+                return
+
+        if propertyobject is None:
+            for exd in self.exdrivers:
+                if devicename in exd:
+                    if name in exd.devicenames[devicename]:
+                        propertyobject = exd.devicenames[devicename][name]
+                        break
+                    else:
+                        # devicename in exd, but name not in exd.devicenames[devicename]
+                        return
+
+        if propertyobject is None:
+            for remcon in self.remotes:
+                if devicename in remcon:
+                    if name in remcon[devicename]:
+                        propertyobject = remcon[devicename][name]
+                        break
+                    else:
+                        # devicename in remcon, but name not in remcon[devicename]
+                        return
 
         if propertyobject is None:
             # property not known about, reject this
             return
+
         # confirm propertyobject is a BLOBVector
         if propertyobject.vectortype != "BLOBVector":
             return

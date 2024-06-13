@@ -82,7 +82,7 @@ class IPyServer:
 
         self.connectionpool = []
         for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(self.devices, self.remotes, self.serverreaderque))
+            self.connectionpool.append(_ClientConnection(self.devices, self.exdrivers, self.remotes, self.serverreaderque))
 
         # This alldrivers list will have exdrivers added to it, so the list
         # here is initially a copy of drivers
@@ -469,7 +469,7 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, devices, remotes, serverreaderque):
+    def __init__(self, devices, exdrivers, remotes, serverreaderque):
         # self.txque will have data to be transmitted
         # inserted into it from the IPyServer._sendtoclient()
         # method
@@ -478,6 +478,7 @@ class _ClientConnection:
         # devices is a dictionary of device name to device
         self.devices = devices
         self.remotes = remotes
+        self.exdrivers = exdrivers
         self.serverreaderque = serverreaderque
         # self.connected is True if this pool object is running a connection
         self.connected = False
@@ -523,7 +524,7 @@ class _ClientConnection:
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
-        sendchecker = SendChecker(self.devices, self.remotes)
+        sendchecker = SendChecker(self.devices, self.exdrivers, self.remotes)
         addr = writer.get_extra_info('peername')
         rx = Port_RX(sendchecker, reader, self.rxtimer)
         tx = Port_TX(sendchecker, writer, self.txtimer)
