@@ -45,6 +45,7 @@ class ExVector:
 class ExDriver:
 
     def __init__(self, program, *args):
+        "Executes a third party indi driver, communicates by stdin stdout"
 
         # traffic is transmitted out from the driver on the writerque
         self.writerque = asyncio.Queue(4)

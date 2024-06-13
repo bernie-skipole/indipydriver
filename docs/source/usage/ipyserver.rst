@@ -5,7 +5,7 @@ This server class is used to run IPyDriver instances and create a listening port
 
 
 .. autoclass:: indipydriver.IPyServer
-   :members: asyncrun, add_remote
+   :members: asyncrun, add_remote, add_exdriver
 
 
 add_remote

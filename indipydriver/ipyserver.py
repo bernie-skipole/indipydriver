@@ -139,7 +139,7 @@ class IPyServer:
 
 
     def add_exdriver(self, program, *args, debug_enable=False):
-        """Adds an external driver program, communicating via stdin and stdout."""
+        """Adds an executable driver program, communicating via stdin and stdout."""
         exd = ExDriver(program, *args)
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
