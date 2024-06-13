@@ -20,6 +20,13 @@ TAGS = (b'message',
         b'getProperties'       # for snooping
        )
 
+DEFTAGS = ( 'defSwitchVector',
+            'defLightVector',
+            'defTextVector',
+            'defNumberVector',
+            'defBLOBVector'
+          )
+
 # _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
 _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
 
@@ -28,7 +35,7 @@ _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
 
-class ExDriver:
+class ExDriver():
 
     def __init__(self, program, *args):
 
@@ -40,11 +47,19 @@ class ExDriver:
         self.args = args
         self.proc = None
 
-        self.devicenames = []
+        # An object for communicating can be set
+        self.comms = None
+
+        self.devicenames = set()
 
         self.snoopall = False           # gets set to True if it is snooping everything
         self.snoopdevices = set()       # gets set to a set of device names
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+
+
+    def __contains__(self, item):
+        "So a devicename can easily be checked if it is in this driver"
+        return item in self.devicenames
 
 
     async def run_rx(self):
@@ -69,7 +84,21 @@ class ExDriver:
         source = self.datasource()
         async for txdata in source:
             # get block of xml.etree.ElementTree data
-            # from source and append it to  writerque
+            devicename = txdata.get("device")
+            if devicename and txdata.tag in DEFTAGS:
+                # its a definition
+                if not devicename in self.devicenames:
+                    self.devicenames.add(devicename)
+            # check for a getProperties being sent, record what is being snooped
+            if txdata.tag == "getProperties":
+                vectorname = txdata.get("name")
+                if devicename is None:
+                    self.snoopall = True
+                elif vectorname is None:
+                    self.snoopdevices.add(devicename)
+                else:
+                    self.snoopvectors.add((devicename,vectorname))
+            # append it to  writerque
             await self.writerque.put(txdata)
 
 
@@ -158,32 +187,6 @@ class ExDriver:
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.PIPE)
 
-        await asyncio.gather(self.run_rx(),
-                             self.run_tx()
-                             )
-
-
-
-async def sendrec(exd):
-    while True:
-        data = await exd.writerque.get()
-        exd.writerque.task_done()
-        print(ET.tostring(data))
-
-
-async def main(program):
-
-    exd = ExDriver(program)
-    await asyncio.gather( exd.asyncrun(),
-                          sendrec(exd)
-                         )
-
-
-
-
-
-if __name__ == "__main__":
-
-    asyncio.run(main(  "indi_simulator_telescope"    ))
-
-    #
+        await asyncio.gather(self.comms(self.readerque, self.writerque),
+                             self.run_rx(),
+                             self.run_tx())

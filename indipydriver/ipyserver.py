@@ -44,6 +44,10 @@ class IPyServer:
 
     def __init__(self, drivers, *, host="localhost", port=7624, maxconnections=5):
 
+        self.drivers = drivers
+        self.host = host
+        self.port = port
+
         # traffic is transmitted out on the serverwriterque
         self.serverwriterque = asyncio.Queue(6)
         # and read in from the serverreaderque
@@ -80,16 +84,21 @@ class IPyServer:
         for clientconnection in range(0, maxconnections):
             self.connectionpool.append(_ClientConnection(self.devices, self.remotes, self.serverreaderque))
 
+        # This alldrivers list will have exdrivers added to it, so the list
+        # here is initially a copy of drivers
+        self.alldrivers = drivers.copy()
+
         for driver in drivers:
             # an instance of _DriverComms is created for each driver
-            # each _DriverComms object has a list of drivers, not including its own driver
-            # these will be used to send snooping traffic, sent by its own driver
-            otherdrivers = [ d for d in drivers if not d is driver]
-            driver.comms = _DriverComms(self.serverwriterque, self.connectionpool, otherdrivers, self.remotes)
+            # each _DriverComms object has lists of drivers and remotes
+            # these will be used to send snooping traffic
 
-        self.drivers = drivers
-        self.host = host
-        self.port = port
+            driver.comms = _DriverComms(driver,
+                                        self.serverwriterque,
+                                        self.connectionpool,
+                                        self.alldrivers,
+                                        self.remotes)
+
 
 
     def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
@@ -132,8 +141,17 @@ class IPyServer:
     def add_exdriver(self, program, *args, debug_enable=False):
         """Adds an external driver program, communicating via stdin and stdout."""
         exd = ExDriver(program, *args)
+        # add this exdriver to alldrivers
+        self.alldrivers.append(exd)
+        # Create a DriverComms objecy
+        exd.comms = _DriverComms(exdriver,
+                                 self.serverwriterque,
+                                 self.connectionpool,
+                                 self.alldrivers,
+                                 self.remotes)
         # store this object
         self.exdrivers.append(exd)
+
 
 
     async def _runserver(self):
@@ -155,6 +173,7 @@ class IPyServer:
             # no clientconnection is available
             writer.close()
             await writer.wait_closed()
+
 
     async def asyncrun(self):
         """Runs the server together with its drivers and any remote connections."""
@@ -181,6 +200,7 @@ class IPyServer:
             propertyname = xmldata.get("name")
 
             remconfound = False
+            exdriverfound = False
 
             # check for a getProperties
             if xmldata.tag == "getProperties":
@@ -198,11 +218,24 @@ class IPyServer:
                             remcon.send(xmldata)
                             remconfound = True
                             break
+                    if not remconfound
+                        for exd in self.exdrivers:
+                            if devicename in exd.devicenames:
+                                # this getProperties request is meant for an external driver
+                                await exd.readerque.put(xmldata)
+                                exdriverfound = True
+                                break
 
             if remconfound:
                 # no need to transmit this anywhere else, continue the while loop
                 self.serverreaderque.task_done()
                 continue
+
+            if exdriverfound:
+                # no need to transmit this anywhere else, continue the while loop
+                self.serverreaderque.task_done()
+                continue
+
 
             # transmit xmldata out to remote connections
             if xmldata.tag != "enableBLOB":
@@ -235,6 +268,36 @@ class IPyServer:
                             remcon.send(xmldata)
 
             if remconfound:
+                # no need to transmit this anywhere else, continue the while loop
+                self.serverreaderque.task_done()
+                continue
+
+            # transmit xmldata out to exdrivers
+            if xmldata.tag != "enableBLOB":
+                # enableBLOB instructions are not forwarded to external drivers
+                for driver in self.exdrivers:
+                    if devicename and (devicename in driver):
+                        # data is intended for this driver
+                        # it is not snoopable, since it is data to a device, not from it.
+                        await driver.readerque.put(xmldata)
+                        exdriverfound = True
+                        break
+                    elif xmldata.tag == "getProperties":
+                        # either no devicename, or an unknown device
+                        await driver.readerque.put(xmldata)
+                    elif not xmldata.tag.startswith("new"):
+                        # either devicename is unknown, or this data is to/from another driver.
+                        # So check if this driver is snooping on this device/vector
+                        # only forward def's and set's, not 'new' vectors which
+                        # do not come from a device, but only from a client to the target device.
+                        if driver.snoopall:
+                            await driver.readerque.put(xmldata)
+                        elif devicename and (devicename in driver.snoopdevices):
+                            await driver.readerque.put(xmldata)
+                        elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
+                            await driver.readerque.put(xmldata)
+
+            if exdriverfound:
                 # no need to transmit this anywhere else, continue the while loop
                 self.serverreaderque.task_done()
                 continue
@@ -286,8 +349,10 @@ class _DriverComms:
        from the drivers writerque and transmitted to the client by placing it
        into the serverwriterque"""
 
-    def __init__(self, serverwriterque, connectionpool, otherdrivers, remotes):
+    def __init__(self, driver, serverwriterque, connectionpool, alldrivers,, remotes):
 
+        # This object is attached to this driver
+        self.driver = driver
         self.serverwriterque = serverwriterque
         # connectionpool is a list of ClientConnection objects, which is used
         # to test if a client is connected
@@ -296,9 +361,10 @@ class _DriverComms:
         # as the driver is connected to IPyServer, which handles snooping traffic,
         # even if no client is connected
         self.connected = True
-        # self.otherdrivers is set to a list of drivers, not including the driver
-        # this object is attached to.
-        self.otherdrivers = otherdrivers
+        # self.alldrivers is set to a list of drivers, including exdrivers
+        self.alldrivers = alldrivers
+        # self.exdrivers is a list of executable drivers
+        self.exdrivers = exdrivers
         # self.remotes is a list of connections to remote servers
         self.remotes = remotes
 
@@ -325,7 +391,10 @@ class _DriverComms:
                 foundflag = False
                 # if getproperties is targetted at a known device, send it to that device
                 if devicename:
-                    for driver in self.otherdrivers:
+                    for driver in self.alldrivers:
+                        if driver is self.driver:
+                            # No need to check sending a getProperties to itself
+                            continue
                         if devicename in driver:
                             # this getProperties request is meant for an attached driver/device
                             await driver.readerque.put(xmldata)
@@ -365,7 +434,9 @@ class _DriverComms:
                         remcon.send(xmldata)
 
             # transmit xmldata out to other drivers
-            for driver in self.otherdrivers:
+            for driver in self.alldrivers:
+                if driver is self.driver:
+                    continue
                 if xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
                     await driver.readerque.put(xmldata)
@@ -379,8 +450,8 @@ class _DriverComms:
                         await driver.readerque.put(xmldata)
 
 
-            # traffic from this driver writerque has been sent to other drivers/remotes if they want to snoop
-            # the traffic must also now be sent to the clients.
+            # traffic from this driver writerque has been sent to other drivers/remotes if they want to snoop.
+            # The traffic must also now be sent to the clients.
             # If no clients are connected, do not put this data into
             # the serverwriterque
             for clientconnection in self.connectionpool:
