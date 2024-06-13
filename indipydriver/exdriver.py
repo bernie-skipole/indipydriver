@@ -74,7 +74,7 @@ class ExDriver:
     async def run_rx(self):
         "Get data from readerque and write into the driver"
         # wait for external program to start
-        asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
         # send a getProperties into the driver
         xldata = ET.fromstring("""<getProperties version="1.7" />""")
         await self.readerque.put(xldata)

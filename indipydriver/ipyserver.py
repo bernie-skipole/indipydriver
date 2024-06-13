@@ -144,7 +144,7 @@ class IPyServer:
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
         # Create a DriverComms objecy
-        exd.comms = _DriverComms(exdriver,
+        exd.comms = _DriverComms(exd,
                                  self.serverwriterque,
                                  self.connectionpool,
                                  self.alldrivers,
@@ -218,7 +218,7 @@ class IPyServer:
                             remcon.send(xmldata)
                             remconfound = True
                             break
-                    if not remconfound
+                    if not remconfound:
                         for exd in self.exdrivers:
                             if devicename in exd.devicenames:
                                 # this getProperties request is meant for an external driver
@@ -349,7 +349,7 @@ class _DriverComms:
        from the drivers writerque and transmitted to the client by placing it
        into the serverwriterque"""
 
-    def __init__(self, driver, serverwriterque, connectionpool, alldrivers,, remotes):
+    def __init__(self, driver, serverwriterque, connectionpool, alldrivers, remotes):
 
         # This object is attached to this driver
         self.driver = driver
@@ -363,8 +363,6 @@ class _DriverComms:
         self.connected = True
         # self.alldrivers is set to a list of drivers, including exdrivers
         self.alldrivers = alldrivers
-        # self.exdrivers is a list of executable drivers
-        self.exdrivers = exdrivers
         # self.remotes is a list of connections to remote servers
         self.remotes = remotes
 
