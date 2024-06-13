@@ -89,7 +89,6 @@ class ExDriver:
             rxdata = await self.readerque.get()
             self.readerque.task_done()
             binarydata = ET.tostring(rxdata)
-            binarydata += b"\n"
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 if ((rxdata.tag == "setBLOBVector") or (rxdata.tag == "newBLOBVector")) and len(rxdata):
@@ -100,6 +99,7 @@ class ExDriver:
                     logger.debug(f"RX:: {binstring.decode('utf-8')}")
                 else:
                     logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+            binarydata += b"\n"
             self.proc.stdin.write(binarydata)
             await self.proc.stdin.drain()
 
@@ -137,7 +137,7 @@ class ExDriver:
                     binarydata = ET.tostring(data)
                     logger.debug(f"TX:: {binarydata.decode('utf-8')}")
                 else:
-                    binarydata = ET.tostring(xmldata)
+                    binarydata = ET.tostring(txdata)
                     logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
