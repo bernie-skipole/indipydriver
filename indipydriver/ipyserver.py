@@ -220,7 +220,7 @@ class IPyServer:
                             break
                     if not remconfound:
                         for exd in self.exdrivers:
-                            if devicename in exd.devicenames:
+                            if devicename in exd:
                                 # this getProperties request is meant for an external driver
                                 await exd.readerque.put(xmldata)
                                 exdriverfound = True
