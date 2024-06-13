@@ -118,8 +118,7 @@ class IPyServer:
         snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
         remcon = RemoteConnection(indihost=host, indiport=port,
-                                  devices = self.devices,
-                                  drivers = self.drivers,
+                                  alldrivers = self.alldrivers,
                                   remotes = self.remotes,
                                   serverwriterque = self.serverwriterque,
                                   connectionpool = self.connectionpool,
@@ -140,7 +139,7 @@ class IPyServer:
 
     def add_exdriver(self, program, *args, debug_enable=False):
         """Adds an executable driver program, communicating via stdin and stdout."""
-        exd = ExDriver(program, *args)
+        exd = ExDriver(program, *args, debug_enable=debug_enable)
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
         # Create a DriverComms objecy
@@ -492,6 +491,9 @@ class _ClientConnection:
         """If connected, send def vectors every timeout seconds
            This ensures that if the connection has failed, due to the client disconnecting, the write
            to the port operation will cause a failure exception which will close the connection"""
+        # this only operates if there are local ipydrivers connected
+        if not self.devices:
+            return
         while True:
             await asyncio.sleep(5)
             # this is tested every five seconds

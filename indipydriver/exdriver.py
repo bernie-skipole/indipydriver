@@ -3,6 +3,9 @@ import asyncio
 
 import xml.etree.ElementTree as ET
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 # All xml data sent from the driver should be contained in one of the following tags
 TAGS = (b'message',
@@ -44,7 +47,7 @@ class ExVector:
 
 class ExDriver:
 
-    def __init__(self, program, *args):
+    def __init__(self, program, *args, debug_enable=False):
         "Executes a third party indi driver, communicates by stdin stdout"
 
         # traffic is transmitted out from the driver on the writerque
@@ -53,6 +56,7 @@ class ExDriver:
         self.readerque = asyncio.Queue(4)
         self.program = program
         self.args = args
+        self.debug_enable = debug_enable
         self.proc = None
 
         # An object for communicating can be set
@@ -86,6 +90,16 @@ class ExDriver:
             self.readerque.task_done()
             binarydata = ET.tostring(rxdata)
             binarydata += b"\n"
+            # log the received data
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                if ((rxdata.tag == "setBLOBVector") or (rxdata.tag == "newBLOBVector")) and len(rxdata):
+                    data = copy.deepcopy(rxdata)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binstring = ET.tostring(data)
+                    logger.debug(f"RX:: {binstring.decode('utf-8')}")
+                else:
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
             self.proc.stdin.write(binarydata)
             await self.proc.stdin.drain()
 
@@ -115,6 +129,16 @@ class ExDriver:
                     self.snoopvectors.add((devicename,vectorname))
             # append it to  writerque
             await self.writerque.put(txdata)
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                if (txdata.tag == "setBLOBVector") and len(txdata):
+                    data = copy.deepcopy(txdata)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(data)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
     async def datasource(self):

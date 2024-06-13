@@ -109,11 +109,12 @@ class RemoteConnection(IPyClient):
 
             # if getproperties is targetted at a known device, send it to that device
             if devicename:
-                if devicename in self.clientdata["devices"]:
-                    # this getProperties request is meant for an attached device
-                    await self.clientdata["devices"][devicename].driver.readerque.put(rxdata)
-                    # no need to transmit this anywhere else
-                    return
+                for driver in self.clientdata["alldrivers"]:
+                    if devicename in driver:
+                        # this getProperties request is meant for an attached device
+                        await driver.readerque.put(rxdata)
+                        # no need to transmit this anywhere else
+                        return
                 for remcon in self.clientdata["remotes"]:
                     if remcon is self:
                         continue
@@ -143,7 +144,7 @@ class RemoteConnection(IPyClient):
                     remcon.send(rxdata)
 
         # transmit rxdata out to drivers
-        for driver in self.clientdata["drivers"]:
+        for driver in self.clientdata["alldrivers"]:
             if isinstance(event, getProperties):
                 # either no devicename, or an unknown device
                 await driver.readerque.put(rxdata)
