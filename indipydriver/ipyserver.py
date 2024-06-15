@@ -142,13 +142,14 @@ class IPyServer:
 
 
     def add_exdriver(self, program, *args, debug_enable=False):
-        """Adds an executable driver program, communicating via stdin and stdout.
+        """Adds an executable driver program, runs it and communicates to it via stdin, stdout
+           and stderr. Then serves the driver, and any others added, by the listening port.
            args is used for the program arguments if any.
            Any program output on stderr will be logged at level ERROR.
 
            If debug_enable is True, then DEBUG level logging will record xml
            traffic, if False, the xml traffic will not be logged. This can be
-           used to prevent multiple such connections all logging xml traffic together."""
+           used to prevent multiple drivers all logging xml traffic together."""
         exd = ExDriver(program, *args, debug_enable=debug_enable)
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
