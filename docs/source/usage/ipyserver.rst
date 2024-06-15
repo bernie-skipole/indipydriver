@@ -1,7 +1,7 @@
 IPyServer
 =========
 
-This server class is used to run IPyDriver instances and create a listening port service. It provides the snooping ability between drivers, enables connections to other remote INDI servers so a branching tree network of drivers can be made, it implements enableBLOB instructions received from the client, and allows up to ten client connections.
+This server class is used to run IPyDriver instances and can also run executable, possibly non-python, drivers written by other parties. It creates a listening INDI service. It provides the snooping ability between drivers, enables connections to other remote INDI servers so a branching tree network of drivers can be made, it implements enableBLOB instructions received from the client, and allows up to ten client connections.
 
 
 .. autoclass:: indipydriver.IPyServer
@@ -30,3 +30,28 @@ Another layout might be:
 .. image:: ./images/rem2.png
 
 In this case Driver E is 'Listening' on a port, rather than using IPyServer, this reduces the code involved in running the driver.
+
+add_exdriver
+^^^^^^^^^^^^
+
+The IPyServer class has method add_exdriver which given an executable command, will run the given driver program, and communicate with it via stdnin, stdout and stderr.
+
+This example shows two INDI drivers available from indilib.org and both being served.  No IPyDriver instances are passed into the IPyServer arguments here, hence the empty list, however if required IPyDriver and executable drivers could all be served together::
+
+    import asyncio
+
+    from indipydriver import IPyServer
+
+    server = IPyServer([], host="localhost",
+                           port=7624,
+                           maxconnections=5)
+
+    server.add_exdriver("indi_simulator_telescope")
+    server.add_exdriver("indi_simulator_ccd")
+    asyncio.run(server.asyncrun())
+
+For further information regarding indilib.org see :ref:`references`.
+
+Connecting using indipyclient gives:
+
+.. image:: ./images/exdrivers.png
