@@ -20,7 +20,7 @@ from .exdriver import ExDriver
 
 class IPyServer:
 
-    """Once an instance of his class is created, the asyncrun method
+    """Once an instance of this class is created, the asyncrun method
        should be awaited which will open a port, and the INDI service
        will be available for clients to connect.
 
@@ -39,6 +39,10 @@ class IPyServer:
        connections to different servers making a branching
        tree of servers and drivers.
 
+       The add_exdriver method can be called to run an executable driver and
+       this server will communicate to it by stdin, stdout and stderr, therefore
+       ipyserver can act as a general INDI server for third party drivers as
+       well as ipydriver instances.
        """
 
 
