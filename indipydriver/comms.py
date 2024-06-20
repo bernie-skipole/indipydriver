@@ -277,6 +277,7 @@ class Port_RX(STDIN_RX):
                 binarydata = b""
                 continue
             if not data:
+                await asyncio.sleep(0.01)
                 continue
             if b">" in data:
                 binarydata = binarydata + data
