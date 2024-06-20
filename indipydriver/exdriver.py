@@ -70,6 +70,11 @@ class ExDriver:
         self.snoopdevices = set()       # gets set to a set of device names
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
+        self._stop = False
+
+    def self.shutdown():
+        self._stop = True
+
 
     def __contains__(self, item):
         "So a devicename can easily be checked if it is in this driver"
@@ -83,11 +88,14 @@ class ExDriver:
         # send a getProperties into the driver
         xldata = ET.fromstring("""<getProperties version="1.7" />""")
         await self.readerque.put(xldata)
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # get block of data from readerque
             rxdata = await self.readerque.get()
             self.readerque.task_done()
+            if rxdata is None:
+                # A sentinal value, check self._stop
+                continue
             binarydata = ET.tostring(rxdata)
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
