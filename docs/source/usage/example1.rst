@@ -118,8 +118,8 @@ In this example a NumberVector and NumberMember contain the temperature which is
 
         # Create the Driver which will contain this Device, the coroutine needed
         # to run the instrument, and the instrument controlling object
-        driver = ThermoDriver( devices=[thermostat],
-                               tasks=[runthermo],
+        driver = ThermoDriver( [thermostat],
+                               runthermo,
                                thermalcontrol=thermalcontrol )
 
         # and return the driver

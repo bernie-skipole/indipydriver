@@ -118,7 +118,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
         # Make the WindowDriver containing this Device
         # and the window controlling object
-        windowdriver = WindowDriver( devices=[window],
+        windowdriver = WindowDriver( [window],
                                      windowcontrol=windowcontrol )
 
         # and return the driver

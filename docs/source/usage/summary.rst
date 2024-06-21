@@ -123,7 +123,7 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         led = ipd.Device( devicename="led", properties=[ledvector])
 
         # Create the Driver containing this device
-        driver = LEDDriver(devices=[led])
+        driver = LEDDriver([led])
 
         # and return the driver
         return driver

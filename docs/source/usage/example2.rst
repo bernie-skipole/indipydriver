@@ -135,8 +135,8 @@ a 'newNumberVector', which causes the rxevent method to be called::
 
         # Create the Driver, containing this Device and instrument
         # controlling objects
-        driver = ThermoDriver( devices=[thermostat],
-                               tasks=[runthermo],
+        driver = ThermoDriver( [thermostat],
+                               runthermo,
                                thermalcontrol=thermalcontrol )
 
         # and return the driver

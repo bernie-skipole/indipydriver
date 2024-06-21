@@ -113,7 +113,7 @@ def make_driver():
 
     # Make the WindowDriver containing this Device
     # and the window controlling object
-    windowdriver = WindowDriver( devices=[window],
+    windowdriver = WindowDriver( [window],
                                  windowcontrol=windowcontrol )
 
     # and return the driver
