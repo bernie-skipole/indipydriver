@@ -70,9 +70,10 @@ class ExDriver:
         self.snoopdevices = set()       # gets set to a set of device names
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
-        self._stop = False
+        self._remainder = b""    # Used to store intermediate data
+        self._stop = False       # Gets set to True to stop communications
 
-    def self.shutdown():
+    def shutdown(self):
         self._stop = True
 
 
@@ -81,7 +82,7 @@ class ExDriver:
         return item in self.devicenames
 
 
-    async def run_rx(self):
+    async def _run_rx(self):
         "Get data from readerque and write into the driver"
         # wait for external program to start
         await asyncio.sleep(0.1)
@@ -111,50 +112,74 @@ class ExDriver:
             self.proc.stdin.write(binarydata)
             await self.proc.stdin.drain()
 
-    async def run_tx(self):
+
+    async def _run_tx(self):
         "Get data from driver and pass into writerque towards the server"
-        source = self.datasource()
-        async for txdata in source:
+        try:
             # get block of xml.etree.ElementTree data
-            devicename = txdata.get("device")
-            if devicename and txdata.tag in DEFTAGS:
-                # its a definition
-                if not (devicename in self.devicenames):
-                    self.devicenames[devicename] = {}
-                vectorname = txdata.get("name")
-                if vectorname:
-                    if not vectorname in self.devicenames[devicename]:
-                        # add this vector to the self.devicenames[devicename] dictionary
-                        self.devicenames[devicename][vectorname] = ExVector(vectorname, txdata.tag)
-            # check for a getProperties being sent, record what is being snooped
-            if txdata.tag == "getProperties":
-                vectorname = txdata.get("name")
-                if devicename is None:
-                    self.snoopall = True
-                elif vectorname is None:
-                    self.snoopdevices.add(devicename)
-                else:
-                    self.snoopvectors.add((devicename,vectorname))
-            # append it to  writerque
-            await self.writerque.put(txdata)
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if (txdata.tag == "setBLOBVector") and len(txdata):
-                    data = copy.deepcopy(txdata)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(data)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(txdata)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+            # from self._xmlinput and append it to self.writerque
+            while not self._stop:
+                txdata = await self._xmlinput()
+                if txdata is None:
+                    return
+                # get block of xml.etree.ElementTree data
+                devicename = txdata.get("device")
+                if devicename and txdata.tag in DEFTAGS:
+                    # its a definition
+                    if not (devicename in self.devicenames):
+                        self.devicenames[devicename] = {}
+                    vectorname = txdata.get("name")
+                    if vectorname:
+                        if not vectorname in self.devicenames[devicename]:
+                            # add this vector to the self.devicenames[devicename] dictionary
+                            self.devicenames[devicename][vectorname] = ExVector(vectorname, txdata.tag)
+                # check for a getProperties being sent, record what is being snooped
+                if txdata.tag == "getProperties":
+                    vectorname = txdata.get("name")
+                    if devicename is None:
+                        self.snoopall = True
+                    elif vectorname is None:
+                        self.snoopdevices.add(devicename)
+                    else:
+                        self.snoopvectors.add((devicename,vectorname))
+                # append it to  writerque
+                while not self._stop:
+                    try:
+                        await asyncio.wait_for(self.writerque.put(txdata), timeout=0.02)
+                    except asyncio.TimeoutError:
+                        # queue is full, continue while loop, checking flags
+                        continue
+                    # txdata is now in writerque, break the inner while loop
+                    break
+                if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                    if (txdata.tag == "setBLOBVector") and len(txdata):
+                        data = copy.deepcopy(txdata)
+                        for element in data:
+                            element.text = "NOT LOGGED"
+                        binarydata = ET.tostring(data)
+                        logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                    else:
+                        binarydata = ET.tostring(txdata)
+                        logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+        except Exception:
+            logger.exception("Exception report from ExDriver._run_tx")
+            raise
 
 
-    async def datasource(self):
-        # get received data, parse it, and yield it as xml.etree.ElementTree object
-        data_in = self.datainput()
+
+    async def _xmlinput(self):
+        """get data from driver, parse it, and return it as xml.etree.ElementTree object
+           Returns None if stop flags arises"""
         message = b''
         messagetagnumber = None
-        async for data in data_in:
+        while not self._stop:
+            await asyncio.sleep(0)
+            data = await self._datainput()
+            # data is either None, or binary data ending in b">"
+            if data is None:
+                return
+            if self._stop:
+                return
             if not message:
                 # data is expected to start with <tag, first strip any newlines
                 data = data.strip()
@@ -180,14 +205,12 @@ class ExDriver:
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
                     except Exception as e:
+                        # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
                         continue
-                    # xml datablock done, yield it up
-                    yield root
-                    # and start again, waiting for a new message
-                    message = b''
-                    messagetagnumber = None
+                    # xml datablock done, return it
+                    return root
                 # and read either the next message, or the children of this tag
                 continue
             # To reach this point, the message is in progress, with a messagetagnumber set
@@ -198,39 +221,46 @@ class ExDriver:
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
                 except Exception as e:
+                    # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None
                     continue
-                # xml datablock done, yield it up
-                yield root
-                # and start again, waiting for a new message
-                message = b''
-                messagetagnumber = None
+                # xml datablock done, return it
+                return root
+            # so message is in progress, with a messagetagnumber set
+            # but no valid endtag received yet, so continue the loop
 
 
-    async def datainput(self):
-        """Generator producing binary string of data from exdriver proc.stdout
-           this yields blocks of data whenever a ">" character is received."""
-        data = b""
-        while True:
+    async def _datainput(self):
+        """Waits for binary string of data ending in > from the driver
+           Returns None if stop flags arises"""
+        remainder = self._remainder
+        if b">" in remainder:
+            # This returns with binary data ending in > as long
+            # as there are > characters in self._remainder
+            binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
+            binarydata += b">"
+            return binarydata
+        # As soon as there are no > characters left in self._remainder
+        # get more data from the driver
+        while not self._stop:
             await asyncio.sleep(0)
             indata = await self.proc.stdout.read(100)
-            if indata is None:
+            if not indata:
                 await asyncio.sleep(0.02)
                 continue
-            data = data + indata
-            while b">" in data:
-                await asyncio.sleep(0)
-                binarydata, data = data.split(b'>', maxsplit=1)
+            remainder += indata
+            if b">" in indata:
+                binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
                 binarydata += b">"
-                yield binarydata
+                return binarydata
 
 
-    async def run_err(self):
+    async def _run_err(self):
         """gets binary string of data from exdriver proc.stderr
            and logs it to logging.error."""
         data = b""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             bindata = await self.proc.stderr.readline()
             if not bindata:
@@ -249,8 +279,8 @@ class ExDriver:
                                                    stderr=asyncio.subprocess.PIPE)
 
         await asyncio.gather(self.comms(self.readerque, self.writerque),
-                             self.run_rx(),
-                             self.run_tx(),
-                             self.run_err())
+                             self._run_rx(),
+                             self._run_tx(),
+                             self._run_err())
 
 #
