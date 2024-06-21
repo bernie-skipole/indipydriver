@@ -97,24 +97,51 @@ class STDOUT_TX:
 
 
 class STDIN_RX:
-    """An object that receives data, parses it to ElementTree elements
+    """An object that receives data on stdin, parses it to ElementTree elements
        and passes it to the driver by appending it to the driver's readerque"""
+
+    def __init__(self):
+        self._remainder = b""    # Used to store intermediate data
+        self._stop = False       # Gets set to True to stop communications
+
+    def shutdown(self):
+        self._stop = True
 
     async def run_rx(self, readerque):
         "pass data to readerque"
-        source = self.datasource()
-        async for rxdata in source:
+        try:
             # get block of xml.etree.ElementTree data
-            # from source and append it to  readerque
-            await readerque.put(rxdata)
+            # from self._xmlinput and append it to readerque
+            while not self._stop:
+                rxdata = await self._xmlinput()
+                if rxdata is None:
+                    return
+                # append it to readerque
+                while not self._stop:
+                    try:
+                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.02)
+                    except asyncio.TimeoutError:
+                        # queue is full, continue while loop, checking stop flag
+                        continue
+                    # rxdata is now in readerque, break the inner while loop
+                    break
+        except Exception:
+            logger.exception("Exception report from STDIN_RX.run_rx")
+            raise
 
-
-    async def datasource(self):
-        # get received data, parse it, and yield it as xml.etree.ElementTree object
-        data_in = self.datainput()
+    async def _xmlinput(self):
+        """get data from  _datainput, parse it, and return it as xml.etree.ElementTree object
+           Returns None if stop flags arises"""
         message = b''
         messagetagnumber = None
-        async for data in data_in:
+        while not self._stop:
+            await asyncio.sleep(0)
+            data = await self._datainput()
+            # data is either None, or binary data ending in b">"
+            if data is None:
+                return
+            if self._stop:
+                return
             if not message:
                 # data is expected to start with <tag, first strip any newlines
                 data = data.strip()
@@ -140,14 +167,12 @@ class STDIN_RX:
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
                     except Exception as e:
+                        # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
                         continue
-                    # xml datablock done, yield it up
-                    yield root
-                    # and start again, waiting for a new message
-                    message = b''
-                    messagetagnumber = None
+                    # xml datablock done, return it
+                    return root
                 # and read either the next message, or the children of this tag
                 continue
             # To reach this point, the message is in progress, with a messagetagnumber set
@@ -158,31 +183,40 @@ class STDIN_RX:
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
                 except Exception as e:
+                    # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None
                     continue
-                # xml datablock done, yield it up
-                yield root
-                # and start again, waiting for a new message
-                message = b''
-                messagetagnumber = None
+                # xml datablock done, return it
+                return root
+            # so message is in progress, with a messagetagnumber set
+            # but no valid endtag received yet, so continue the loop
 
-    async def datainput(self):
-        """Generator producing binary string of data from stdin
-           this yields blocks of data whenever a ">" character is received."""
-        data = b""
-        while True:
+
+    async def _datainput(self):
+        """Waits for binary string of data ending in > from stdin
+           Returns None if stop flags arises"""
+        remainder = self._remainder
+        if b">" in remainder:
+            # This returns with binary data ending in > as long
+            # as there are > characters in self._remainder
+            binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
+            binarydata += b">"
+            return binarydata
+        # As soon as there are no > characters left in self._remainder
+        # get more data from stdin
+        while not self._stop:
             await asyncio.sleep(0)
             indata = sys.stdin.buffer.read(100)
-            if indata is None:
+            if not indata:
                 await asyncio.sleep(0.02)
                 continue
-            data = data + indata
-            while b">" in data:
-                await asyncio.sleep(0)
-                binarydata, data = data.split(b'>', maxsplit=1)
+            remainder += indata
+            if b">" in indata:
+                binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
                 binarydata += b">"
-                yield binarydata
+                return binarydata
+
 
 
 class STDINOUT():
@@ -241,6 +275,7 @@ class Port_RX(STDIN_RX):
        This overwrites methods of the STDIN_RX parent class."""
 
     def __init__(self, sendchecker, reader, timer):
+        super().__init__()
         self.sendchecker = sendchecker
         self.reader = reader
         # update timer every time something received
@@ -250,43 +285,55 @@ class Port_RX(STDIN_RX):
 
 
     async def run_rx(self, readerque):
-        "pass data to readerque"
-        source = self.datasource()
-        async for rxdata in source:
+        "pass xml.etree.ElementTree data to readerque"
+        try:
             # get block of xml.etree.ElementTree data
-            # from source and append it to  readerque
-            if rxdata.tag == "enableBLOB":
-                # set permission flags in the sendchecker object
-                self.sendchecker.setpermissions(rxdata)
-            # and place rxdata into readerque
-            await readerque.put(rxdata)
-            self.timer.update()
+            # from self._xmlinput and append it to  readerque
+            while not self._stop:
+                rxdata = await self._xmlinput()
+                if rxdata is None:
+                    return
+                if rxdata.tag == "enableBLOB":
+                    # set permission flags in the sendchecker object
+                    self.sendchecker.setpermissions(rxdata)
+                # and place rxdata into readerque
+                while not self._stop:
+                    try:
+                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.02)
+                    except asyncio.TimeoutError:
+                        # queue is full, continue while loop, checking stop flag
+                        continue
+                    # rxdata is now in readerque, break the inner while loop
+                    break
+                self.timer.update()
+        except Exception:
+            logger.exception("Exception report from Port_RX.run_rx")
+            raise
 
 
-
-    async def datainput(self):
-        "Generator producing binary string of data from the port"
+    async def _datainput(self):
+        """Waits for binary string of data ending in > from the port
+           Returns None if stop flags arises"""
         binarydata = b""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             try:
                 data = await self.reader.readuntil(separator=b'>')
             except asyncio.LimitOverrunError:
                 data = await self.reader.read(n=32000)
-            except Exception:
+            except asyncio.IncompleteReadError:
                 binarydata = b""
                 continue
             if not data:
                 await asyncio.sleep(0.01)
                 continue
+            # data received
             if b">" in data:
                 binarydata = binarydata + data
-                yield binarydata
-                binarydata = b""
-            else:
-                # data has content but no > found
-                binarydata += data
-                # could put a max value here to stop this increasing indefinetly
+                return binarydata
+            # data has content but no > found
+            binarydata += data
+            # could put a max value here to stop this increasing indefinetly
 
 
 class TXTimer():

@@ -166,7 +166,6 @@ class ExDriver:
             raise
 
 
-
     async def _xmlinput(self):
         """get data from driver, parse it, and return it as xml.etree.ElementTree object
            Returns None if stop flags arises"""
