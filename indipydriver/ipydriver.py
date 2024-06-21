@@ -82,8 +82,12 @@ class IPyDriver(collections.UserDict):
     def __init__(self, devices, *coros, **driverdata):
         super().__init__()
 
-        # this is a dictionary of device name to device this driver owns
-        self.devices = {d.devicename:d for d in devices}
+        # devices is either a Device, or a list of Device objects
+        if isinstance(devices, Device):
+            self.devices = {devices.devicename:devices}
+        else:
+            # this is a dictionary of device name to device this driver owns
+            self.devices = {d.devicename:d for d in devices}
 
         for device in self.devices.values():
             # set driver into devices
