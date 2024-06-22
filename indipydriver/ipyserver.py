@@ -48,7 +48,13 @@ class IPyServer:
 
     def __init__(self, drivers, *, host="localhost", port=7624, maxconnections=5):
 
-        self.drivers = drivers
+
+        if isinstance(drivers, IPyDriver):
+            # Its a single IPyDriver rather than a list
+            self.drivers = [drivers]
+        else:
+            self.drivers = drivers
+
         self.host = host
         self.port = port
 
@@ -72,7 +78,7 @@ class IPyServer:
         # this list is populated by calling self.add_exdriver(program, *args, debug_enable=False)
         self.exdrivers = []
 
-        for driver in drivers:
+        for driver in self.drivers:
             if not isinstance(driver, IPyDriver):
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
             if not driver.comms is None:
@@ -89,10 +95,10 @@ class IPyServer:
             self.connectionpool.append(_ClientConnection(self.devices, self.exdrivers, self.remotes, self.serverreaderque))
 
         # This alldrivers list will have exdrivers added to it, so the list
-        # here is initially a copy of drivers
-        self.alldrivers = drivers.copy()
+        # here is initially a copy of self.drivers
+        self.alldrivers = self.drivers.copy()
 
-        for driver in drivers:
+        for driver in self.drivers:
             # an instance of _DriverComms is created for each driver
             # each _DriverComms object has lists of drivers and remotes
             # these will be used to send snooping traffic

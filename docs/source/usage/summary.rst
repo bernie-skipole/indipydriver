@@ -8,17 +8,17 @@ Subclass IPyDriver
 
 The IPyDriver class has signature::
 
-    class IPyDriver(devices, tasks=[], **driverdata)
+    class IPyDriver(devices, *coros, **driverdata)
 
 Where 'devices' is a list of devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
 
-The argument 'tasks' is a list of co-routines that you may have created to operate your instruments (to poll instrument values perhaps), the co-routines set in this list will all be started when the driver is run. This example does not use this functionality so tasks remains an empty list.
+The positional arguments 'coros' are any optional co-routines that you may have created to operate your instruments (to poll instrument values perhaps), the co-routines set here will all be awaited when the driver is run. This example does not use this functionality so no co-routines are used.
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
 In this example the device object will contain a single switch vector, with a single switch member, to control the LED.
 
-The keyword argument 'driverdata' contains any data you wish to set into the class, in this example it is not used.
+The keyword arguments 'driverdata' contains any data you wish to set into the class, in this example it is not used.
 
 The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
 
@@ -148,7 +148,7 @@ The IPyServer class takes a list of drivers, only one in this example, and serve
 
 To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate by stdin and stdout. The method can be called multiple times to add several executable drivers.
 
-It also has an add_remote method which can be used to add a connection to a remote server, creating a tree network of servers.
+It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
 
 Connecting using the indipyclient terminal client gives:
 
