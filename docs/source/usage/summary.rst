@@ -146,7 +146,7 @@ If the host, port and maxconnections are not specified in the IPyServer call, th
 
 The IPyServer class takes a list of drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. The drivers in the argument list must all be created from IPyDriver subclasses.
 
-To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate by stdin and stdout. The method can be called multiple times to add several executable drivers.
+To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate to it by stdin and stdout. The method can be called multiple times to add several executable drivers.
 
 It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
 
