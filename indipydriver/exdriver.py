@@ -75,6 +75,8 @@ class ExDriver:
 
     def shutdown(self):
         self._stop = True
+        if not self.proc is None:
+            self.proc.terminate()
 
 
     def __contains__(self, item):

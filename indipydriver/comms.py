@@ -49,45 +49,51 @@ def _makestart(element):
     return "".join(attriblist)
 
 
-def blob_chunks(xmldata):
-    """A generator yielding blob xml byte strings
-       for a setBLOBVector.
-       yields the byte string as chunks including tags."""
-
-    # yield initial setBLOBVector
-    setblobvector = _makestart(xmldata)
-    yield setblobvector.encode()
-    for oneblob in xmldata.iter('oneBLOB'):
-        bytescontent = oneblob.text
-        # yield start of oneblob
-        start = _makestart(oneblob)
-        yield start.encode()
-        # yield content in chunks
-        chunksize = 1000
-        for b in range(0, len(bytescontent), chunksize):
-            yield bytescontent[b:b+chunksize]
-        yield b"</oneBLOB>"
-    yield b"</setBLOBVector>\n"
-
 
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
 
+    def __init__(self):
+        self._stop = False       # Gets set to True to stop communications
+
+    def shutdown(self):
+        self._stop = True
+
+
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on stdout"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
             writerque.task_done()
+            if not txdata:
+                await asyncio.sleep(0.02)
+                continue
             if (txdata.tag == "setBLOBVector") and len(txdata):
                 # txdata is a setBLOBVector containing blobs
-                # the generator blob_chunks yields byte chunks
-                for binarydata in blob_chunks(txdata):
-                    # transmit the data
-                    sys.stdout.buffer.write(binarydata)
+                # send initial setBLOBVector
+                startdata = _makestart(txdata)
+                sys.stdout.buffer.write(startdata.encode())
+                sys.stdout.buffer.flush()
+                for oneblob in txdata.iter('oneBLOB'):
+                    bytescontent = oneblob.text.encode()
+                    # send start of oneblob
+                    startoneblob = _makestart(oneblob)
+                    sys.stdout.buffer.write(startoneblob.encode())
                     sys.stdout.buffer.flush()
-                    await asyncio.sleep(0)
+                    # send content in chunks
+                    chunksize = 1000
+                    for b in range(0, len(bytescontent), chunksize):
+                        byteschunk = bytescontent[b:b+chunksize]
+                        sys.stdout.buffer.write(byteschunk)
+                        sys.stdout.buffer.flush()
+                        await asyncio.sleep(0)
+                    sys.stdout.buffer.write(b"</oneBLOB>")
+                    sys.stdout.buffer.flush()
+                # send enddata
+                sys.stdout.buffer.write(b"</setBLOBVector>\n")
+                sys.stdout.buffer.flush()
             else:
                 # its straight xml, send it out on stdout
                 binarydata = ET.tostring(txdata)
@@ -225,7 +231,12 @@ class STDINOUT():
 
     def __init__(self):
         self.connected = True
+        self.rx = STDIN_RX()
+        self.tx = STDOUT_TX()
 
+    def shutdown(self):
+        self.rx.shutdown()
+        self.tx.shutdown()
 
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
@@ -233,13 +244,10 @@ class STDINOUT():
         flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-        rx = STDIN_RX()
-        tx = STDOUT_TX()
+        logger.info("Communicating via STDIN/STDOUT")
 
-        logger.info("Listening on STDIN")
-
-        await asyncio.gather(rx.run_rx(readerque),
-                             tx.run_tx(writerque)
+        await asyncio.gather(self.rx.run_rx(readerque),
+                             self.tx.run_tx(writerque)
                              )
 
 class Port_TX():
@@ -249,15 +257,20 @@ class Port_TX():
         self.sendchecker = sendchecker
         self.writer = writer
         self.timer = timer
+        self._stop = False       # Gets set to True to stop communications
 
+    def shutdown(self):
+        self._stop = True
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit
             txdata = await writerque.get()
             writerque.task_done()
+            if not txdata:
+                continue
             if not self.sendchecker.allowed(txdata):
                 # this data should not be transmitted, discard it
                 continue
@@ -373,6 +386,18 @@ class Portcomms():
         self.txtimer = TXTimer()
         self.rxtimer = TXTimer()
 
+        self.rx = None
+        self.tx = None
+        self._stop = False       # Gets set to True to stop communications
+
+    def shutdown(self):
+        self._stop = True
+        if not self.rx is None:
+            self.rx.shutdown()
+        if not self.tx is None:
+            self.tx.shutdown()
+
+
     async def __call__(self, readerque, writerque):
         "Called from indipydriver.asyncrun() to run the communications"
         self.readerque = readerque
@@ -386,8 +411,11 @@ class Portcomms():
         """If connected and not transmitting, send def vectors every self.timeout seconds
            This ensures that if the connection has failed, due to the client disconnecting, the write
            to the port operation will cause a failure exception which will close the connection"""
-        while True:
-            await asyncio.sleep(5)
+        while not self._stop:
+            for i in range(50):
+                await asyncio.sleep(0.1)
+                if self._stop:
+                    return
             # this is tested every five seconds
             if self.connected and self.txtimer.elapsed() and self.rxtimer.elapsed():
                 # Nothing recently transmitted or received so send defVectors
@@ -409,12 +437,12 @@ class Portcomms():
             return
         self.connected = True
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(self.sendchecker, reader, self.rxtimer)
-        tx = Port_TX(self.sendchecker, writer, self.txtimer)
+        self.rx = Port_RX(self.sendchecker, reader, self.rxtimer)
+        self.tx = Port_TX(self.sendchecker, writer, self.txtimer)
         logger.info(f"Connection received from {addr}")
         try:
-            txtask = asyncio.create_task(tx.run_tx(self.writerque))
-            rxtask = asyncio.create_task(rx.run_rx(self.readerque))
+            txtask = asyncio.create_task(self.tx.run_tx(self.writerque))
+            rxtask = asyncio.create_task(self.rx.run_rx(self.readerque))
             montask = asyncio.create_task(self._monitor_connection())
             await asyncio.gather(txtask, rxtask, montask)
         except Exception as e:
