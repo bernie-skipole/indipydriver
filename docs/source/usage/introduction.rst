@@ -50,6 +50,8 @@ Having created an instance of your IPyDriver subclass, you would serve this, and
 
 A connected client can then control all the drivers.
 
+The IPyServer can also run third party INDI drivers created with other languages or tools, using an add_exdriver method. It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
+
 
 Issues
 ^^^^^^
