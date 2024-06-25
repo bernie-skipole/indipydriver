@@ -5,6 +5,10 @@ Example1
 
 The following example shows a simulated thermostat and heater which maintains a temperature around 15C.
 
+This, and other, example files can be found at:
+
+https://github.com/bernie-skipole/inditest
+
 In this example a NumberVector and NumberMember contain the temperature which is reported to the client::
 
 
