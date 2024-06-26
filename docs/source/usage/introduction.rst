@@ -27,6 +27,20 @@ The package can be installed from:
 
 https://pypi.org/project/indipydriver
 
+Usually you would install into a virtual environment, if using a Raspberry Pi you may want your environment to be able to access the system gpiozero module, so it is suggested you create a virtual environment something like::
+
+    python3 -m venv --system-site-packages ~/myenv
+
+and then::
+
+    source ~/myenv/bin/activate
+
+Followed by::
+
+    pip install indipydriver
+
+You can then change to a directory of your choice where you will be developing your script.
+
 Typically you would create a subclass of IPyDriver.
 
 The driver has methods which should be overwritten.
@@ -48,12 +62,6 @@ Having created an instance of your IPyDriver subclass, you would serve this, and
     server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
     asyncio.run(server.asyncrun())
 
-A connected client can then control all the drivers.
+A connected client, such as indipyclient, can then control all the drivers.
 
 The IPyServer can also run third party INDI drivers created with other languages or tools, using an add_exdriver method. It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
-
-
-Issues
-^^^^^^
-
-The driver also has a method of comunicating Using stdin/stdout which has required some linux/unix specific commands, and which will probably not work on Windows. However using IPyServer should work on Windows, but is untested.

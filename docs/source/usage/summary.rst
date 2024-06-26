@@ -81,7 +81,7 @@ The client is setting the member's value, 'On' or 'Off' which is obtained from e
 
     ledvalue = event["ledmember"]
 
-Gets the value from the event, and sets the LED.
+Gets the value from the event, and is then used to set the LED.
 
 You should then set the vector's member "ledmember" to the new value, and await the vector's send_setVector() method, which sends it to the client, confirming that the led has changed state.
 
