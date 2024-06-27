@@ -17,7 +17,7 @@ https://github.com/bernie-skipole/indipyclient
 
 https://indipyclient.readthedocs.io
 
-Examples of drivers are collected at:
+Examples of clients and drivers are collected at:
 
 https://github.com/bernie-skipole/inditest
 

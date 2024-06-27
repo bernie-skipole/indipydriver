@@ -1,5 +1,5 @@
 
-import asyncio, sys, os, time, copy
+import asyncio, sys, os, time
 
 import xml.etree.ElementTree as ET
 

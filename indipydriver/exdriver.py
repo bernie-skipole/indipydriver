@@ -1,5 +1,5 @@
 
-import asyncio
+import asyncio, copy
 
 import xml.etree.ElementTree as ET
 

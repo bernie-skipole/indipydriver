@@ -1,6 +1,6 @@
 
 
-import collections, asyncio, sys
+import collections, asyncio, sys, copy
 
 from datetime import datetime, timezone
 
