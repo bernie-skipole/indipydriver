@@ -67,7 +67,7 @@ class STDOUT_TX:
             # get block of data from writerque and transmit down stdout
             txdata = await writerque.get()
             writerque.task_done()
-            if not txdata:
+            if txdata is None:
                 await asyncio.sleep(0.02)
                 continue
             if (txdata.tag == "setBLOBVector") and len(txdata):
@@ -269,7 +269,7 @@ class Port_TX():
             # get block of data from writerque and transmit
             txdata = await writerque.get()
             writerque.task_done()
-            if not txdata:
+            if txdata is None:
                 continue
             if not self.sendchecker.allowed(txdata):
                 # this data should not be transmitted, discard it
