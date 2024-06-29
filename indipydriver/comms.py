@@ -319,7 +319,12 @@ class Port_RX(STDIN_RX):
                     # rxdata is now in readerque, break the inner while loop
                     break
                 self.timer.update()
+        except ConnectionError:
+            # re-raise this without creating a report, as it probably indicates
+            # a normal connection drop
+            raise
         except Exception:
+            # possibly some other error, so report it
             logger.exception("Exception report from Port_RX.run_rx")
             raise
 
