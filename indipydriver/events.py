@@ -566,7 +566,7 @@ class setBLOBVector(setVector):
                     raise EventException("No member format given in snooped setBLOBVector")
                 try:
                     self.data[membername] = standard_b64decode(member.text.encode('ascii'))
-                    memberize = int(member.get("size"))
+                    membersize = int(member.get("size"))
                 except Exception:
                     raise EventException("Unable to decode snooped setBLOBVector")
                 self.sizeformat[membername] = (membersize, memberformat)
