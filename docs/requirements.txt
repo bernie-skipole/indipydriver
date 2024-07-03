@@ -1,1 +1,1 @@
-indipyclient>=0.2.6
+indipyclient>=0.2.8
