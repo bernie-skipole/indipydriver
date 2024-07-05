@@ -296,7 +296,6 @@ class Port_RX(STDIN_RX):
         # this can be read to see if it has elapsed
         self.timer = timer
 
-
     async def run_rx(self, readerque):
         "pass xml.etree.ElementTree data to readerque"
         try:
@@ -409,7 +408,8 @@ class Portcomms():
         self.writerque = writerque
         logger.info(f"Listening on {self.host} : {self.port}")
         server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        await server.serve_forever()
+        async with server:
+            await server.serve_forever()
 
 
     async def _monitor_connection(self):

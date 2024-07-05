@@ -128,10 +128,25 @@ class IPyDriver(collections.UserDict):
         # If True, xmldata will be logged at DEBUG level
         self.debug_enable = True
 
+        # shutdown routine sets this to True to stop coroutines
+        self._stop = False
+
+    def shutdown(self):
+        "Shuts down the client, sets the flag self._stop to True"
+        self._stop = True
+        if not self.comms is None:
+            self.comms.shutdown()
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the client"
+        return self._stop
+
 
     def listen(self, host="localhost", port=7624):
-        """If called, listens on the given host and port. Only one connection is accepted,
-           further connection attempts while a client is already connected will be refused.
+        """If called, sets up listening on the given host and port.
+           Only one connection will accepted, further connection attempts
+           while a client is already connected will be refused.
            This method also checks for enableBLOB instructions, and implements them.
            In general, using IPyServer is preferred."""
         if not self.comms is None:
@@ -163,7 +178,7 @@ class IPyDriver(collections.UserDict):
         snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
                       'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
                       'defBLOBVector', 'setBLOBVector')
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # reads readerque, and sends xml data to the device via its dataque
             root = await self.readerque.get()
@@ -213,7 +228,7 @@ class IPyDriver(collections.UserDict):
 
     async def _snoophandler(self):
         """Creates events using data from self.snoopque"""
-        while True:
+        while not self._stop:
             # get block of data from the self.snoopque
             await asyncio.sleep(0)
             root = await self.snoopque.get()
