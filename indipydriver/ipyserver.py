@@ -126,6 +126,8 @@ class IPyServer:
             remcon.shutdown()
         for exd in self.exdrivers:
             exd.shutdown()
+        for clientconnection in self.connectionpool:
+            clientconnection.shutdown()
         if not self.server is None:
             self.server.cancel()
 
@@ -533,6 +535,9 @@ class _ClientConnection:
         self.txtimer = TXTimer(timeout = 15)
         self.rxtimer = TXTimer(timeout = 15)
 
+        self.rx = None
+        self.tx = None
+
         self._stop = False       # Gets set to True to stop communications
 
     @property
@@ -544,6 +549,10 @@ class _ClientConnection:
         "Sets self.stop to True and calls shutdown on tasks"
         self._stop = True
         self.connected = False
+        if not self.rx is None:
+            self.rx.shutdown()
+        if not self.tx is None:
+            self.tx.shutdown()
 
     async def _monitor_connection(self):
         """If connected, send def vectors every timeout seconds
@@ -584,12 +593,12 @@ class _ClientConnection:
         self.connected = True
         sendchecker = SendChecker(self.devices, self.exdrivers, self.remotes)
         addr = writer.get_extra_info('peername')
-        rx = Port_RX(sendchecker, reader, self.rxtimer)
-        tx = Port_TX(sendchecker, writer, self.txtimer)
+        self.rx = Port_RX(sendchecker, reader, self.rxtimer)
+        self.tx = Port_TX(sendchecker, writer, self.txtimer)
         logger.info(f"Connection received from {addr}")
         try:
-            txtask = asyncio.create_task(tx.run_tx(self.txque))
-            rxtask = asyncio.create_task(rx.run_rx(self.serverreaderque))
+            txtask = asyncio.create_task(self.tx.run_tx(self.txque))
+            rxtask = asyncio.create_task(self.rx.run_rx(self.serverreaderque))
             montask = asyncio.create_task(self._monitor_connection())
             await asyncio.gather(txtask, rxtask, montask)
         except ConnectionError:

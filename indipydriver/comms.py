@@ -284,6 +284,8 @@ class Port_TX():
 
     def shutdown(self):
         self._stop = True
+        self.writer.close()
+        await self.writer.wait_closed()
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
