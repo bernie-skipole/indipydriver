@@ -59,6 +59,11 @@ class STDOUT_TX:
     def shutdown(self):
         self._stop = True
 
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
+
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on stdout"""
@@ -112,6 +117,11 @@ class STDIN_RX:
 
     def shutdown(self):
         self._stop = True
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
 
     async def run_rx(self, readerque):
         "pass data to readerque"
@@ -233,8 +243,16 @@ class STDINOUT():
         self.connected = True
         self.rx = STDIN_RX()
         self.tx = STDOUT_TX()
+        self._stop = False       # Gets set to True to stop communications
+
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
 
     def shutdown(self):
+        self._stop = True
         self.rx.shutdown()
         self.tx.shutdown()
 
@@ -258,6 +276,11 @@ class Port_TX():
         self.writer = writer
         self.timer = timer
         self._stop = False       # Gets set to True to stop communications
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
 
     def shutdown(self):
         self._stop = True
@@ -392,14 +415,23 @@ class Portcomms():
 
         self.rx = None
         self.tx = None
+        self.server = None
         self._stop = False       # Gets set to True to stop communications
 
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
+
     def shutdown(self):
+        "Sets self.stop to True and calls shutdown on tasks"
         self._stop = True
         if not self.rx is None:
             self.rx.shutdown()
         if not self.tx is None:
             self.tx.shutdown()
+        if not self.server is None:
+            self.server.cancel()
 
 
     async def __call__(self, readerque, writerque):
@@ -407,9 +439,9 @@ class Portcomms():
         self.readerque = readerque
         self.writerque = writerque
         logger.info(f"Listening on {self.host} : {self.port}")
-        server = await asyncio.start_server(self.handle_data, self.host, self.port)
+        self.server = await asyncio.start_server(self.handle_data, self.host, self.port)
         async with server:
-            await server.serve_forever()
+            await self.server.serve_forever()
 
 
     async def _monitor_connection(self):

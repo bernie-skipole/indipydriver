@@ -108,7 +108,26 @@ class IPyServer:
                                         self.connectionpool,
                                         self.alldrivers,
                                         self.remotes)
+        # shutdown routine sets this to True to stop coroutines
+        self._stop = False
+        self.server = None
 
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the server"
+        return self._stop
+
+    def shutdown(self):
+        "Shuts down the server, sets the flag self._stop to True"
+        self._stop = True
+        for driver in self.drivers:
+            driver.shutdown()
+        for remcon in self.remotes:
+            remcon.shutdown()
+        for exd in self.exdrivers:
+            exd.shutdown()
+        if not self.server is None:
+            self.server.cancel()
 
 
     def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
@@ -159,7 +178,7 @@ class IPyServer:
         exd = ExDriver(program, *args, debug_enable=debug_enable)
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
-        # Create a DriverComms objecy
+        # Create a DriverComms object
         exd.comms = _DriverComms(exd,
                                  self.serverwriterque,
                                  self.connectionpool,
@@ -173,9 +192,9 @@ class IPyServer:
     async def _runserver(self):
         "Runs the server on the given host and port"
         logger.info(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
-        server = await asyncio.start_server(self.handle_data, self.host, self.port)
+        self.server = await asyncio.start_server(self.handle_data, self.host, self.port)
         async with server:
-            await server.serve_forever()
+            await self.server.serve_forever()
 
 
     async def handle_data(self, reader, writer):
@@ -210,7 +229,7 @@ class IPyServer:
         """Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, to its send method"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             xmldata = await self.serverreaderque.get()
             devicename = xmldata.get("device")
@@ -348,7 +367,7 @@ class IPyServer:
 
     async def _sendtoclient(self):
         "For every clientconnection, get txque and copy data into it from serverwriterque"
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             xmldata = await self.serverwriterque.get()
             for clientconnection in self.connectionpool:
@@ -382,12 +401,22 @@ class _DriverComms:
         self.alldrivers = alldrivers
         # self.remotes is a list of connections to remote servers
         self.remotes = remotes
+        self._stop = False       # Gets set to True to stop communications
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
+
+    def shutdown(self):
+        "Sets self.stop to True and calls shutdown on tasks"
+        self._stop = True
 
 
     async def __call__(self, readerque, writerque):
         """Called by the driver, should run continuously.
            reads writerque from the driver, and sends xml data to the network"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             xmldata = await writerque.get()
             # Check if other drivers/remotes wants to snoop this traffic
@@ -504,6 +533,17 @@ class _ClientConnection:
         self.txtimer = TXTimer(timeout = 15)
         self.rxtimer = TXTimer(timeout = 15)
 
+        self._stop = False       # Gets set to True to stop communications
+
+    @property
+    def stop(self):
+        "returns self._stop"
+        return self._stop
+
+    def shutdown(self):
+        "Sets self.stop to True and calls shutdown on tasks"
+        self._stop = True
+        self.connected = False
 
     async def _monitor_connection(self):
         """If connected, send def vectors every timeout seconds
@@ -512,7 +552,7 @@ class _ClientConnection:
         # this only operates if there are local ipydrivers connected
         if not self.devices:
             return
-        while True:
+        while not self._stop:
             await asyncio.sleep(5)
             # this is tested every five seconds
             # If a remcon is connected, leave the send def vectors to the remcon

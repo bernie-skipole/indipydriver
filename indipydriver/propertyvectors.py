@@ -55,6 +55,17 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
+       # shutdown routine sets this to True to stop coroutines
+        self._stop = False
+
+    def shutdown(self):
+        """Sets the flag self._stop to True which shuts down the handler"""
+        self._stop = True
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
 
     @property
     def device(self):
@@ -192,7 +203,7 @@ class SwitchVector(PropertyVector):
 
     async def _handler(self):
         """Check received data and take action"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             try:
                 root = await self.dataque.get()
@@ -379,7 +390,7 @@ class LightVector(PropertyVector):
 
     async def _handler(self):
         """Check received data and take action"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # test if any xml data has been received
             try:
@@ -541,7 +552,7 @@ class TextVector(PropertyVector):
 
     async def _handler(self):
         """Check received data and take action"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             try:
                 root = await self.dataque.get()
@@ -715,7 +726,7 @@ class NumberVector(PropertyVector):
 
     async def _handler(self):
         """Check received data and take action"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             try:
                 root = await self.dataque.get()
@@ -904,7 +915,7 @@ class BLOBVector(PropertyVector):
 
     async def _handler(self):
         """Check received data and take action"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             try:
                 root = await self.dataque.get()

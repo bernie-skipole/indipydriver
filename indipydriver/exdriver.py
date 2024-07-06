@@ -77,6 +77,8 @@ class ExDriver:
         self._stop = True
         if not self.proc is None:
             self.proc.terminate()
+        if not self.comms is None:
+            self.comms.shutdown()
 
 
     def __contains__(self, item):

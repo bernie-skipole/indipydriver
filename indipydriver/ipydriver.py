@@ -132,14 +132,16 @@ class IPyDriver(collections.UserDict):
         self._stop = False
 
     def shutdown(self):
-        "Shuts down the client, sets the flag self._stop to True"
+        "Shuts down the driver, sets the flag self._stop to True"
         self._stop = True
         if not self.comms is None:
             self.comms.shutdown()
+        for device in self.devices.values():
+            device.shutdown()
 
     @property
     def stop(self):
-        "returns self._stop, being the instruction to stop the client"
+        "returns self._stop, being the instruction to stop the driver"
         return self._stop
 
 
@@ -428,6 +430,21 @@ class Device(collections.UserDict):
         # self.data is used by UserDict, it is an alias of self.propertyvectors
         # simply because 'propertyvectors' is more descriptive
 
+       # shutdown routine sets this to True to stop coroutines
+        self._stop = False
+
+    def shutdown(self):
+        """Shuts down the device, sets the flag self._stop to True
+           and shuts down property vector handlers"""
+        self._stop = True
+        for pv in self.propertyvectors.values():
+            pv.shutdown()
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop the driver"
+        return self._stop
+
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
@@ -496,7 +513,7 @@ class Device(collections.UserDict):
 
     async def _handler(self):
         """Handles data read from dataque"""
-        while True:
+        while not self._stop:
             await asyncio.sleep(0)
             # get block of data from the self.dataque
             root = await self.dataque.get()
