@@ -195,7 +195,7 @@ class IPyServer:
         "Runs the server on the given host and port"
         logger.info(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
         self.server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        async with server:
+        async with self.server:
             await self.server.serve_forever()
 
 

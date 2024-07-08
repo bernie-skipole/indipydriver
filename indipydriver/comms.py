@@ -284,8 +284,6 @@ class Port_TX():
 
     def shutdown(self):
         self._stop = True
-        self.writer.close()
-        await self.writer.wait_closed()
 
     async def run_tx(self, writerque):
         """Gets data from writerque, and transmits it out on the port writer"""
@@ -305,6 +303,8 @@ class Port_TX():
             self.timer.update()
             self.writer.write(binarydata)
             await self.writer.drain()
+        self.writer.close()
+        await self.writer.wait_closed()
 
 
 class Port_RX(STDIN_RX):
@@ -442,7 +442,7 @@ class Portcomms():
         self.writerque = writerque
         logger.info(f"Listening on {self.host} : {self.port}")
         self.server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        async with server:
+        async with self.server:
             await self.server.serve_forever()
 
 
