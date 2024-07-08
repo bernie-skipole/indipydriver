@@ -433,7 +433,7 @@ class Portcomms():
         if not self.tx is None:
             self.tx.shutdown()
         if not self.server is None:
-            self.server.cancel()
+            self.server.close()
 
 
     async def __call__(self, readerque, writerque):

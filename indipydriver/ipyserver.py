@@ -129,7 +129,7 @@ class IPyServer:
         for clientconnection in self.connectionpool:
             clientconnection.shutdown()
         if not self.server is None:
-            self.server.cancel()
+            self.server.close()
 
 
     def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
