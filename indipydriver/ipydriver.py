@@ -132,7 +132,7 @@ class IPyDriver(collections.UserDict):
         self._stop = False
 
     def shutdown(self):
-        "Shuts down the driver, sets the flag self._stop to True"
+        "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
         if not self.comms is None:
             self.comms.shutdown()
