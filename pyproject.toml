@@ -7,7 +7,7 @@ name = "indipydriver"
 authors = [{name = "Bernard Czenkusz", email = "bernie@skipole.co.uk"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License", "Operating System :: POSIX :: Linux","Topic :: Scientific/Engineering :: Astronomy", "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator"]
-version = "1.5.5"
+version = "1.5.6"
 description="Pure python package providing a set of classes which can be used to create and serve INDI drivers."
 readme = "README.md"
 requires-python = ">=3.10"
