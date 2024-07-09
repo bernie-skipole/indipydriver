@@ -12,7 +12,7 @@ description="Pure python package providing a set of classes which can be used to
 readme = "README.md"
 requires-python = ">=3.10"
 keywords=['indi', 'driver', 'astronomy', 'instrument']
-dependencies = ["indipyclient>=0.2.8"]
+dependencies = ["indipyclient>=0.2.9"]
 
 [project.urls]
 Documentation = "https://indipydriver.readthedocs.io"
