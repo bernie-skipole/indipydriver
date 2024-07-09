@@ -56,7 +56,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
             windowcontrol = self.driverdata["windowcontrol"]
             statusvector = self['Window']['windowstatus']
-            while True:
+            while not self.stop:
                 # every ten seconds send an update on window position
                 await asyncio.sleep(10)
                 now_time = time.time()
