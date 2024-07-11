@@ -42,4 +42,4 @@ And a further method which also listens on a host and port, but with a single co
         driver.listen(host="localhost", port=7624)
         asyncio.run(driver.asyncrun())
 
-Typically you would use indipyclient to connect to this port, however note that if indipyclient is running remotely, and you are connecting over a network, then in the above commands "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.
+In both of the above cases you would use indipyclient, or other INDI client, to connect to this port, however note that if your client is running remotely, and you are connecting over a network, then in the above commands "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.
