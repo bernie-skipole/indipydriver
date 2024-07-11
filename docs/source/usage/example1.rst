@@ -149,11 +149,20 @@ You would typically create your own child class of IPyDriver, overriding methods
 
 To handle incoming calls from the client.
 
+Note, in the above example the rxevent only handles the received getProperties event,
+which the default rxevent of IPyDriver also does. Therefore in this case it was not necessary
+to override this.  It is only done above to illustrate the method.
+
 **async def hardware(self)**
 
 To run a continuous long running loop, typically sending data to the client. Like
 all async tasks, this should be non blocking, so typically should include a call
 to await asyncio.sleep() in its loop.
+
+Testing self.stop is also useful, as this stop flag is set to True when shutdown() is
+called on the driver, and therefore the hardware loop should exit as shown above.
+
+----
 
 The driver can manage multiple devices.
 

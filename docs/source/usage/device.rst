@@ -20,6 +20,10 @@ Automatically set to False if the device is deleted by calling the device send_d
 
 Set from the device constructer as optional keyword arguments, can be used to pass in hardware data to the device object.
 
+**stop**
+
+When a driver is shutdown, it automatically calls the shutdown method of each device, which sets this stop flag to True. So this flag could be tested in the devhardware method if that facility is used, and should gracefully shut down the co-routine.
+
 **driver**
 
 The driver object, can be used to access driver.send_message() and driver.send_getProperties() methods if required, and also to access any other device using the driver mapping feature.

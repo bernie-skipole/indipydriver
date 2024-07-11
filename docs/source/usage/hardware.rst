@@ -6,7 +6,14 @@ The driver has method::
 
     async def hardware(self)
 
-This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client
+This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client.
+
+If a continuous loop is run in this hardware method, then use something like::
+
+    while not self.stop:
+        ...
+
+The flag self.stop is set to True when the shutdown() method of the driver is called, so this exits the hardware co-routine.
 
 Within this hardware method any vector can be accessed with::
 
