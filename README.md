@@ -6,7 +6,7 @@ It has one dependency, indipyclient, which itself is pure python and has no furt
 
 INDI - Instrument Neutral Distributed Interface.
 
-See https://en.wikipedia.org/wiki/Instrument\_Neutral\_Distributed\_Interface
+See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
 Typically you would use this package to create drivers to control an instrument, or GPIO pins on the computer itself, and the package functions generate the INDI protocol which communicates to an INDI client.
 
@@ -19,7 +19,7 @@ https://github.com/bernie-skipole/inditest/blob/main/lights/bincount.py
 Which is a file of only 73 lines
 
 
-![Terminal screenshot](./docs/source/usage/images/bincount.png)
+![Terminal screenshot](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/bincount.png)
 
 
 The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the display format of switches, numbers etc., from the protocol.
@@ -32,15 +32,15 @@ Typically you would create a subclass of IPyDriver.
 
 The driver has methods which should be overwritten.
 
-async def rxevent(self, event)
+**async def rxevent(self, event)**
 
 This is called whenever data is received from the client, typically to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
 
-async def hardware(self)
+**async def hardware(self)**
 
 This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
 
-async def snoopevent(self, event)
+**async def snoopevent(self, event)**
 
 This is only used if the device is monitoring (snooping) on other devices.
 
