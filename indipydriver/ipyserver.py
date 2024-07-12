@@ -110,6 +110,8 @@ class IPyServer:
                                         self.remotes)
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
+        # this is set when asyncrun is finished
+        self.stopped = asyncio.Event()
         self.server = None
 
     @property
@@ -218,13 +220,16 @@ class IPyServer:
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
         externalruns = [ exd.asyncrun() for exd in self.exdrivers ]
-        await asyncio.gather(*driverruns,
-                             *remoteruns,
-                             *externalruns,
-                             self._runserver(),
-                             self._copyfromserver(),
-                             self._sendtoclient()
-                             )
+        try:
+            await asyncio.gather(*driverruns,
+                                 *remoteruns,
+                                 *externalruns,
+                                 self._runserver(),
+                                 self._copyfromserver(),
+                                 self._sendtoclient()
+                                 )
+        finally:
+            self.stopped.set()
 
 
     async def _copyfromserver(self):

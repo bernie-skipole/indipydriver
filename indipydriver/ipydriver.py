@@ -130,6 +130,8 @@ class IPyDriver(collections.UserDict):
 
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
+        # this is set when asyncrun is finished
+        self.stopped = asyncio.Event()
 
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
@@ -386,9 +388,10 @@ class IPyDriver(collections.UserDict):
                 # also give the propertyvector a reference to this driver
                 # so it can call eventaction and have access to writerque
                 pv.driver = self
-
-        await asyncio.gather( *self._coros, *self._tasks )
-
+        try:
+            await asyncio.gather( *self._coros, *self._tasks )
+        finally:
+            self.stopped.set()
 
 class Device(collections.UserDict):
 
