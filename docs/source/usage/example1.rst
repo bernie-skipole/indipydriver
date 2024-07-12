@@ -32,11 +32,15 @@ In this example a NumberVector and NumberMember contain the temperature which is
             self.temperature = 20
             self.target = 15
             self.heater = "Off"
+            self.stop = False
+
+        def shutdown(self):
+            self.stop = True
 
         async def run_thermostat(self):
             """This simulates temperature increasing/decreasing, and turns
                on/off a heater if moving too far from the target."""
-            while True:
+            while not self.stop:
                 await asyncio.sleep(2)
                 if self.heater == "On":
                     # increasing temperature if the heater is on
@@ -97,13 +101,9 @@ In this example a NumberVector and NumberMember contain the temperature which is
                 # and transmit it to the client
                 await vector.send_setVector()
 
-    def make_driver():
-        "Returns an instance of the driver"
 
-        # Make an instance of the object controlling the instrument
-        thermalcontrol = ThermalControl()
-        # and a coroutine which will run the instrument
-        runthermo = thermalcontrol.run_thermostat()
+    def make_driver(thermalcontrol):
+        "Returns an instance of the driver"
 
         # Make a NumberMember holding the temperature value
         temperaturemember = NumberMember( name="temperature",
@@ -120,28 +120,36 @@ In this example a NumberVector and NumberMember contain the temperature which is
         thermostat = Device( devicename="Thermostat",
                              properties=[temperaturevector] )
 
-        # Create the Driver which will contain this Device, the coroutine needed
-        # to run the instrument, and the instrument controlling object
+        # Create the Driver which will contain this Device,
+        #  and the instrument controlling object
         driver = ThermoDriver( [thermostat],
-                               runthermo,
-                               thermalcontrol=thermalcontrol )
+                                thermalcontrol=thermalcontrol )
 
         # and return the driver
         return driver
 
 
+    def main(thermalcontrol, server):
+        "Run the instrument and the server async tasks"
+        await asyncio.gather(thermalcontrol.run_thermostat(),
+                             server.asyncrun() )
+
+
     if __name__ == "__main__":
 
-        driver = make_driver()
-
+        # Make an instance of the object controlling the instrument
+        thermalcontrol = ThermalControl()
+        # make a driver for the instrument
+        driver = make_driver(thermalcontrol)
+        # and a server, which serves this driver
         server = IPyServer([driver])
-        asyncio.run(server.asyncrun())
+        # and run them together
+        asyncio.run( main(thermalcontrol, server) )
 
 
-In summary. You create any objects or functions needed to operate your
-hardware, and these can be inserted into the IPyDriver constructor and will be available
-in the dictionary of named arguments 'driverdata'.  Any tasks you wish to start together
-with the driver can be included in the 'tasks' argument.
+In summary. You create any objects needed to operate your hardware,
+and these can be inserted into the IPyDriver constructor and will be available
+in the dictionary of named arguments 'driverdata'.
 
 You would typically create your own child class of IPyDriver, overriding methods:
 
@@ -160,7 +168,10 @@ all async tasks, this should be non blocking, so typically should include a call
 to await asyncio.sleep() in its loop.
 
 Testing self.stop is also useful, as this stop flag is set to True when shutdown() is
-called on the driver, and therefore the hardware loop should exit as shown above.
+called on the driver, and would therefore stop the hardware loop.
+
+You would then create the IPyServer object to serve the driver, and run the server.asyncrun()
+co-routine together with any other tasks needed to run your instrument.
 
 ----
 
@@ -170,28 +181,8 @@ Each device contains one or more vectors.
 
 Each vector contains one or more members which hold instrument values.
 
-Your package should include a make_driver() function which returns the driver
+Your package should include a make_driver(instrument) function which returns the driver
 and makes your package suitable for import into other possible python scripts.
 
-Finally, if the driver is to communicate by stdin and stdout::
-
-    if __name__ == "__main__":
-
-        driver = make_driver()
-        asyncio.run(driver.asyncrun())
-
-Alternatively, if you want the driver to listen on a port::
-
-    if __name__ == "__main__":
-
-        driver = make_driver()
-        server = IPyServer([driver], host="localhost",
-                                     port=7624,
-                                     maxconnections=5)
-        asyncio.run(server.asyncrun())
-
-The server can contain multiple drivers, the first argument to IPyServer is
-a list of drivers.
-
-If host, port and maxconnections arguments are not given, the above defaults
-are used.
+It is also a good idea to keep the functionality of the instrument and driver separate, so
+the instrument can keep running even if there is no driver or server connections.
