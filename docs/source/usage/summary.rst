@@ -14,11 +14,11 @@ Where 'devices' is a list of devices this driver will control, each device being
 
 The positional arguments 'coros' are any optional co-routines that you may have created to operate your instruments (to poll instrument values perhaps), the co-routines set here will all be awaited when the driver is run. This example does not use this functionality so no co-routines are used.
 
+Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In this example this feature is not used.
+
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
 In this example the device object will contain a single switch vector, with a single switch member, to control the LED.
-
-The keyword arguments 'driverdata' contains any data you wish to set into the class, in this example it is not used.
 
 The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
 
@@ -99,7 +99,7 @@ Sends this new value to the client.
 hardware method
 ^^^^^^^^^^^^^^^
 
-In the example above no hardware coroutine is needed, but there may be instruments that need to send data periodically. The hardware coroutine is automatically started and should run continuously, typically with a 'while True' loop. Examples are given further in this documentation.
+In the example above no hardware coroutine is needed, but there may be instruments that need to send data periodically. The hardware coroutine is automatically started and normally runs continuously, typically with a 'while not self.stop' loop. (self.stop is an attribute set to True if shutdown() is called on a driver). Examples are given further in this documentation.
 
 The driver is a mapping to its devices, so self["led"] will get the device with devicename "led", and a device is a mapping to its vectors, so self["led"]["ledvector"] will return the vector controlling the LED.
 

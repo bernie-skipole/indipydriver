@@ -168,7 +168,7 @@ The driver can manage multiple devices.
 
 Each device contains one or more vectors.
 
-Eech vector contains one or more members which hold instrument values.
+Each vector contains one or more members which hold instrument values.
 
 Your package should include a make_driver() function which returns the driver
 and makes your package suitable for import into other possible python scripts.
