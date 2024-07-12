@@ -115,7 +115,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
         # Make the WindowDriver containing this Device
         # and the window controlling object
-        windowdriver = WindowDriver( [window],
+        windowdriver = WindowDriver( window,
                                      windowcontrol=windowcontrol )
 
         # and return the driver
@@ -143,16 +143,17 @@ This example simulates a driver which snoops on the thermostat of the previous e
         windowcontrol = WindowControl()
         windowdriver = make_driver(windowcontrol)
 
-        server = IPyServer([thermodriver, windowdriver])
+        server = IPyServer(thermodriver, windowdriver)
         asyncio.run( main(thermalcontrol, server) )
 
 Alternatively if the thermostat of example2 was running on a remote machine (with name 'raspberrypi'), then this script could be altered to remotely connect to it.
 
 Example2 would need one minor modification::
 
-        server = IPyServer([thermodriver], host="0.0.0.0",
-                                           port=7624,
-                                           maxconnections=5)
+        server = IPyServer(thermodriver,
+                           host="0.0.0.0",
+                           port=7624,
+                           maxconnections=5)
 
 The server host has 'localhost' changed to "0.0.0.0" indicating it is listening on all IP addresses, allowing the window control machine to connect to it.
 
@@ -163,7 +164,7 @@ The machine operating the window could then be changed to::
         # make the windowcontrol object
         windowcontrol = WindowControl()
         windowdriver = make_driver(windowcontrol)
-        server = IPyServer([windowdriver])
+        server = IPyServer(windowdriver)
         server.add_remote(host='raspberrypi', port=7624)
         asyncio.run(server.asyncrun())
 

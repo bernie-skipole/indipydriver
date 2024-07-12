@@ -136,8 +136,8 @@ a 'newNumberVector', which causes the rxevent method to be called::
 
         # Create the Driver which will contain this Device,
         #  and the instrument controlling object
-        driver = ThermoDriver( [thermostat],
-                                thermalcontrol=thermalcontrol )
+        driver = ThermoDriver( thermostat,
+                               thermalcontrol=thermalcontrol )
 
 
         # and return the driver
@@ -157,6 +157,6 @@ a 'newNumberVector', which causes the rxevent method to be called::
         # make a driver for the instrument
         thermodriver = make_driver(thermalcontrol)
         # and a server, which serves this driver
-        server = IPyServer([thermodriver])
+        server = IPyServer(thermodriver)
         # and run them together
         asyncio.run( main(thermalcontrol, server) )

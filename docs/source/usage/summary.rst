@@ -8,11 +8,9 @@ Subclass IPyDriver
 
 The IPyDriver class has signature::
 
-    class IPyDriver(devices, *coros, **driverdata)
+    class IPyDriver(*devices, **driverdata)
 
-Where 'devices' is a list of devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
-
-The positional arguments 'coros' are any optional co-routines that you may have created to operate your instruments (to poll instrument values perhaps), the co-routines set here will all be awaited when the driver is run. This example does not use this functionality so no co-routines are used.
+Where 'devices' is one or more devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
 
 Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In this example this feature is not used.
 
@@ -132,7 +130,7 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         leddevice = ipd.Device( devicename="led", properties=[ledvector])
 
         # Create the Driver containing this device
-        driver = LEDDriver([leddevice])
+        driver = LEDDriver(leddevice)
 
         # and return the driver
         return driver
@@ -149,12 +147,12 @@ To run the driver include::
     if __name__ == "__main__":
 
         driver = make_driver()
-        server = ipd.IPyServer([driver], host="localhost", port=7624, maxconnections=5)
+        server = ipd.IPyServer(driver, host="localhost", port=7624, maxconnections=5)
         asyncio.run(server.asyncrun())
 
 If the host, port and maxconnections are not specified in the IPyServer call, the values shown above are the defaults.
 
-The IPyServer class takes a list of drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. The drivers in the argument list must all be created from IPyDriver subclasses.
+The IPyServer class takes drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. The drivers in the positional arguments must all be created from IPyDriver subclasses.
 
 To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate to it by stdin and stdout. The method can be called multiple times to add several executable drivers.
 

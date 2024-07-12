@@ -38,15 +38,15 @@ add_exdriver
 
 The IPyServer class has method add_exdriver which given an executable command, will run the given driver program, and communicate with it via stdnin, stdout and stderr.
 
-This example shows two INDI drivers available from indilib.org and both being served.  No IPyDriver instances are passed into the IPyServer arguments here, hence the empty list, however if required IPyDriver and executable drivers could all be served together::
+This example shows two INDI drivers available from indilib.org and both being served.  No IPyDriver instances are passed into the IPyServer arguments here, however if required IPyDriver and executable drivers could all be served together::
 
     import asyncio
 
     from indipydriver import IPyServer
 
-    server = IPyServer([], host="localhost",
-                           port=7624,
-                           maxconnections=5)
+    server = IPyServer(host="localhost",
+                       port=7624,
+                       maxconnections=5)
 
     server.add_exdriver("indi_simulator_telescope")
     server.add_exdriver("indi_simulator_ccd")

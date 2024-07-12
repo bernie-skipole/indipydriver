@@ -18,20 +18,13 @@ These all being instances asyncio.Queue(4).
 
 The asyncrun method of the driver contains the following::
 
-        await asyncio.gather(*self._tasks,           # any tasks included when creating the driver
-                             self.comms(self.readerque, self.writerque),   # run communications
+        await asyncio.gather(self.comms(self.readerque, self.writerque),   # run communications
                              self.hardware(),        # task to operate device hardware, and transmit updates
                              self._read_readerque(), # task to handle received xml data
                              self._snoophandler(),   # task to handle incoming snoop data
                              *device_handlers,       # each device handles its incoming data
                              *property_handlers      # each property handles its incoming data
                             )
-
-
-IPyDriver._tasks
-^^^^^^^^^^^^^^^^
-
-This is an optional list of user defined coroutines/tasks passed in the IPyDriver constructor.
 
 
 IPyDriver.comms

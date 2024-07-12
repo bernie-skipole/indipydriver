@@ -34,7 +34,7 @@ Normally this will be awaited together with any other co-routines needed to run 
 
 Alternatively, use indipydriver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
 
-        server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
+        server = IPyServer(driver, host="localhost", port=7624, maxconnections=5)
         await server.asyncrun()
 
 And a further method which also listens on a host and port, but with a single connection only is shown here. It may be useful in some circumstances as it avoids the code associated with IPyServer::

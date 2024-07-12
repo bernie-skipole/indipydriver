@@ -122,8 +122,8 @@ In this example a NumberVector and NumberMember contain the temperature which is
 
         # Create the Driver which will contain this Device,
         #  and the instrument controlling object
-        driver = ThermoDriver( [thermostat],
-                                thermalcontrol=thermalcontrol )
+        driver = ThermoDriver( thermostat,
+                               thermalcontrol=thermalcontrol )
 
         # and return the driver
         return driver
@@ -142,7 +142,7 @@ In this example a NumberVector and NumberMember contain the temperature which is
         # make a driver for the instrument
         thermodriver = make_driver(thermalcontrol)
         # and a server, which serves this driver
-        server = IPyServer([thermodriver])
+        server = IPyServer(thermodriver)
         # and run them together
         asyncio.run( main(thermalcontrol, server) )
 

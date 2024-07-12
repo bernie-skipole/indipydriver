@@ -24,7 +24,7 @@ class IPyServer:
        should be awaited which will open a port, and the INDI service
        will be available for clients to connect.
 
-       drivers is a list of IPyDriver objects this driver handles,
+       drivers are IPyDriver objects this driver handles,
        host and port are "localhost" and 7624 as default
 
        maxconnections is the number of simultaneous client connections
@@ -46,15 +46,9 @@ class IPyServer:
        """
 
 
-    def __init__(self, drivers, *, host="localhost", port=7624, maxconnections=5):
+    def __init__(self, *drivers, host="localhost", port=7624, maxconnections=5):
 
-
-        if isinstance(drivers, IPyDriver):
-            # Its a single IPyDriver rather than a list
-            self.drivers = [drivers]
-        else:
-            self.drivers = drivers
-
+        self.drivers = list(drivers)
         self.host = host
         self.port = port
 
