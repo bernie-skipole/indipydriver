@@ -6,13 +6,23 @@ It has one dependency, indipyclient, which itself is pure python and has no furt
 
 INDI - Instrument Neutral Distributed Interface.
 
-See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
+See https://en.wikipedia.org/wiki/Instrument\_Neutral\_Distributed\_Interface
 
 Typically you would use this package to create drivers to control an instrument, or GPIO pins on the computer itself, and the package functions generate the INDI protocol which communicates to an INDI client.
 
 Installing indipydriver from Pypi will also install indipyclient which provides a terminal client so the instrument can be viewed and controlled from a terminal session. The INDI protocol is defined so that drivers should operate with any INDI client. The indipyclient package can also be installed separately on a remote computer.
 
-The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the format of switches, numbers etc., from the protocol.
+The image below shows the indipyclient terminal connected to a server running an example driver listed at:
+
+https://github.com/bernie-skipole/inditest/blob/main/lights/bincount.py
+
+Which is a file of only 73 lines
+
+
+![Terminal screenshot](./docs/source/usage/images/bincount.png)
+
+
+The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the display format of switches, numbers etc., from the protocol.
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control if appropriate drivers are written.
 
@@ -34,7 +44,7 @@ async def snoopevent(self, event)
 
 This is only used if the device is monitoring (snooping) on other devices.
 
-Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object:
+The indipyclient package also includes an IPyServer class. Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object:
 
     server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
     asyncio.run(server.asyncrun())
