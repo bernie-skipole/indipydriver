@@ -122,7 +122,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
         return windowdriver
 
 
-    def main(thermalcontrol, server):
+    async def main(thermalcontrol, server):
         "Run the instrument and the server async tasks"
         await asyncio.gather(thermalcontrol.run_thermostat(),
                              server.asyncrun() )

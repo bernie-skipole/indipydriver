@@ -144,7 +144,7 @@ a 'newNumberVector', which causes the rxevent method to be called::
         return driver
 
 
-    def main(thermalcontrol, server):
+    async def main(thermalcontrol, server):
         "Run the instrument and the server async tasks"
         await asyncio.gather(thermalcontrol.run_thermostat(),
                              server.asyncrun() )

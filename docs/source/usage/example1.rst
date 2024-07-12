@@ -129,7 +129,7 @@ In this example a NumberVector and NumberMember contain the temperature which is
         return driver
 
 
-    def main(thermalcontrol, server):
+    async def main(thermalcontrol, server):
         "Run the instrument and the server async tasks"
         await asyncio.gather(thermalcontrol.run_thermostat(),
                              server.asyncrun() )
