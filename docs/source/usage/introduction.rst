@@ -60,7 +60,7 @@ This is only used if the device is monitoring (snooping) on other devices.
 Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object::
 
     server = IPyServer([driver], host="localhost", port=7624, maxconnections=5)
-    asyncio.run(server.asyncrun())
+    await server.asyncrun()
 
 A connected client, such as indipyclient, can then control all the drivers.
 

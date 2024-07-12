@@ -155,8 +155,8 @@ a 'newNumberVector', which causes the rxevent method to be called::
         # Make an instance of the object controlling the instrument
         thermalcontrol = ThermalControl()
         # make a driver for the instrument
-        driver = make_driver(thermalcontrol)
+        thermodriver = make_driver(thermalcontrol)
         # and a server, which serves this driver
-        server = IPyServer([driver])
+        server = IPyServer([thermodriver])
         # and run them together
         asyncio.run( main(thermalcontrol, server) )

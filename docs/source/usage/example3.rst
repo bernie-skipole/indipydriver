@@ -96,11 +96,8 @@ This example simulates a driver which snoops on the thermostat of the previous e
                     windowcontrol.set_window(temperature)
 
 
-    def make_driver():
+    def make_driver(windowcontrol):
         "Creates the driver"
-
-        # make the instrument controlling object
-        windowcontrol = WindowControl()
 
         status = TextMember( name="status",
                              label="Window position",
@@ -125,44 +122,49 @@ This example simulates a driver which snoops on the thermostat of the previous e
         return windowdriver
 
 
+    def main(thermalcontrol, server):
+        "Run the instrument and the server async tasks"
+        await asyncio.gather(thermalcontrol.run_thermostat(),
+                             server.asyncrun() )
+
+
     # Assuming the thermostat example is example2.py, these would be run with
 
     if __name__ == "__main__":
 
         import example2
 
-        thermodriver = example2.make_driver()
-        windowdriver = make_driver()
+        # Make the thermalcontrol object
+        thermalcontrol = example2.ThermalControl()
+        # make a driver
+        thermodriver = example2.make_driver(thermalcontrol)
+
+        # make the windowcontrol object
+        windowcontrol = WindowControl()
+        windowdriver = make_driver(windowcontrol)
 
         server = IPyServer([thermodriver, windowdriver])
-        asyncio.run(server.asyncrun())
+        asyncio.run( main(thermalcontrol, server) )
 
-Alternatively if the thermostat of example2 was running on a remote machine, then this script could be altered to remotely connect to it.  Example2 would need one minor modification::
+Alternatively if the thermostat of example2 was running on a remote machine (with name 'raspberrypi'), then this script could be altered to remotely connect to it.
 
-    if __name__ == "__main__":
-        thermodriver = make_driver()
+Example2 would need one minor modification::
+
         server = IPyServer([thermodriver], host="0.0.0.0",
                                            port=7624,
                                            maxconnections=5)
-        asyncio.run(server.asyncrun())
 
-The server host would have to be changed from 'localhost' to either the machines IP address, or to "0.0.0.0" indicating it is listenning on all IP addresses.
+The server host has 'localhost' changed to "0.0.0.0" indicating it is listening on all IP addresses, allowing the window control machine to connect to it.
 
-The machine operating the window would then need to be changed to::
+The machine operating the window could then be changed to::
 
     if __name__ == "__main__":
-        windowdriver = make_driver()
+
+        # make the windowcontrol object
+        windowcontrol = WindowControl()
+        windowdriver = make_driver(windowcontrol)
         server = IPyServer([windowdriver])
         server.add_remote(host='raspberrypi', port=7624)
         asyncio.run(server.asyncrun())
 
-Where the machine running the thermostat has name 'raspberrypi', and this connects the two. If indipyclient is then run on the machine running the windowdriver, it is able to control both drivers as before.
-
-As a further variation, the thermostat of Example 2 on the Raspberry pi could have configuration::
-
-    if __name__ == "__main__":
-        thermodriver = make_driver()
-        thermodriver.listen(host="0.0.0.0", port=7624)
-        asyncio.run(thermodriver.asyncrun())
-
-This accepts the remote call from the machine running the window driver, but is a lighter option as it does not use IPyServer.
+The server.add_remote command enables this to make a connection to raspberrypi which is running the thermostat, and this connects the two. If indipyclient is then run on the machine running the windowdriver, it is able to control both drivers as before.

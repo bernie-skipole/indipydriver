@@ -140,9 +140,9 @@ In this example a NumberVector and NumberMember contain the temperature which is
         # Make an instance of the object controlling the instrument
         thermalcontrol = ThermalControl()
         # make a driver for the instrument
-        driver = make_driver(thermalcontrol)
+        thermodriver = make_driver(thermalcontrol)
         # and a server, which serves this driver
-        server = IPyServer([driver])
+        server = IPyServer([thermodriver])
         # and run them together
         asyncio.run( main(thermalcontrol, server) )
 
@@ -181,8 +181,5 @@ Each device contains one or more vectors.
 
 Each vector contains one or more members which hold instrument values.
 
-Your package should include a make_driver(instrument) function which returns the driver
-and makes your package suitable for import into other possible python scripts.
-
-It is also a good idea to keep the functionality of the instrument and driver separate, so
+It is a good idea to keep the functionality of the instrument and driver separate, so
 the instrument can keep running even if there is no driver or server connections.
