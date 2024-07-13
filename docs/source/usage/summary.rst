@@ -67,7 +67,7 @@ rxevent method
 
 The event object is triggered by data received from the client, and is one of "enableBLOB", "getProperties", "newSwitchVector", "newNumberVector", "newTextVector" or "newBLOBVector".
 
-The enableBLOB event can be ignored - it is used internally by IpyServer.
+The enableBLOB event can be ignored - it is used internally by IPyServer.
 
 The getProperties event is sent by the client to discover the properties of the driver, and the reply you should generally use is shown above. The event has a 'vector' attribute, which is the vector being requested, and its send_defVector() method will transmit its definition back to the client.
 

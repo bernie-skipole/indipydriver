@@ -57,7 +57,7 @@ This should be a contuously running coroutine which you can use to operate your 
 
 This is only used if the device is monitoring (snooping) on other devices.
 
-Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object::
+The indipyclient package also includes an IPyServer class. Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object::
 
     server = IPyServer(driver, host="localhost", port=7624, maxconnections=5)
     await server.asyncrun()
