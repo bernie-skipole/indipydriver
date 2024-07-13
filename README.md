@@ -16,7 +16,7 @@ The image below shows the indipyclient terminal connected to a server running an
 
 https://github.com/bernie-skipole/inditest/blob/main/lights/bincount.py
 
-Which is a file of only 73 lines
+Which is a file of only 60 lines
 
 
 ![Terminal screenshot](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/bincount.png)
