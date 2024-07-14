@@ -44,6 +44,8 @@ A typical sesssion would look like:
 
 .. image:: ./images/image1.png
 
+As well as the terminal client, the indipyclient package can be imported into your own script and provides a set of classes which can generate the INDI protocol and create the connection to a port serving INDI drivers. This could be used to create your own client, or to control remote instruments with your own Python program.
+
 Further information about indipyclient can be found from:
 
 https://indipyclient.readthedocs.io
