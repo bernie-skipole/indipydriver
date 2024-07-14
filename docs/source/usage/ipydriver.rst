@@ -18,6 +18,10 @@ The ipydriver object has attributes:
 
 self.driverdata - The dictionary of named arguments you have optionally set in the constructor
 
+self.stop - This is set to True when the driver.shutdown() method is called.
+
+self.stopped - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
+
 self.debug_enable - As default is set to True, indicating this driver will log xml traffic at level DEBUG.
 
 If self.debug_enable is set to False, then xml traffic will not be logged, this could be useful if you have a number of drivers operating, and you only want one to log xml traffic.

@@ -3,11 +3,21 @@ IPyServer
 
 This server class is used to run IPyDriver instances and can also run executable, possibly non-python, drivers written by other parties. It creates a listening INDI service. It provides the snooping ability between drivers, enables connections to other remote INDI servers so a branching tree network of drivers can be made, it implements enableBLOB instructions received from the client, and allows up to ten client connections.
 
-If only executable drivers or remote servers are being used, and no IPyDriver instances are implemented, the drivers argument should be set to an empty list.
+If only executable drivers or remote servers are being used, and no IPyDriver instances are implemented, no drivers should be set.
 
 
 .. autoclass:: indipydriver.IPyServer
    :members: asyncrun, add_remote, add_exdriver
+
+The server has attributes:
+
+self.host - the host
+
+self.port - the port
+
+self.stop - This is set to True when the server.shutdown() method is called.
+
+self.stopped - An asyncio.Event() object, await server.stopped.wait() will block until the driver stops.
 
 
 add_remote
