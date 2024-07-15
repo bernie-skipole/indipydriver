@@ -148,6 +148,8 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
 Alternatively if the thermostat of example2 was running on a remote machine (with name 'raspberrypi'), then this script could be altered to remotely connect to it.
 
+.. image:: ./images/rem3.png
+
 Example2 would need one minor modification::
 
         server = IPyServer(thermodriver,
