@@ -101,7 +101,6 @@ If desired you could subclass Device, and overwrite this method to handle events
 ensure devrxevent(event) is called using something like the code below in the driver::
 
     async def rxevent(self, event):
-        await asyncio.sleep(0)
         match event:
             case getProperties():
                 await event.vector.send_defVector()
