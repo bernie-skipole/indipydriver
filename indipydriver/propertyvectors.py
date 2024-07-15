@@ -167,6 +167,8 @@ class SwitchVector(PropertyVector):
        AtMostOne - of the SwitchMembers in this vector, one or none can be On.
 
        AnyOfMany - multiple switch members can be On.
+
+       switchmembers is a list of SwitchMember objects
        """
 
     def __init__(self, name, label, group, perm, rule, state, switchmembers):
@@ -378,7 +380,9 @@ class LightVector(PropertyVector):
 
     """A LightVector is an instrument indicator, and sends one or more members
        with values 'Idle', 'Ok', 'Busy' or 'Alert'. In general a client will
-       indicate this state with different colours."""
+       indicate this state with different colours.
+
+       lightmembers is a list of LightMember objects"""
 
     def __init__(self, name, label, group, state, lightmembers):
         super().__init__(name, label, group, state)
@@ -528,7 +532,9 @@ class LightVector(PropertyVector):
 
 class TextVector(PropertyVector):
 
-    """A TextVector is used to send and receive text between instrument and client."""
+    """A TextVector is used to send and receive text between instrument and client.
+
+       textmembers is a list of TextMember objects"""
 
     def __init__(self, name, label, group, perm, state, textmembers):
         super().__init__(name, label, group, state)
@@ -704,6 +710,11 @@ class TextVector(PropertyVector):
 
 class NumberVector(PropertyVector):
 
+    """A NumberVector is used to send and receive numbers between instrument and client.
+
+       numbermembers is a list of NumberMember objects"""
+
+
     def __init__(self, name, label, group, perm, state, numbermembers):
         super().__init__(name, label, group, state)
         self.perm = perm
@@ -877,6 +888,10 @@ class NumberVector(PropertyVector):
 
 
 class BLOBVector(PropertyVector):
+
+    """A BLOBVector is used to send and receive BLOBs between instrument and client.
+
+       blobmembers is a list of BLOBMember objects"""
 
     def __init__(self, name, label, group, perm, state, blobmembers):
         super().__init__(name, label, group, state)

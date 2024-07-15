@@ -13,7 +13,7 @@ Your code should typically use match and case to determine the type of event, an
 Snooping
 ^^^^^^^^
 
-Snooping can occur on a network of INDI drivers, typically connected together by IPyServer, or using the program 'indiserver' from indilib.org.  A driver can transmit a 'getProperties' command using driver coroutine method::
+Snooping can occur on a network of INDI drivers, typically connected together by IPyServer.  A driver can transmit a 'getProperties' command using driver coroutine method::
 
     send_getProperties(devicename=None, vectorname=None)
 
@@ -21,7 +21,7 @@ which requests the server utility to copy traffic from another driver/device to 
 
 If vectorname is None, then all traffic from the specified device will be copied, if devicename is None as well, then traffic from all devices will be copied (apart from devices on this particular driver).
 
-Note: in this implementation, snooping will not occur between devices on the same driver. Your driver code is handling all its devices, so should be able to control all traffic needed between them.
+Note: in this implementation, snooping will not occur between devices on the same driver. Your driver code is handling all its devices, so should be able to control all traffic needed between them. However snooping can occur between drivers connected to the same IPyServer, or across multiple IPyServers linked together by remote connections.
 
 Snooping is typically used when an instrument should only take actions if another remote instrument has already taken a required prior action.  Snooping may also be useful as a method of logging traffic.
 

@@ -1,5 +1,5 @@
-indipyclient.py
-===============
+indipyclient
+============
 
 If indipydriver is installed from Pypi, the package indipyclient will also be automatically installed.
 
