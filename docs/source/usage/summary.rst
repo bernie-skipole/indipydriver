@@ -12,7 +12,7 @@ The IPyDriver class has signature::
 
 Where 'devices' is one or more devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
 
-Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In this example this feature is not used.
+Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In general this can be used to pass in your object which does the actual instrument control. In this example this feature is used to pass in a gpiozero.LED object.
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
@@ -25,14 +25,17 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
 
     from gpiozero import LED
 
-    led = LED(17)
 
     class LEDDriver(ipd.IPyDriver):
 
-        """IPyDriver is subclassed here."""
+        """IPyDriver is subclassed here to create an LED driver."""
 
         async def rxevent(self, event):
             "On receiving data from the client, this is called"
+
+            # get the object controlling the instrument, which is available
+            # in the class named arguments dictionary 'self.driverdata'.
+            led = self.driverdata["led"]
 
             match event:
 
@@ -48,6 +51,7 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
                                          vectorname="ledvector") if 'ledmember' in event:
                     # a new value has been received from the client
                     ledvalue = event["ledmember"]
+                    # turn on or off the led
                     if ledvalue == "On":
                         led.on()
                     elif ledvalue == "Off":
@@ -109,8 +113,12 @@ Make the driver
 
 The driver, device, vectors etc,. have to be instantiated, it is suggested this is done in a make_driver() function::
 
-    def make_driver():
-        "Creates the driver"
+    def make_driver(led):
+        "Creates the driver, led is a gpiozero.LED object"
+
+        # Note that “is_lit” is a property of the gpiozero LED
+        # object and is True if the LED is on, this is used to
+        # set up the initial value of ledmember.
 
         ledvalue = "On" if led.is_lit else "Off"
 
@@ -129,13 +137,13 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         # create a Device with this vector
         leddevice = ipd.Device( devicename="led", properties=[ledvector])
 
-        # Create the Driver containing this device
-        driver = LEDDriver(leddevice)
+        # Create the Driver containing this device, and the actual
+        # LED object used for instrument control as a named argument
+        driver = LEDDriver(leddevice, led=led)
 
         # and return the driver
         return driver
 
-Note that "is_lit" is a property of the gpiozero LED object and is True if the LED is on, this is used to set up the initial value of ledmember.
 
 The various vector and member classes and their arguments are detailed further in this documentation.
 
@@ -146,7 +154,9 @@ To run the driver include::
 
     if __name__ == "__main__":
 
-        driver = make_driver()
+        # set up the LED pin and create and serve the driver
+        led = LED(17)
+        driver = make_driver(led)
         server = ipd.IPyServer(driver, host="localhost", port=7624, maxconnections=5)
         asyncio.run(server.asyncrun())
 
