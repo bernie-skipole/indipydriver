@@ -327,7 +327,9 @@ class SwitchVector(PropertyVector):
 
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
-        """Transmits the vector (setSwitchVector) and members with their values to the client.
+        """members is a list of member names.
+
+           Transmits the vector (setSwitchVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
 
@@ -492,7 +494,9 @@ class LightVector(PropertyVector):
             await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
-        """Transmits the vector (setLightVector) and members with their values to the client.
+        """members is a list of member names.
+
+           Transmits the vector (setLightVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
 
@@ -665,7 +669,9 @@ class TextVector(PropertyVector):
             await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
-        """Transmits the vector (setTextVector) and members with their values to the client.
+        """members is a list of member names.
+
+           Transmits the vector (setTextVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
 
@@ -844,7 +850,9 @@ class NumberVector(PropertyVector):
             await self.driver.send(xmldata)
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
-        """Transmits the vector (setNumberVector) and members with their values to the client.
+        """members is a list of member names.
+
+           Transmits the vector (setNumberVector) and members with their values to the client.
            Similar to the send_setVector method however the members list specifies the
            member names which will have their values sent.
 
@@ -981,7 +989,9 @@ class BLOBVector(PropertyVector):
     #       only the more explicit send_setVectorMembers is available
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
-        """Transmits the vector (setBLOBVector) and members with their values to the client.
+        """members is a list of member names.
+
+           Transmits the vector (setBLOBVector) and members with their values to the client.
            The members list specifies the member names which will have their values sent.
 
            The member values can be set via vector[membername] = membervalue prior to calling
