@@ -1,7 +1,7 @@
 
 
-indipydriver = Python tools to create INDI drivers
-==================================================
+indipydriver = Enabling remote instrument control
+=================================================
 
 .. toctree::
    :maxdepth: 1
