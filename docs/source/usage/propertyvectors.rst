@@ -5,9 +5,9 @@ A property vector is set with one or more 'members'.  For example a NumberVector
 
 The vector object is a mapping to a member value, so to access a value you could use vector['membername'], which for example, given a SwitchVector would be either "On" or "Off". Note, it is not a mapping to a member object, it is a mapping to the member value.
 
-As well as the methods documented below, dict methods are available such as get() and iteration through keys, values and items.
+As well as the methods documented below, vectors have dict methods such as get() and iteration through keys, values and items.
 
-This section documents the property vectors which can be created and set into the device, and also the associated members.
+A number of attributes are common to all vectors.
 
 Common Attributes
 ^^^^^^^^^^^^^^^^^
@@ -54,8 +54,6 @@ Each vector is also a mapping of membername to memberVALUE  - note, not member o
 
 Numeric values are preferably set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol. If given as floats or integers they will be converted to strings. The only exception is blobsize, where the number should be an integer.
 
-Each member has a name and label, the label is a string which can be used by the client, if not given it will be set equal to the name.
-
 When transmitting a vector, using the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
 
 One possible way you may want to create your own timestamp is::
@@ -65,10 +63,12 @@ One possible way you may want to create your own timestamp is::
     timestamp = datetime.now(tz=timezone.utc)
 
 
+The Text, Light, Switch, Number and BLOB members and vectors are described below. When creating a driver you would typically first make the members that hold the values associated with your instrument, these members would then be inserted into vectors, and the vectors into a Device.
+
+Your Driver object, subclassed from IPyDriver, would then contain these devices.
+
 Text
 ^^^^
-
-A TextVector takes one or more TextMember objects.
 
 .. autoclass:: indipydriver.TextMember
 
@@ -79,8 +79,6 @@ A TextVector takes one or more TextMember objects.
 Lights
 ^^^^^^
 
-A LightVector takes one or more LightMember objects.
-
 .. autoclass:: indipydriver.LightMember
 
 .. autoclass:: indipydriver.LightVector
@@ -90,8 +88,6 @@ A LightVector takes one or more LightMember objects.
 Switches
 ^^^^^^^^
 
-A SwitchVector takes one or more SwitchMember objects.
-
 .. autoclass:: indipydriver.SwitchMember
 
 .. autoclass:: indipydriver.SwitchVector
@@ -100,8 +96,6 @@ A SwitchVector takes one or more SwitchMember objects.
 
 Numbers
 ^^^^^^^
-
-A NumberVector takes one or more NumberMember objects.
 
 .. autoclass:: indipydriver.NumberMember
 
@@ -130,8 +124,6 @@ From the INDI spec::
 
 BLOBs
 ^^^^^
-
-A BLOBVector takes one or more BLOBMember objects.
 
 .. autoclass:: indipydriver.BLOBMember
 
