@@ -212,6 +212,7 @@ class IPyServer:
     async def asyncrun(self):
         """await this to operate the server together with its
            drivers and any remote connections."""
+        self._stop = False
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
         externalruns = [ exd.asyncrun() for exd in self.exdrivers ]
@@ -225,6 +226,7 @@ class IPyServer:
                                  )
         finally:
             self.stopped.set()
+            self._stop = True
 
 
     async def _copyfromserver(self):

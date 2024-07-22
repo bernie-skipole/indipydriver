@@ -158,8 +158,8 @@ class PropertyVector(collections.UserDict):
 
 class SwitchVector(PropertyVector):
 
-    """A SwitchVector sends and receives one or more members with values 'On' or 'Off'. It
-       also has the extra attribute 'rule' which can be one of 'OneOfMany', 'AtMostOne', 'AnyOfMany'.
+    """A SwitchVector contains one or more members with values 'On' or 'Off'. It also has
+       the extra attribute 'rule' which can be one of 'OneOfMany', 'AtMostOne', 'AnyOfMany'.
        These are hints to the client how to display the switches in the vector.
 
        OneOfMany - of the SwitchMembers in this vector, one (and only one) must be On.
@@ -249,7 +249,6 @@ class SwitchVector(PropertyVector):
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
         return xmldata
-
 
 
     async def send_setVector(self, message='', timestamp=None, timeout=None, state=None, allvalues=True):
@@ -380,9 +379,9 @@ class SwitchVector(PropertyVector):
 
 class LightVector(PropertyVector):
 
-    """A LightVector is an instrument indicator, and sends one or more members
-       with values 'Idle', 'Ok', 'Busy' or 'Alert'. In general a client will
-       indicate this state with different colours.
+    """A LightVector is an instrument indicator, and contains one or more
+       members with values 'Idle', 'Ok', 'Busy' or 'Alert'. In general a
+       client will indicate this state with different colours.
 
        lightmembers is a list of LightMember objects"""
 
@@ -536,7 +535,8 @@ class LightVector(PropertyVector):
 
 class TextVector(PropertyVector):
 
-    """A TextVector is used to send and receive text between instrument and client.
+    """A TextVector contains one or more TextMembers holding text strings,
+       typically used where text such as a location or file name is required.
 
        textmembers is a list of TextMember objects"""
 
@@ -716,7 +716,9 @@ class TextVector(PropertyVector):
 
 class NumberVector(PropertyVector):
 
-    """A NumberVector is used to send and receive numbers between instrument and client.
+    """A NumberVector contains one or more NumberMember objects, where
+       the number member can be set with a format, min, max and step
+       sizes which instruct the client how the number should be displayed.
 
        numbermembers is a list of NumberMember objects"""
 
@@ -897,7 +899,9 @@ class NumberVector(PropertyVector):
 
 class BLOBVector(PropertyVector):
 
-    """A BLOBVector is used to send and receive BLOBs between instrument and client.
+    """A BLOBVector contains BLOB members, being Binary Large Objects.
+       This implementation allows the member object to be set with either
+       a bytes object, a file-like object, or a path to a file.
 
        blobmembers is a list of BLOBMember objects"""
 

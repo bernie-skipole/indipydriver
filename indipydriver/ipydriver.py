@@ -360,6 +360,7 @@ class IPyDriver(collections.UserDict):
            that situation the IPyServer will control communications."""
 
         logger.info(f"Driver {self.__class__.__name__} started")
+        self._stop = False
 
         # set an object for communicating, as default this is stdin and stdout
         if self.comms is None:
@@ -383,6 +384,7 @@ class IPyDriver(collections.UserDict):
             await asyncio.gather( *tasks )
         finally:
             self.stopped.set()
+            self._stop = True
 
 class Device(collections.UserDict):
 
