@@ -210,7 +210,8 @@ class IPyServer:
 
 
     async def asyncrun(self):
-        """Runs the server together with its drivers and any remote connections."""
+        """await this to operate the server together with its
+           drivers and any remote connections."""
         driverruns = [ driver.asyncrun() for driver in self.drivers ]
         remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
         externalruns = [ exd.asyncrun() for exd in self.exdrivers ]

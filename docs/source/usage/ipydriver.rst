@@ -3,9 +3,9 @@ IPyDriver
 
 The driver object is a mapping, of devicename:deviceobject, so your code in the hardware or rxevent methods could access a specific device using self['devicename'].
 
-Similarly a Device object is a mapping to a vector, so to access a vector you could use self['devicename']['vectorname'].
+As well as the methods documented below, dict methods are available such as get() and iteration through keys, values and items.
 
-The 'snooping' capabilities enable one driver to receive data transmitted by another, possibly remote driver. For a simple instrument this will probably not be used.
+Similarly a Device object is a mapping to a vector, so to access a vector you could use self['devicename']['vectorname'].
 
 ----
 

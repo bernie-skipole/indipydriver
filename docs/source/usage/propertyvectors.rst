@@ -1,9 +1,13 @@
 Property Vectors
 ================
 
-A property vector is an object containing one or more 'members'.  For example a NumberVector will contain one or more NumberMember objects, each containing a number value.
+A property vector is set with one or more 'members'.  For example a NumberVector will contain one or more NumberMember objects, each containing a number value.
 
-This section documents the property vectors created and set into the device, and also the associated members.
+The vector object is a mapping to a member value, so to access a value you could use vector['membername'], which for example, given a SwitchVector would be either "On" or "Off". Note, it is not a mapping to a member object, it is a mapping to the member value.
+
+As well as the methods documented below, dict methods are available such as get() and iteration through keys, values and items.
+
+This section documents the property vectors which can be created and set into the device, and also the associated members.
 
 Common Attributes
 ^^^^^^^^^^^^^^^^^

@@ -1,10 +1,17 @@
 Device
 ======
 
+The device object is a mapping of vectorname:vectorobject, so to access a vector you could use device['vectorname'].
+
+As well as the methods documented below, dict methods are available such as get() and iteration through keys, values and items.
+
+Similarly a Vector object is a mapping to a member value, so to access a value you could use device['vectorname']['membername'], which for example, given a SwitchVector would be either "On" or "Off".
+
+----
+
 .. autoclass:: indipydriver.Device
    :members:
 
-The Device is also a mapping, of vectorname:vectorobject, so to access a vector you could use device['vectorname'].
 
 The device has attributes:
 
