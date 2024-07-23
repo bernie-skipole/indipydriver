@@ -42,7 +42,7 @@ The INDI specification describes enableBLOB when sent from a client::
 
 Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
 
-The following event objects indicate the client is trying to set new member values of a vector. These events are mappings of membername:value which the client is submitting, you would typically use the rxevent method to accept these new values and set them into your instrument. The event has dict methods available such as get() and iteration through keys, values and items.
+The following event objects indicate the client is trying to set new member values of a vector. These events are mappings of membername:value which the client is submitting, you would typically use the rxevent method to accept these new values and set them into your instrument. The event has dict methods available such as get() and iteration through keys(), values() and items().
 
 If you accept the new values, you should also set the vector with the new value, and send the vector back to the client to update it with the new value. The vector which these values apply to is made conveniently available as the event.vector attribute.
 

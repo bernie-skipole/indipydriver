@@ -5,7 +5,7 @@ A property vector is set with one or more 'members'.  For example a NumberVector
 
 The vector object is a mapping to a member value, so to access a value you could use vector['membername'], which for example, given a SwitchVector would be either "On" or "Off". Note, it is not a mapping to a member object, it is a mapping to the member value.
 
-As well as the methods documented below, vectors have dict methods such as get() and iteration through keys, values and items.
+As well as the methods documented below, vectors have dict methods such as get() and iteration through keys(), values() and items().
 
 A number of attributes are common to all vectors.
 
