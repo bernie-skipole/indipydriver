@@ -1,3 +1,5 @@
+.. _rxevents:
+
 RxEvents
 ========
 
