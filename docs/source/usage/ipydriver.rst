@@ -1,7 +1,23 @@
 IPyDriver
 =========
 
-The driver object is a mapping, of devicename:deviceobject, so your code in the hardware or rxevent methods could access a specific device using self['devicename'].
+Typically you would create a subclass of IPyDriver.
+
+The driver has methods which should be overwritten.
+
+**async def rxevent(self, event)**
+
+This is called whenever data is received from the client, typically to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
+
+**async def hardware(self)**
+
+This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
+
+**async def snoopevent(self, event)**
+
+This is only used if the device is monitoring (snooping) on other devices.
+
+The driver object is a mapping, of devicename:deviceobject, so your code in these methods could access a specific device using self['devicename'].
 
 As well as the methods documented below, dict methods are available such as get() and iteration through keys(), values() and items().
 
