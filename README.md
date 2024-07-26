@@ -1,6 +1,6 @@
 # indipydriver
 
-If you are developing a Python project to control some form of instrument, such as GPIO pins, either switching them or measuring data, this package provides classes which can be used to send and receive controlling data on a port.
+If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
 
 Installing indipydriver from Pypi will also install indipyclient which provides a terminal client, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
 
