@@ -149,7 +149,9 @@ class PropertyVector(collections.UserDict):
     def __setitem__(self, membername, value):
         try:
             self.data[membername].membervalue = value
-        except ValueError as ex:
+        except KeyError:
+            logger.exception(f"Member {membername} not recognised")
+        except ValueError:
             logger.exception("Unable to set value")
 
     def __getitem__(self, membername):

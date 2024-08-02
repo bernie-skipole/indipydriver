@@ -4,9 +4,9 @@ If you are developing a Python project to control some form of instrument, with 
 
 Installing indipydriver from Pypi will also install indipyclient which provides a terminal client, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
 
-indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
+Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 
-This is a pure python package, and its only dependency, indipyclient, is itself pure python and has no further dependencies.
+Indipydriver is a pure python package, and its only dependency, indipyclient, is itself pure python and has no further dependencies.
 
 The package creates and serves the INDI communications protocol.
 
