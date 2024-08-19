@@ -78,10 +78,13 @@ class IPyDriver(collections.UserDict):
     def __init__(self, *devices, **driverdata):
         super().__init__()
 
-        # this is a dictionary of device name to device this driver owns
-        self.devices = {d.devicename:d for d in devices}
-
-        for device in self.devices.values():
+        self.devices = {}
+        for device in devices:
+            devicename = device.devicename
+            if devicename in self.devices:
+                # duplicate devicename
+                raise ValueError(f"Device name {devicename} is duplicated in this driver.")
+            self.devices[devicename] = device
             # set driver into devices
             device.driver = self
 
