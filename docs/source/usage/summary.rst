@@ -23,7 +23,23 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
     import asyncio
     import indipydriver as ipd
 
-    from gpiozero import LED
+    # from gpiozero import LED
+
+    # If trying this on a raspberrypi, uncomment the line above
+    # and comment out or delete this LED class definition
+
+    class LED:
+        "A class to simulate gpiozero.LED"
+
+        def __init__(self, pin):
+            self.pin = pin
+            self.is_lit = False
+
+        def on(self):
+            self.is_lit = True
+
+        def off(self):
+            self.is_lit = False
 
 
     class LEDDriver(ipd.IPyDriver):
@@ -33,8 +49,8 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
         async def rxevent(self, event):
             "On receiving data from the client, this is called"
 
-            # get the object controlling the instrument, which is available
-            # in the class named arguments dictionary 'self.driverdata'.
+            # get the LED object controlling the instrument, which is
+            # available in the named arguments dictionary 'self.driverdata'
             led = self.driverdata["led"]
 
             match event:
@@ -79,11 +95,11 @@ The new vector events are sent by the client to change the instrument settings, 
 
 In this case the only event to be received will be a newSwitchVector for the devicename "led", and vectorname "ledvector" - as this is the only device and vector defined which can be controlled by the client. If any other device or vector event is received, it can be ignored.
 
-The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledmember"]. In this example the gpiozero 'LED' object is set accordingly.::
+The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledmember"].::
 
     ledvalue = event["ledmember"]
 
-Gets the value from the event, and is then used to set the LED.
+Gets the value from the event, which is then used to set the LED.
 
 You should then set the vector's member "ledmember" to the new value, and await the vector's send_setVector() method, which sends it to the client, confirming that the led has changed state.
 
@@ -114,10 +130,10 @@ Make the driver
 The driver, device, vectors etc,. have to be instantiated, it is suggested this is done in a make_driver() function::
 
     def make_driver(led):
-        "Creates the driver, led is a gpiozero.LED object"
+        "Creates the driver, led is the instrument LED object"
 
-        # Note that “is_lit” is a property of the gpiozero LED
-        # object and is True if the LED is on, this is used to
+        # Note that “is_lit” is a property of the LED object
+        # and is True if the LED is on, this is used to
         # set up the initial value of ledmember.
 
         ledvalue = "On" if led.is_lit else "Off"
@@ -130,7 +146,7 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         ledvector = ipd.SwitchVector(name="ledvector",
                                      label="LED",
                                      group="Control Group",
-                                     perm="rw",
+                                     perm="wo"
                                      rule='AtMostOne',
                                      state="Ok",
                                      switchmembers=[ledmember] )
