@@ -2,6 +2,8 @@
 
 import collections, asyncio, sys
 
+from datetime import datetime, timezone
+
 import xml.etree.ElementTree as ET
 
 from functools import partialmethod
@@ -367,8 +369,6 @@ class IPyServer:
             self.serverreaderque.task_done()
             # now every driver/remcon which needs it has this xmldata
 
-
-
     async def _sendtoclient(self):
         "For every clientconnection, get txque and copy data into it from serverwriterque"
         while not self._stop:
@@ -379,6 +379,26 @@ class IPyServer:
                     await clientconnection.txque.put(xmldata)
             # task completed
             self.serverwriterque.task_done()
+
+    async def _checkduplicates(self):
+        "Every ten seconds check for duplicate devicenames"
+        while not self._stop:
+            await asyncio.sleep(10)
+        
+
+
+    async def send_message(self, message):
+        "Send system wide message"
+        if self._stop:
+            return
+        tstring = datetime.now(tz=timezone.utc).replace(tzinfo = None).isoformat(sep='T')
+        xmldata = ET.Element('message')
+        xmldata.set("timestamp", tstring)
+        xmldata.set("message", message)
+        for clientconnection in self.connectionpool:
+            if clientconnection.connected:
+                await clientconnection.txque.put(xmldata)
+
 
 
 
