@@ -116,7 +116,7 @@ class IPyDriver(collections.UserDict):
         self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
 
         # If True, xmldata will be logged at DEBUG level
-        self.debug_enable = True
+        self.debug_enable = False
 
         # shutdown routine sets this to True to stop coroutines
         self._stop = False

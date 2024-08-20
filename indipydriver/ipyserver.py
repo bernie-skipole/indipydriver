@@ -1,6 +1,6 @@
 
 
-import collections, asyncio, sys
+import collections, asyncio, sys, copy
 
 from datetime import datetime, timezone
 
@@ -241,6 +241,17 @@ class IPyServer:
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
+            if logger.isEnabledFor(logging.DEBUG):
+                if ((xmldata.tag == "setBLOBVector") or (xmldata.tag == "newBLOBVector")) and len(xmldata):
+                    data = copy.deepcopy(xmldata)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(data)
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+
             remconfound = False
             exdriverfound = False
 
@@ -374,6 +385,16 @@ class IPyServer:
         while not self._stop:
             await asyncio.sleep(0)
             xmldata = await self.serverwriterque.get()
+            if logger.isEnabledFor(logging.DEBUG):
+                if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                    data = copy.deepcopy(xmldata)
+                    for element in data:
+                        element.text = "NOT LOGGED"
+                    binarydata = ET.tostring(data)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                else:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     await clientconnection.txque.put(xmldata)
@@ -382,23 +403,75 @@ class IPyServer:
 
     async def _checkduplicates(self):
         "Every ten seconds check for duplicate devicenames"
+
+        # self.devices is a dictionary of device name to device
+        # self.remotes is a list of RemoteConnection objects running connections to remote servers
+        # self.exdrivers is a list of ExDriver objects running external drivers
+
+        devicenames = list(self.devices.keys())
+        otherdevicenames = []
+
         while not self._stop:
             await asyncio.sleep(10)
-        
+            otherdevicenames.clear()
+            duplicatename = ""
+            for remote in self.remotes:
+                if remote.connected:
+                    for name in remote.keys():
+                        if name in devicenames:
+                            duplicatename = name
+                            break
+                        if name in otherdevicenames:
+                            duplicatename = name
+                            break
+                        otherdevicenames.append(name)
+                    if duplicatename:
+                        break
+            if duplicatename:
+                await self.send_message(f"ERROR: Duplicate name {duplicatename} is connected")
+                continue
+            for exd in self.exdrivers:
+                for name in exd.devicenames.keys():
+                    if name in devicenames:
+                        duplicatename = name
+                        break
+                    if name in otherdevicenames:
+                        duplicatename = name
+                        break
+                    otherdevicenames.append(name)
+                if duplicatename:
+                    break
+            if duplicatename:
+                await self.send_message(f"ERROR: Duplicate name {duplicatename} is connected")
 
 
-    async def send_message(self, message):
-        "Send system wide message"
+    async def send_message(self, message, timestamp=None):
+        """Send system wide message, timestamp should normlly not be set, if
+           given, it should be a datetime.datetime object with tz set to timezone.utc"""
         if self._stop:
             return
-        tstring = datetime.now(tz=timezone.utc).replace(tzinfo = None).isoformat(sep='T')
+        if not timestamp:
+            timestamp = datetime.now(tz=timezone.utc).replace(tzinfo = None)
+        else:
+            if not isinstance(timestamp, datetime):
+                # invalid timestamp given
+                return
+            if not (timestamp.tzinfo is None):
+                if timestamp.tzinfo == timezone.utc:
+                    timestamp = timestamp.replace(tzinfo = None)
+                else:
+                    # invalid timestamp
+                    return
         xmldata = ET.Element('message')
-        xmldata.set("timestamp", tstring)
+        xmldata.set("timestamp", timestamp.isoformat(sep='T'))
         xmldata.set("message", message)
         for clientconnection in self.connectionpool:
             if clientconnection.connected:
-                await clientconnection.txque.put(xmldata)
-
+                # at least one is connected, so this data is put into
+                # serverwriterque, and is then sent to each client by
+                # the _sendtoclient method.
+                await self.serverwriterque.put(xmldata)
+                break
 
 
 
