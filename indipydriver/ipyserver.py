@@ -19,7 +19,6 @@ from .remote import RemoteConnection
 
 from .exdriver import ExDriver
 
-
 class IPyServer:
 
     """Once an instance of this class is created, the asyncrun method
@@ -385,6 +384,13 @@ class IPyServer:
         while not self._stop:
             await asyncio.sleep(0)
             xmldata = await self.serverwriterque.get()
+            #  This xmldata of None is an indication to shut the server down
+            #  It is set to None when a duplicate devicename is discovered
+            if xmldata is None:
+                logger.error(f"A duplicate devicename has caused a server shutdown")
+                self.serverwriterque.task_done()
+                self.shutdown()
+                return
             if logger.isEnabledFor(logging.DEBUG):
                 if (xmldata.tag == "setBLOBVector") and len(xmldata):
                     data = copy.deepcopy(xmldata)
@@ -400,50 +406,6 @@ class IPyServer:
                     await clientconnection.txque.put(xmldata)
             # task completed
             self.serverwriterque.task_done()
-
-    async def _checkduplicates(self):
-        "Every ten seconds check for duplicate devicenames"
-
-        # self.devices is a dictionary of device name to device
-        # self.remotes is a list of RemoteConnection objects running connections to remote servers
-        # self.exdrivers is a list of ExDriver objects running external drivers
-
-        devicenames = list(self.devices.keys())
-        otherdevicenames = []
-
-        while not self._stop:
-            await asyncio.sleep(10)
-            otherdevicenames.clear()
-            duplicatename = ""
-            for remote in self.remotes:
-                if remote.connected:
-                    for name in remote.keys():
-                        if name in devicenames:
-                            duplicatename = name
-                            break
-                        if name in otherdevicenames:
-                            duplicatename = name
-                            break
-                        otherdevicenames.append(name)
-                    if duplicatename:
-                        break
-            if duplicatename:
-                await self.send_message(f"ERROR: Duplicate name {duplicatename} is connected")
-                continue
-            for exd in self.exdrivers:
-                for name in exd.devicenames.keys():
-                    if name in devicenames:
-                        duplicatename = name
-                        break
-                    if name in otherdevicenames:
-                        duplicatename = name
-                        break
-                    otherdevicenames.append(name)
-                if duplicatename:
-                    break
-            if duplicatename:
-                await self.send_message(f"ERROR: Duplicate name {duplicatename} is connected")
-
 
     async def send_message(self, message, timestamp=None):
         """Send system wide message, timestamp should normlly not be set, if
@@ -526,6 +488,17 @@ class _DriverComms:
                 writerque.task_done()
                 logger.error(f"Driver transmitted invalid tag {xmldata.tag}")
                 continue
+
+            if xmldata.tag.startswith("def"):
+                # check for duplicate devicename
+                for driver in self.alldrivers:
+                    if driver is self.driver:
+                        continue
+                    if devicename in driver:
+                        logger.error(f"A duplicate devicename {devicename} has been detected")
+                        await self.serverwriterque.put(None)
+                        writerque.task_done()
+                        return                
 
             # check for a getProperties
             if xmldata.tag == "getProperties":

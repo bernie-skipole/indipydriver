@@ -5,6 +5,9 @@ import xml.etree.ElementTree as ET
 
 from datetime import datetime, timezone
 
+import logging
+logger = logging.getLogger(__name__)
+
 from indipyclient import IPyClient
 
 from indipyclient.events import getProperties
@@ -92,9 +95,22 @@ class RemoteConnection(IPyClient):
         # rxdata is the xml data received
 
         if event.eventtype == "Define" or event.eventtype == "DefineBLOB":
+            # check for duplicate devicename
+            for driver in self.clientdata["alldrivers"]:
+                if devicename in driver:
+                    logger.error(f"A duplicate devicename {devicename} has been detected")
+                    await self.clientdata['serverwriterque'].put(None)
+                    return
+            for remcon in self.clientdata["remotes"]:
+                if remcon is self:
+                    continue
+                if devicename in remcon:
+                    logger.error(f"A duplicate devicename {devicename} has been detected")
+                    await self.clientdata['serverwriterque'].put(None)
+                    return
             # on receiving a define vector, send the blobenabled status for that device
             # but record it, so it is not being sent repeatedly
-            if devicename and (devicename in self) and (not (devicename in self.clientdata["blobenablesent"])):
+            if devicename and (not (devicename in self.clientdata["blobenablesent"])):
                 self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
                 self.clientdata["blobenablesent"].append(devicename)
 
