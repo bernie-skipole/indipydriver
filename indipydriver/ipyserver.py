@@ -58,6 +58,9 @@ class IPyServer:
         # and read in from the serverreaderque
         self.serverreaderque = asyncio.Queue(6)
 
+        # If True, xmldata will be logged at DEBUG level
+        self.debug_enable = True
+
         if maxconnections<1 or maxconnections>10:
             raise ValueError("maxconnections should be a number between 1 and 10 inclusive.")
         self.maxconnections = maxconnections
@@ -114,8 +117,11 @@ class IPyServer:
         "returns self._stop, being the instruction to stop the server"
         return self._stop
 
-    def shutdown(self):
-        "Shuts down the server, sets the flag self._stop to True"
+    def shutdown(self, shutdownmessage=""):
+        """Shuts down the server, sets the flag self._stop to True
+           and prints shutdownmessage if given"""
+        if shutdownmessage:
+            print(shutdownmessage)
         self._stop = True
         for driver in self.drivers:
             driver.shutdown()
@@ -240,7 +246,7 @@ class IPyServer:
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
-            if logger.isEnabledFor(logging.DEBUG):
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 if ((xmldata.tag == "setBLOBVector") or (xmldata.tag == "newBLOBVector")) and len(xmldata):
                     data = copy.deepcopy(xmldata)
                     for element in data:
@@ -387,11 +393,11 @@ class IPyServer:
             #  This xmldata of None is an indication to shut the server down
             #  It is set to None when a duplicate devicename is discovered
             if xmldata is None:
-                logger.error(f"A duplicate devicename has caused a server shutdown")
+                logger.error("A duplicate devicename has caused a server shutdown")
                 self.serverwriterque.task_done()
-                self.shutdown()
+                self.shutdown("A duplicate devicename has caused a server shutdown")
                 return
-            if logger.isEnabledFor(logging.DEBUG):
+            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 if (xmldata.tag == "setBLOBVector") and len(xmldata):
                     data = copy.deepcopy(xmldata)
                     for element in data:
@@ -498,7 +504,7 @@ class _DriverComms:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self.serverwriterque.put(None)
                         writerque.task_done()
-                        return                
+                        return
 
             # check for a getProperties
             if xmldata.tag == "getProperties":

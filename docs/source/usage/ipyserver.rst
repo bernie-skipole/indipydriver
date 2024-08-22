@@ -7,7 +7,7 @@ If only executable drivers or remote servers are being used, and no IPyDriver in
 
 
 .. autoclass:: indipydriver.IPyServer
-   :members: asyncrun, add_remote, add_exdriver
+   :members: asyncrun, add_remote, add_exdriver, send_message
 
 The server has attributes:
 
@@ -18,6 +18,8 @@ self.port - the port
 self.stop - This is set to True when the server.shutdown() method is called.
 
 self.stopped - An asyncio.Event() object, await server.stopped.wait() will block until the server stops.
+
+self.debug_enable - Default True, will enable server xml traffic to be logged, if logging is set at DEBUG level.
 
 
 add_remote
