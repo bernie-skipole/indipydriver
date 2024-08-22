@@ -7,7 +7,7 @@ If only executable drivers or remote servers are being used, and no IPyDriver in
 
 
 .. autoclass:: indipydriver.IPyServer
-   :members: asyncrun, add_remote, add_exdriver, send_message
+   :members: asyncrun, add_remote, add_exdriver, send_message, shutdown
 
 The server has attributes:
 
