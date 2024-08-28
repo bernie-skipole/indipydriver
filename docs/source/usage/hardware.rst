@@ -6,7 +6,7 @@ The driver has method::
 
     async def hardware(self)
 
-This  is started when the driver is run, and should be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client.
+This  is started when the driver is run, and could be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client.
 
 If a continuous loop is run in this hardware method, then use something like::
 
