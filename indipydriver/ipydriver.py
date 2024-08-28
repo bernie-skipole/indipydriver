@@ -342,9 +342,7 @@ class IPyDriver(collections.UserDict):
            devicename, vectorname, vector, root
            where vector is the properties vector the event refers to, and
            root is an xml.etree.ElementTree object of the received xml"""
-        match event:
-            case events.getProperties():
-                await event.vector.send_defVector()
+        pass
 
 
     async def snoopevent(self, event):
@@ -353,6 +351,14 @@ class IPyDriver(collections.UserDict):
            any necessary actions.
            event is an object with attributes according to the data received."""
         pass
+
+
+    async def rxgetproperties(self, event):
+        """This is an internal method called wherever a getProperties
+           event is received from the client. It replies with a send_defVector
+           to send a property vector definition back to the client.
+           It would normally never be called by users own code"""
+        await event.vector.send_defVector()
 
     async def asyncrun(self):
         """await this to operate the driver, which will then communicate by

@@ -214,7 +214,7 @@ class SwitchVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
+                    await self.driver.rxgetproperties(event)
                 elif root.tag == "newSwitchVector":
                     # create event
                     event = newSwitchVector(self.devicename, self.name, self, root)
@@ -405,7 +405,7 @@ class LightVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
+                    await self.driver.rxgetproperties(event)
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
@@ -571,7 +571,7 @@ class TextVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
+                    await self.driver.rxgetproperties(event)
                 elif root.tag == "newTextVector":
                     # create event
                     event = newTextVector(self.devicename, self.name, self, root)
@@ -754,7 +754,7 @@ class NumberVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
+                    await self.driver.rxgetproperties(event)
                 elif root.tag == "newNumberVector":
                     # create event
                     event = newNumberVector(self.devicename, self.name, self, root)
@@ -951,7 +951,7 @@ class BLOBVector(PropertyVector):
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
+                    await self.driver.rxgetproperties(event)
                 elif root.tag == "enableBLOB":
                     # create event
                     event = enableBLOB(self.devicename, self.name, self, root)

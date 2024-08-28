@@ -3,7 +3,7 @@ IPyDriver
 
 Typically you would create a subclass of IPyDriver.
 
-The driver has methods which should be overwritten.
+The driver has methods which can be overwritten.
 
 **async def rxevent(self, event)**
 
@@ -11,7 +11,7 @@ This is called whenever data is received from the client, typically to set an in
 
 **async def hardware(self)**
 
-This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
+This could be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
 
 **async def snoopevent(self, event)**
 

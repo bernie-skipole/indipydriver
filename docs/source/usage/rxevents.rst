@@ -14,20 +14,14 @@ Typically you would start with::
 
     async def rxevent(self, event):
         match event:
-            case getProperties():
-                await event.vector.send_defVector()
-            case ...
+            case newXXXXXVector( ....
 
-
-In all cases you will need to handle the "getProperties()" event - in which the client is requesting information.  All events have a 'vector' attribute - which is the vector object the event refers to, so normally you would await the event.vector.send_defVector() method to respond to the client with the vector definition.
 
 The client event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
 
 All event objects have attributes devicename, vectorname, vector, root
 
 Where vector is the vector object, and root is the received xml parsed as an xml.etree.ElementTree element.
-
-.. autoclass:: indipydriver.getProperties
 
 .. autoclass:: indipydriver.enableBLOB
 
@@ -104,8 +98,6 @@ ensure devrxevent(event) is called using something like the code below in the dr
 
     async def rxevent(self, event):
         match event:
-            case getProperties():
-                await event.vector.send_defVector()
 
             case newNumberVector(devicename='Thermostat'):
                 await self['Thermostat'].devrxevent(event)

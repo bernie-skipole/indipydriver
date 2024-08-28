@@ -9,8 +9,7 @@ a 'newNumberVector', which causes the rxevent method to be called::
 
     from indipydriver import (IPyDriver, Device,
                               NumberVector, NumberMember,
-                              getProperties, newNumberVector,
-                              IPyServer
+                              newNumberVector, IPyServer
                              )
 
     # Other vectors, members and events are available,
@@ -65,9 +64,6 @@ a 'newNumberVector', which causes the rxevent method to be called::
             thermalcontrol = self.driverdata["thermalcontrol"]
 
             match event:
-
-                case getProperties():
-                    await event.vector.send_defVector()
 
                 case newNumberVector(devicename='Thermostat',
                                      vectorname='targetvector') if 'target' in event:
