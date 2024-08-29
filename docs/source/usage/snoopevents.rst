@@ -10,24 +10,32 @@ The driver has method::
 
 If this driver is 'snooping' on other drivers, this method should be written to handle events created as data is received.
 
+Snooping is typically used when an instrument should only take actions if another remote instrument has already taken a required prior action.  Snooping may also be useful as a method of logging traffic.
+
 Your code should typically use match and case to determine the type of event, and read the event contents, and then take any appropriate action.
 
 Snooping
 ^^^^^^^^
 
-Snooping can occur on a network of INDI drivers, typically connected together by IPyServer.  A driver can transmit a 'getProperties' command using driver coroutine method::
+A driver can be set to snoop on another drivers device and vector traffic with the method::
+
+    snoop(devicename, vectorname, timeout=30)
+
+This will cause the driver to transmit a 'getProperties' request, which will instruct servers to copy traffic originating from the specified device/vector to this driver, as well as to any connected client. Since intermediate servers may get switched off and on and lose the copy instruction, if no traffic is received after the timeout value, then another getProperties will be sent.
+
+It is also possible for a driver to await a send_getProperties command directly using coroutine method::
 
     send_getProperties(devicename=None, vectorname=None)
 
-which requests the server utility to copy traffic from another driver/device to this driver.
+This has the same effect as the snoop command, however without the timeout facility, and this command could have devicename and vectorname set to None.
 
 If vectorname is None, then all traffic from the specified device will be copied, if devicename is None as well, then traffic from all devices will be copied (apart from devices on this particular driver).
 
+As this has no timeout function it is up to user code to provide a repeating send_getProperties call if it is deemed necessary.
+
 Note: in this implementation, snooping will not occur between devices on the same driver. Your driver code is handling all its devices, so should be able to control all traffic needed between them. However snooping can occur between drivers connected to the same IPyServer, or across multiple IPyServers linked together by remote connections.
 
-Snooping is typically used when an instrument should only take actions if another remote instrument has already taken a required prior action.  Snooping may also be useful as a method of logging traffic.
-
-To snoop on a remote device, send the getProperties command, and handle the incoming traffic using the snoopevent method. The snoop event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
+When the copied traffic is received by this driver, the snoopevent method will be awaited. The snoop event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should overwrite the snoopevent method to test the event matches an object, and act accordingly.
 
 The event type passed into the method reflects the command sent by the remote device.
 

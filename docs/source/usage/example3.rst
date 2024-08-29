@@ -20,8 +20,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
             "Set initial value of window"
             self.window = "Open"
             # window should be "Open" or 'Closed'
-            self.update_time = time.time()
-            # Set whenever a temperature update is requested
+
 
         def set_window(self, temperature):
             """Gets new temperature, sets window accordingly"""
@@ -29,9 +28,6 @@ This example simulates a driver which snoops on the thermostat of the previous e
                 self.window = "Open"
             if temperature < 18:
                 self.window = "Closed"
-            # An update time is recorded to ensure the received
-            # temperature is regularly obtained.
-            self.update_time = time.time()
 
 
     class WindowDriver(IPyDriver):
@@ -41,27 +37,11 @@ This example simulates a driver which snoops on the thermostat of the previous e
         async def hardware(self):
             "Update client with window status"
 
-            # Send an initial getProperties to snoop on Thermostat
-            # This is necessary to inform IPyServer that this driver
-            # wants copies of data sent from the thermostat
-            await self.send_getProperties(devicename="Thermostat",
-                                          vectorname="temperaturevector")
-
             windowcontrol = self.driverdata["windowcontrol"]
             statusvector = self['Window']['windowstatus']
             while not self.stop:
                 # every ten seconds send an update on window position
                 await asyncio.sleep(10)
-                now_time = time.time()
-                if now_time - windowcontrol.update_time > 20.0:
-                    # No new temperature has been received for longer than 20 seconds
-                    # the thermostat could have been disconnected. Send another
-                    # getProperties just in case it is reconnected
-                    await self.send_getProperties(devicename="Thermostat",
-                                                  vectorname="temperaturevector")
-                    # It would also be possible to set an alarm
-                    # to indicate the failure of received temperature
-
                 # get the current window status
                 statusvector['status'] = windowcontrol.window
                 # and transmit it to the client
@@ -85,7 +65,6 @@ This example simulates a driver which snoops on the thermostat of the previous e
                         # ignore an incoming invalid number
                         return
                     # this updates windowcontrol which opens or closes the widow
-                    # and also updates its update_time
                     windowcontrol.set_window(temperature)
 
 
@@ -110,6 +89,11 @@ This example simulates a driver which snoops on the thermostat of the previous e
         # and the window controlling object
         windowdriver = WindowDriver( window,
                                      windowcontrol=windowcontrol )
+
+        # This driver wants copies of data sent from the thermostat
+        windowdriver.snoop(devicename="Thermostat",
+                           vectorname="temperaturevector",
+                           timeout=30)
 
         # and return the driver
         return windowdriver
