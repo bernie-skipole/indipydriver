@@ -1,6 +1,6 @@
 
 
-import collections, asyncio, sys, copy
+import collections, asyncio, sys, copy, time
 
 from datetime import datetime, timezone
 
@@ -113,7 +113,17 @@ class IPyDriver(collections.UserDict):
         # a getProperties
         self.snoopall = False           # gets set to True if it is snooping everything
         self.snoopdevices = set()       # gets set to a set of device names
-        self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+
+        self.snoopvectors = {}
+        # The keys of self.snoopvectors will be tuples (devicename,vectorname)
+        # of vectors that are to be snooped
+        # The values will be either None or lists of [timeout, timestamp]
+
+        # timeout is integer seconds set by the snoop() method
+        # timestamp is updated whenever snoop data from devicename,vectorname
+        # is received.
+        # The coroutine _monitorsnoop Checks if current time is greater than
+        # timeout+timestamp, and if it is, sends a getproperties
 
         # If True, xmldata will be logged at DEBUG level
         self.debug_enable = False
@@ -219,6 +229,15 @@ class IPyDriver(collections.UserDict):
                 await self.snoopque.put(root)
             self.readerque.task_done()
 
+    async def _call_snoopevent(self, event):
+        "Update timestamp when snoop data received and call self.snoopevent"
+        if event.devicename and event.vectorname:
+            # update timestamp in self.snoopvectors
+            timedata = self.snoopvectors.get((event.devicename, event.vectorname))
+            if not timedata is None:
+                timedata[1] = time.time()
+        await self.snoopevent(event)
+
 
     async def _snoophandler(self):
         """Creates events using data from self.snoopque"""
@@ -238,51 +257,51 @@ class IPyDriver(collections.UserDict):
                 if root.tag == "message":
                     # create event
                     event = events.message(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "delProperty":
                     # create event
                     event = events.delProperty(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "defSwitchVector":
                     # create event
                     event = events.defSwitchVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "setSwitchVector":
                     # create event
                     event = events.setSwitchVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "defLightVector":
                     # create event
                     event = events.defLightVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "setLightVector":
                     # create event
                     event = events.setLightVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "defTextVector":
                     # create event
                     event = events.defTextVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "setTextVector":
                     # create event
                     event = events.setTextVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "defNumberVector":
                     # create event
                     event = events.defNumberVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "setNumberVector":
                     # create event
                     event = events.setNumberVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "defBLOBVector":
                     # create event
                     event = events.defBLOBVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
                 elif root.tag == "setBLOBVector":
                     # create event
                     event = events.setBLOBVector(root)
-                    await self.snoopevent(event)
+                    await self._call_snoopevent(event)
             except events.EventException as ex:
                 # if an EventException is raised, it is because received data is malformed
                 # so log it
@@ -300,6 +319,53 @@ class IPyDriver(collections.UserDict):
         if message:
             xmldata.set("message", message)
         await self.send(xmldata)
+
+
+    def snoop(self, devicename, vectorname, timeout=30):
+        """Call this to snoop on a given devicename, vectorname.
+           This will cause a getProperties to be sent, and will also
+           send further getProperties every timeout seconds if no snooping
+           data is being received from the specified vector.
+           This avoids a possible problem where intermediate servers may
+           be temporarily turned off, and will lose their instruction to
+           broadcast snooping traffic. This method is only applicable when
+           snooping on a specific device vector.
+           timeout must be an integer equal or greater than 5 seconds."""
+        if devicename in self.devices:
+            logger.error("Cannot snoop on a device already controlled by this driver")
+            return
+        timeout = int(timeout)
+        if timeout < 5:
+            logger.error("Snoop timout should be equal or greater than 5 seconds")
+            return
+
+        current = time.time()
+
+        # set self.snoopvectors[(devicename,vectorname)] to [timeout, timestamp]
+
+        self.snoopvectors[(devicename,vectorname)] = [timeout, current - timeout + 1]
+
+        # setting timestamp to current - timeout + 1 means that after a second
+        # the coroutine _monitorsnoop will think that its own time measurement
+        # is greater than the timestamp plus timeout and will send a send_getProperties
+
+
+    async def _monitorsnoop(self):
+        "Checks if any snooping vectors have timed out, if it has, sends getproperties"
+        while not self._stop:
+            await asyncio.sleep(1)
+            if not self.snoopvectors:
+                continue
+            current = time.time()
+            for key, value in self.snoopvectors.items():
+                if value is None:
+                    continue
+                timeout, timestamp = value
+                if current > timestamp + timeout:
+                    # the timeout has expired, update timestamp and send getproperties
+                    value[1] = current
+                    await self.send_getProperties(*key)
+
 
     async def send_getProperties(self, devicename=None, vectorname=None):
         """Sends a getProperties request - which is used to snoop data from other devices
@@ -322,7 +388,8 @@ class IPyDriver(collections.UserDict):
         xmldata.set("name", vectorname)
         await self.send(xmldata)
         # adds tuple (devicename,vectorname) to self.snoopvectors
-        self.snoopvectors.add((devicename,vectorname))
+        if (devicename,vectorname) not in self.snoopvectors:
+            self.snoopvectors[(devicename,vectorname)] = None
 
 
     async def hardware(self):
@@ -380,6 +447,7 @@ class IPyDriver(collections.UserDict):
         tasks = [ self.comms(self.readerque, self.writerque),    # run communications
                   self.hardware(),                               # task to operate device hardware, and transmit updates
                   self._read_readerque(),                        # task to handle received xml data
+                  self._monitorsnoop(),                          # task to monitor if a getproperties needs to be sent
                   self._snoophandler() ]                         # task to handle incoming snoop data
 
         for device in self.devices.values():

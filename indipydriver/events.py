@@ -190,6 +190,7 @@ class SnoopEvent:
     "Parent class for snoop events"
     def __init__(self, root):
         self.devicename = root.get("device")
+        self.vectorname = None
         self.root = root
         timestamp_string = root.get("timestamp")
         self.timestamp = _parse_timestamp(timestamp_string)
