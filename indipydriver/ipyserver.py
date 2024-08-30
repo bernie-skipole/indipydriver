@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, SendChecker, TXTimer
+from .comms import Port_RX, Port_TX, cleanque, SendChecker
 
 from .remote import RemoteConnection
 
@@ -603,12 +603,6 @@ class _ClientConnection:
         # self.connected is True if this pool object is running a connection
         self.connected = False
 
-        # timer used to force a data transmission after timeout seconds
-        # this will cause an exception if the connection is broken and will shut down
-        # the connection
-        self.txtimer = TXTimer(timeout = 15)
-        self.rxtimer = TXTimer(timeout = 15)
-
         self.rx = None
         self.tx = None
 
@@ -628,38 +622,6 @@ class _ClientConnection:
         if not self.tx is None:
             self.tx.shutdown()
 
-    async def _monitor_connection(self):
-        """If connected, send def vectors every timeout seconds
-           This ensures that if the connection has failed, due to the client disconnecting, the write
-           to the port operation will cause a failure exception which will close the connection"""
-        # this only operates if there are local ipydrivers connected
-        if not self.devices:
-            return
-        while not self._stop:
-            await asyncio.sleep(5)
-            # this is tested every five seconds
-            # If a remcon is connected, leave the send def vectors to the remcon
-            # by increasing the timeout, so the remcon timer times out first
-            if self.remotes:
-                for remcon in self.remotes:
-                    if remcon.connected:
-                        self.txtimer.timeout = 25
-                        self.rxtimer.timeout = 25
-                        break
-                else:
-                    self.txtimer.timeout = 15
-                    self.rxtimer.timeout = 15
-            if self.connected and self.txtimer.elapsed() and self.rxtimer.elapsed():
-                # no transmission in timeout seconds so send defVectors
-                for device in self.devices.values():
-                    if not device.enable:
-                        continue
-                    for vector in device.values():
-                        if not vector.enable:
-                            continue
-                        xmldata =  vector._make_defVector()
-                        if xmldata:
-                            await self.txque.put(xmldata)
 
 
     async def handle_data(self, reader, writer):
@@ -667,18 +629,18 @@ class _ClientConnection:
         self.connected = True
         sendchecker = SendChecker(self.devices, self.exdrivers, self.remotes)
         addr = writer.get_extra_info('peername')
-        self.rx = Port_RX(sendchecker, reader, self.rxtimer)
-        self.tx = Port_TX(sendchecker, writer, self.txtimer)
+        self.rx = Port_RX(sendchecker, reader)
+        self.tx = Port_TX(sendchecker, writer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(self.tx.run_tx(self.txque))
             rxtask = asyncio.create_task(self.rx.run_rx(self.serverreaderque))
-            montask = asyncio.create_task(self._monitor_connection())
-            await asyncio.gather(txtask, rxtask, montask)
+            await asyncio.gather(txtask, rxtask)
         except ConnectionError:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-            montask.cancel()
+        finally:
+            self.connected = False
             cleanque(self.txque)
-        logger.info(f"Connection from {addr} closed")
+            logger.info(f"Connection from {addr} closed")

@@ -271,10 +271,9 @@ class STDINOUT():
 class Port_TX():
     "An object that transmits data on a port, used by Portcomms as one half of the communications path"
 
-    def __init__(self, sendchecker, writer, timer):
+    def __init__(self, sendchecker, writer):
         self.sendchecker = sendchecker
         self.writer = writer
-        self.timer = timer
         self._stop = False       # Gets set to True to stop communications
 
     @property
@@ -300,7 +299,6 @@ class Port_TX():
             # this data can be transmitted
             binarydata = ET.tostring(txdata)
             # Send to the port
-            self.timer.update()
             self.writer.write(binarydata)
             await self.writer.drain()
         self.writer.close()
@@ -312,14 +310,11 @@ class Port_RX(STDIN_RX):
        this is used by Portcomms as one half of the communications path.
        This overwrites methods of the STDIN_RX parent class."""
 
-    def __init__(self, sendchecker, reader, timer):
+    def __init__(self, sendchecker, reader):
         super().__init__()
         self.sendchecker = sendchecker
         self.reader = reader
-        # update timer every time something received
-        # in the last 15 seconds
-        # this can be read to see if it has elapsed
-        self.timer = timer
+
 
     async def run_rx(self, readerque):
         "pass xml.etree.ElementTree data to readerque"
@@ -342,7 +337,6 @@ class Port_RX(STDIN_RX):
                         continue
                     # rxdata is now in readerque, break the inner while loop
                     break
-                self.timer.update()
         except ConnectionError:
             # re-raise this without creating a report, as it probably indicates
             # a normal connection drop
@@ -378,25 +372,6 @@ class Port_RX(STDIN_RX):
             # could put a max value here to stop this increasing indefinetly
 
 
-class TXTimer():
-
-    def __init__(self, timeout = 15):
-        self.timer = time.time()
-        self.timeout = timeout
-
-    def update(self):
-        "call this every time a transmission is made, and it resets the timer"
-        self.timer = time.time()
-
-    def elapsed(self):
-        "Return True if more than timeout seconds have elapsed since last update"
-        telapsed = time.time() - self.timer
-        if telapsed > self.timeout:
-            self.timer = time.time()
-            return True
-        return False
-
-
 class Portcomms():
     """If indipydriver.comms is set to an instance of this class it is
        used to implement communications via a port"""
@@ -408,12 +383,6 @@ class Portcomms():
         self.host = host
         self.port = port
         self.connected = False
-
-        # timer used to force a data transmission after timeout seconds
-        # this will cause an exception if the connection is broken and will shut down
-        # the connection
-        self.txtimer = TXTimer()
-        self.rxtimer = TXTimer()
 
         self.rx = None
         self.tx = None
@@ -445,28 +414,6 @@ class Portcomms():
         async with self.server:
             await self.server.serve_forever()
 
-
-    async def _monitor_connection(self):
-        """If connected and not transmitting, send def vectors every self.timeout seconds
-           This ensures that if the connection has failed, due to the client disconnecting, the write
-           to the port operation will cause a failure exception which will close the connection"""
-        while not self._stop:
-            for i in range(50):
-                await asyncio.sleep(0.1)
-                if self._stop:
-                    return
-            # this is tested every five seconds
-            if self.connected and self.txtimer.elapsed() and self.rxtimer.elapsed():
-                # Nothing recently transmitted or received so send defVectors
-                for device in self.devices.values():
-                    if not device.enable:
-                        continue
-                    for vector in device.values():
-                        if not vector.enable:
-                            continue
-                        await vector.send_defVector()
-
-
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         if self.connected:
@@ -476,21 +423,21 @@ class Portcomms():
             return
         self.connected = True
         addr = writer.get_extra_info('peername')
-        self.rx = Port_RX(self.sendchecker, reader, self.rxtimer)
-        self.tx = Port_TX(self.sendchecker, writer, self.txtimer)
+        self.rx = Port_RX(self.sendchecker, reader)
+        self.tx = Port_TX(self.sendchecker, writer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(self.tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(self.rx.run_rx(self.readerque))
-            montask = asyncio.create_task(self._monitor_connection())
-            await asyncio.gather(txtask, rxtask, montask)
+            await asyncio.gather(txtask, rxtask)
         except Exception as e:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-            montask.cancel()
+        finally:
+            self.connected = False
             cleanque(self.writerque)
-        logger.info(f"Connection from {addr} closed")
+            logger.info(f"Connection from {addr} closed")
 
 
 def cleanque(que):
