@@ -49,6 +49,17 @@ def _makestart(element):
     return "".join(attriblist)
 
 
+async def queueget(queue, timeout=0.5):
+    """"Returns True, True if timed out
+                True, False is reserved for future
+                False, Value if a value is taken from the queue"""
+    try:
+        value = await asyncio.wait_for(queue.get(), timeout)
+    except asyncio.TimeoutError:
+        return True, True
+    return False, value
+
+
 
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
