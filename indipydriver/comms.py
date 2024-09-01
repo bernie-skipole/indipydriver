@@ -91,7 +91,7 @@ class STDOUT_TX:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
             quexit, txdata = await queueget(writerque)
-            if quext:
+            if quexit:
                 continue
             writerque.task_done()
             if txdata is None:
@@ -311,7 +311,7 @@ class Port_TX():
             await asyncio.sleep(0)
             # get block of data from writerque and transmit
             quexit, txdata = await queueget(writerque)
-            if quext:
+            if quexit:
                 continue
             writerque.task_done()
             if txdata is None:

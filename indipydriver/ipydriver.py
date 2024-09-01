@@ -201,7 +201,7 @@ class IPyDriver(collections.UserDict):
         while not self._stop:
             # reads readerque, and sends xml data to the device via its dataque
             quexit, root = await queueget(self.readerque)
-            if quext:
+            if quexit:
                 continue
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
@@ -261,7 +261,7 @@ class IPyDriver(collections.UserDict):
         while not self._stop:
             # get block of data from the self.snoopque
             quexit, root = await queueget(self.snoopque)
-            if quext:
+            if quexit:
                 continue
             devicename = root.get("device")
             if devicename is not None:
@@ -616,7 +616,7 @@ class Device(collections.UserDict):
         while not self._stop:
             # get block of data from the self.dataque
             quexit, root = await queueget(self.dataque)
-            if quext:
+            if quexit:
                 continue
             if not self.enable:
                 self.dataque.task_done()

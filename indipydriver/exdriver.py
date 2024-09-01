@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from comms import queueget, queueput
+from .comms import queueget, queueput
 
 
 # All xml data sent from the driver should be contained in one of the following tags
@@ -103,7 +103,7 @@ class ExDriver:
         while not self._stop:
             # get block of data from readerque
             quexit, rxdata = await queueget(self.readerque)
-            if quext:
+            if quexit:
                 continue
             self.readerque.task_done()
             if rxdata is None:

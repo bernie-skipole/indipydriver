@@ -212,7 +212,7 @@ class SwitchVector(PropertyVector):
         while not self._stop:
             try:
                 quexit, root = await queueget(self.dataque)
-                if quext:
+                if quexit:
                     continue
                 if root.tag == "getProperties":
                     # create event
@@ -404,7 +404,7 @@ class LightVector(PropertyVector):
             # test if any xml data has been received
             try:
                 quexit, root = await queueget(self.dataque)
-                if quext:
+                if quexit:
                     continue
                 if root.tag == "getProperties":
                     # create event
@@ -571,7 +571,7 @@ class TextVector(PropertyVector):
         while not self._stop:
             try:
                 quexit, root = await queueget(self.dataque)
-                if quext:
+                if quexit:
                     continue
                 if root.tag == "getProperties":
                     # create event
@@ -755,7 +755,7 @@ class NumberVector(PropertyVector):
         while not self._stop:
             try:
                 quexit, root = await queueget(self.dataque)
-                if quext:
+                if quexit:
                     continue
                 if root.tag == "getProperties":
                     # create event
@@ -953,7 +953,7 @@ class BLOBVector(PropertyVector):
         while not self._stop:
             try:
                 quexit, root = await queueget(self.dataque)
-                if quext:
+                if quexit:
                     continue
                 if root.tag == "getProperties":
                     # create event

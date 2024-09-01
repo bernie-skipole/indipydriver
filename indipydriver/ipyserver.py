@@ -249,7 +249,7 @@ class IPyServer:
            And for every remote connection if applicable, to its send method"""
         while not self._stop:
             quexit, xmldata = await queueget(self.serverreaderque)
-            if quext:
+            if quexit:
                 continue
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
@@ -397,7 +397,7 @@ class IPyServer:
         "For every clientconnection, get txque and copy data into it from serverwriterque"
         while not self._stop:
             quexit, xmldata = await queueget(self.serverwriterque)
-            if quext:
+            if quexit:
                 continue
             #  This xmldata of None is an indication to shut the server down
             #  It is set to None when a duplicate devicename is discovered
@@ -499,8 +499,8 @@ class _DriverComms:
         """Called by the driver, should run continuously.
            reads writerque from the driver, and sends xml data to the network"""
         while not self._stop:
-            quexit, xmldata = await queueget(self.writerque)
-            if quext:
+            quexit, xmldata = await queueget(writerque)
+            if quexit:
                 continue
             # Check if other drivers/remotes wants to snoop this traffic
             devicename = xmldata.get("device")
