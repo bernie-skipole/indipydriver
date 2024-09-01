@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import STDINOUT, Portcomms
+from .comms import STDINOUT, Portcomms, queueget, queueput
 from . import events
 from .propertyvectors import timestamp_string
 
@@ -147,6 +147,14 @@ class IPyDriver(collections.UserDict):
         return self._stop
 
 
+    async def _queueput(self, queue, value, timeout=0.5):
+        while not self._stop:
+            quexit = await queueput(queue, value, timeout)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
+
     def listen(self, host="localhost", port=7624):
         """If called, sets up listening on the given host and port.
            Only one connection will accepted, further connection attempts
@@ -160,18 +168,26 @@ class IPyDriver(collections.UserDict):
 
     async def send(self, xmldata):
         "Transmits xmldata, this is an internal method, not normally called by a user."
-        if self.comms.connected:
-            await self.writerque.put(xmldata)
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                    data = copy.deepcopy(xmldata)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(data)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(xmldata)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+        if not self.comms.connected:
+            return
+        while not self._stop:
+            if not self.comms.connected:
+                return
+            quexit = await queueput(self.writerque, xmldata)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
+        if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+            if (xmldata.tag == "setBLOBVector") and len(xmldata):
+                data = copy.deepcopy(xmldata)
+                for element in data:
+                    element.text = "NOT LOGGED"
+                binarydata = ET.tostring(data)
+                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+            else:
+                binarydata = ET.tostring(xmldata)
+                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
     def __setitem__(self, devicename):
@@ -183,9 +199,10 @@ class IPyDriver(collections.UserDict):
                       'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
                       'defBLOBVector', 'setBLOBVector')
         while not self._stop:
-            await asyncio.sleep(0)
             # reads readerque, and sends xml data to the device via its dataque
-            root = await self.readerque.get()
+            quexit, root = await queueget(self.readerque)
+            if quext:
+                continue
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 if ((root.tag == "setBLOBVector") or (root.tag == "newBLOBVector")) and len(root):
@@ -208,10 +225,10 @@ class IPyDriver(collections.UserDict):
                 if devicename is None:
                     for d in self.devices.values():
                         if d.enable:
-                            await d.dataque.put(root)
+                            await self._queueput(d.dataque, root)
                 elif devicename in self.devices:
                     if self.devices[devicename].enable:
-                        await self.devices[devicename].dataque.put(root)
+                        await self._queueput(self.devices[devicename].dataque, root)
                 # else device not recognised
             elif root.tag in client_tags:
                 # xml received from client
@@ -222,11 +239,11 @@ class IPyDriver(collections.UserDict):
                     continue
                 elif devicename in self.devices:
                     if self.devices[devicename].enable:
-                        await self.devices[devicename].dataque.put(root)
+                        await self._queueput(self.devices[devicename].dataque, root)
                 # else device not recognised
             elif root.tag in snoop_tags:
                 # xml received from other devices
-                await self.snoopque.put(root)
+                await self._queueput(self.snoopque, root)
             self.readerque.task_done()
 
     async def _call_snoopevent(self, event):
@@ -243,8 +260,9 @@ class IPyDriver(collections.UserDict):
         """Creates events using data from self.snoopque"""
         while not self._stop:
             # get block of data from the self.snoopque
-            await asyncio.sleep(0)
-            root = await self.snoopque.get()
+            quexit, root = await queueget(self.snoopque)
+            if quext:
+                continue
             devicename = root.get("device")
             if devicename is not None:
                 # if a device name is given, check
@@ -518,6 +536,15 @@ class Device(collections.UserDict):
         "returns self._stop, being the instruction to stop the driver"
         return self._stop
 
+
+    async def _queueput(self, queue, value, timeout=0.5):
+        while not self._stop:
+            quexit = await queueput(queue, value, timeout)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
+
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
            The timestamp should be either None or a datetime.datetime object. If the
@@ -587,10 +614,10 @@ class Device(collections.UserDict):
     async def _handler(self):
         """Handles data read from dataque"""
         while not self._stop:
-            await asyncio.sleep(0)
             # get block of data from the self.dataque
-            root = await self.dataque.get()
-
+            quexit, root = await queueget(self.dataque)
+            if quext:
+                continue
             if not self.enable:
                 self.dataque.task_done()
                 continue
@@ -600,10 +627,10 @@ class Device(collections.UserDict):
                 if name is None:
                     for pvector in self.propertyvectors.values():
                         if pvector.enable:
-                            await pvector.dataque.put(root)
+                            await self._queueput(pvector.dataque, root)
                 elif name in self.propertyvectors:
                     if self.propertyvectors[name].enable:
-                        await self.propertyvectors[name].dataque.put(root)
+                        await self._queueput(self.propertyvectors[name].dataque, root)
                 else:
                     # property name not recognised
                     self.dataque.task_done()
@@ -614,10 +641,10 @@ class Device(collections.UserDict):
                 if name is None:
                     for pvector in self.propertyvectors.values():
                         if pvector.enable:
-                            await pvector.dataque.put(root)
+                            await self._queueput(pvector.dataque, root)
                 elif name in self.propertyvectors:
                     if self.propertyvectors[name].enable:
-                        await self.propertyvectors[name].dataque.put(root)
+                        await self._queueput(self.propertyvectors[name].dataque, root)
                 else:
                     # property name not recognised
                     self.dataque.task_done()
@@ -634,6 +661,6 @@ class Device(collections.UserDict):
                     pvector = self.propertyvectors[name]
                     if pvector.perm != "ro" and pvector.enable:
                         # all ok, add to the vector dataque
-                        await pvector.dataque.put(root)
+                        await self._queueput(pvector.dataque, root)
             # task completed
             self.dataque.task_done()

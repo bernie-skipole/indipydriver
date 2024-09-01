@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
+from .comms import queueget
+
 
 def timestamp_string(timestamp = None):
     "Return a string timestamp or None if invalid"
@@ -208,9 +210,10 @@ class SwitchVector(PropertyVector):
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
-            await asyncio.sleep(0)
             try:
-                root = await self.dataque.get()
+                quexit, root = await queueget(self.dataque)
+                if quext:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -398,10 +401,11 @@ class LightVector(PropertyVector):
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
-            await asyncio.sleep(0)
             # test if any xml data has been received
             try:
-                root = await self.dataque.get()
+                quexit, root = await queueget(self.dataque)
+                if quext:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -565,9 +569,10 @@ class TextVector(PropertyVector):
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
-            await asyncio.sleep(0)
             try:
-                root = await self.dataque.get()
+                quexit, root = await queueget(self.dataque)
+                if quext:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -748,9 +753,10 @@ class NumberVector(PropertyVector):
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
-            await asyncio.sleep(0)
             try:
-                root = await self.dataque.get()
+                quexit, root = await queueget(self.dataque)
+                if quext:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -945,9 +951,10 @@ class BLOBVector(PropertyVector):
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
-            await asyncio.sleep(0)
             try:
-                root = await self.dataque.get()
+                quexit, root = await queueget(self.dataque)
+                if quext:
+                    continue
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)

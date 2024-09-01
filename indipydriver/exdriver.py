@@ -6,6 +6,8 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
+from comms import queueget, queueput
+
 
 # All xml data sent from the driver should be contained in one of the following tags
 TAGS = (b'message',
@@ -92,11 +94,17 @@ class ExDriver:
         await asyncio.sleep(0.1)
         # send a getProperties into the driver
         xldata = ET.fromstring("""<getProperties version="1.7" />""")
-        await self.readerque.put(xldata)
         while not self._stop:
-            await asyncio.sleep(0)
+            quexit = await queueput(self.readerque, xldata)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
+        while not self._stop:
             # get block of data from readerque
-            rxdata = await self.readerque.get()
+            quexit, rxdata = await queueget(self.readerque)
+            if quext:
+                continue
             self.readerque.task_done()
             if rxdata is None:
                 # A sentinal value, check self._stop
@@ -148,10 +156,9 @@ class ExDriver:
                         self.snoopvectors.add((devicename,vectorname))
                 # append it to  writerque
                 while not self._stop:
-                    try:
-                        await asyncio.wait_for(self.writerque.put(txdata), timeout=0.02)
-                    except asyncio.TimeoutError:
-                        # queue is full, continue while loop, checking flags
+                    quexit = await queueput(self.writerque, txdata)
+                    if quexit:
+                        # queue is full, continue while loop, checking stop flag
                         continue
                     # txdata is now in writerque, break the inner while loop
                     break
@@ -176,7 +183,6 @@ class ExDriver:
         message = b''
         messagetagnumber = None
         while not self._stop:
-            await asyncio.sleep(0)
             data = await self._datainput()
             # data is either None, or binary data ending in b">"
             if data is None:
@@ -264,7 +270,6 @@ class ExDriver:
            and logs it to logging.error."""
         data = b""
         while not self._stop:
-            await asyncio.sleep(0)
             bindata = await self.proc.stderr.readline()
             if not bindata:
                 await asyncio.sleep(0.02)

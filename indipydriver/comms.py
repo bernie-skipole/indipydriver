@@ -60,6 +60,15 @@ async def queueget(queue, timeout=0.5):
     return False, value
 
 
+async def queueput(queue, value, timeout=0.5):
+    """"Returns True if timed out
+                False if value put"""
+    try:
+        await asyncio.wait_for(queue.put(value), timeout)
+    except asyncio.TimeoutError:
+        return True
+    return False
+
 
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
@@ -81,7 +90,9 @@ class STDOUT_TX:
         while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
-            txdata = await writerque.get()
+            quexit, txdata = await queueget(writerque)
+            if quext:
+                continue
             writerque.task_done()
             if txdata is None:
                 await asyncio.sleep(0.02)
@@ -145,9 +156,8 @@ class STDIN_RX:
                     return
                 # append it to readerque
                 while not self._stop:
-                    try:
-                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.02)
-                    except asyncio.TimeoutError:
+                    quexit = await queueput(readerque, rxdata)
+                    if quexit:
                         # queue is full, continue while loop, checking stop flag
                         continue
                     # rxdata is now in readerque, break the inner while loop
@@ -300,7 +310,9 @@ class Port_TX():
         while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit
-            txdata = await writerque.get()
+            quexit, txdata = await queueget(writerque)
+            if quext:
+                continue
             writerque.task_done()
             if txdata is None:
                 continue
@@ -341,9 +353,8 @@ class Port_RX(STDIN_RX):
                     self.sendchecker.setpermissions(rxdata)
                 # and place rxdata into readerque
                 while not self._stop:
-                    try:
-                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.02)
-                    except asyncio.TimeoutError:
+                    quexit = await queueput(readerque, rxdata)
+                    if quexit:
                         # queue is full, continue while loop, checking stop flag
                         continue
                     # rxdata is now in readerque, break the inner while loop

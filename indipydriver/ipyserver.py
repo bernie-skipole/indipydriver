@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, SendChecker
+from .comms import Port_RX, Port_TX, cleanque, SendChecker, queueget, queueput
 
 from .remote import RemoteConnection
 
@@ -134,6 +134,13 @@ class IPyServer:
         if not self.server is None:
             self.server.close()
 
+    async def _queueput(self, queue, value, timeout=0.5):
+        while not self._stop:
+            quexit = await queueput(queue, value, timeout)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
 
     def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
         """Adds a connection to a remote server.
@@ -241,8 +248,9 @@ class IPyServer:
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, to its send method"""
         while not self._stop:
-            await asyncio.sleep(0)
-            xmldata = await self.serverreaderque.get()
+            quexit, xmldata = await queueget(self.serverreaderque)
+            if quext:
+                continue
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
@@ -266,7 +274,7 @@ class IPyServer:
                 if devicename:
                     if devicename in self.devices:
                         # this getProperties request is meant for an attached device
-                        await self.devices[devicename].driver.readerque.put(xmldata)
+                        await self._queueput(self.devices[devicename].driver.readerque, xmldata)
                         # no need to transmit this anywhere else, continue the while loop
                         self.serverreaderque.task_done()
                         continue
@@ -280,7 +288,7 @@ class IPyServer:
                         for exd in self.exdrivers:
                             if devicename in exd:
                                 # this getProperties request is meant for an external driver
-                                await exd.readerque.put(xmldata)
+                                await self._queueput(exd.readerque, xmldata)
                                 exdriverfound = True
                                 break
 
@@ -337,23 +345,23 @@ class IPyServer:
                     if devicename and (devicename in driver):
                         # data is intended for this driver
                         # it is not snoopable, since it is data to a device, not from it.
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                         exdriverfound = True
                         break
                     elif xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque.put, xmldata)
                     elif not xmldata.tag.startswith("new"):
                         # either devicename is unknown, or this data is to/from another driver.
                         # So check if this driver is snooping on this device/vector
                         # only forward def's and set's, not 'new' vectors which
                         # do not come from a device, but only from a client to the target device.
                         if driver.snoopall:
-                            await driver.readerque.put(xmldata)
+                            await self._queueput(driver.readerque, xmldata)
                         elif devicename and (devicename in driver.snoopdevices):
-                            await driver.readerque.put(xmldata)
+                            await self._queueput(driver.readerque, xmldata)
                         elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                            await driver.readerque.put(xmldata)
+                            await self._queueput(driver.readerque, xmldata)
 
             if exdriverfound:
                 # no need to transmit this anywhere else, continue the while loop
@@ -365,22 +373,22 @@ class IPyServer:
                 if devicename and (devicename in driver):
                     # data is intended for this driver
                     # it is not snoopable, since it is data to a device, not from it.
-                    await driver.readerque.put(xmldata)
+                    await self._queueput(driver.readerque, xmldata)
                     break
                 elif xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
-                    await driver.readerque.put(xmldata)
+                    await self._queueput(driver.readerque, xmldata)
                 elif not xmldata.tag.startswith("new"):
                     # either devicename is unknown, or this data is to/from another driver.
                     # So check if this driver is snooping on this device/vector
                     # only forward def's and set's, not 'new' vectors which
                     # do not come from a device, but only from a client to the target device.
                     if driver.snoopall:
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                     elif devicename and (devicename in driver.snoopdevices):
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                     elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
 
             self.serverreaderque.task_done()
             # now every driver/remcon which needs it has this xmldata
@@ -388,8 +396,9 @@ class IPyServer:
     async def _sendtoclient(self):
         "For every clientconnection, get txque and copy data into it from serverwriterque"
         while not self._stop:
-            await asyncio.sleep(0)
-            xmldata = await self.serverwriterque.get()
+            quexit, xmldata = await queueget(self.serverwriterque)
+            if quext:
+                continue
             #  This xmldata of None is an indication to shut the server down
             #  It is set to None when a duplicate devicename is discovered
             if xmldata is None:
@@ -409,7 +418,7 @@ class IPyServer:
                     logger.debug(f"TX:: {binarydata.decode('utf-8')}")
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
-                    await clientconnection.txque.put(xmldata)
+                    await self._queueput(clientconnection.txque, xmldata)
             # task completed
             self.serverwriterque.task_done()
 
@@ -438,7 +447,7 @@ class IPyServer:
                 # at least one is connected, so this data is put into
                 # serverwriterque, and is then sent to each client by
                 # the _sendtoclient method.
-                await self.serverwriterque.put(xmldata)
+                await self._queueput(self.serverwriterque, xmldata)
                 break
 
 
@@ -477,13 +486,22 @@ class _DriverComms:
         "Sets self.stop to True and calls shutdown on tasks"
         self._stop = True
 
+    async def _queueput(self, queue, value, timeout=0.5):
+        while not self._stop:
+            quexit = await queueput(queue, value, timeout)
+            if quexit:
+                # queue is full, continue while loop, checking stop flag
+                continue
+            break
+
 
     async def __call__(self, readerque, writerque):
         """Called by the driver, should run continuously.
            reads writerque from the driver, and sends xml data to the network"""
         while not self._stop:
-            await asyncio.sleep(0)
-            xmldata = await writerque.get()
+            quexit, xmldata = await queueget(self.writerque)
+            if quext:
+                continue
             # Check if other drivers/remotes wants to snoop this traffic
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
@@ -502,7 +520,7 @@ class _DriverComms:
                         continue
                     if devicename in driver:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
-                        await self.serverwriterque.put(None)
+                        await self._queueput(self.serverwriterque, None)
                         writerque.task_done()
                         return
 
@@ -517,7 +535,7 @@ class _DriverComms:
                             continue
                         if devicename in driver:
                             # this getProperties request is meant for an attached driver/device
-                            await driver.readerque.put(xmldata)
+                            await self._queueput(driver.readerque, xmldata)
                             foundflag = True
                             break
                     if foundflag:
@@ -559,15 +577,15 @@ class _DriverComms:
                     continue
                 if xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
-                    await driver.readerque.put(xmldata)
+                    await self._queueput(driver.readerque, xmldata)
                 else:
                     # Check if this driver is snooping on this device/vector
                     if driver.snoopall:
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                     elif devicename and (devicename in driver.snoopdevices):
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                     elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                        await driver.readerque.put(xmldata)
+                        await self._queueput(driver.readerque, xmldata)
 
 
             # traffic from this driver writerque has been sent to other drivers/remotes if they want to snoop.
@@ -579,7 +597,7 @@ class _DriverComms:
                     # at least one is connected, so this data is put into
                     # serverwriterque, and is then sent to each client by
                     # the _sendtoclient method.
-                    await self.serverwriterque.put(xmldata)
+                    await self._queueput(self.serverwriterque, xmldata)
                     break
             # task completed
             writerque.task_done()
