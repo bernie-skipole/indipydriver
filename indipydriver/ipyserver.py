@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, SendChecker, queueget, queueput
+from .comms import Port_RX, Port_TX, cleanque, SendChecker, queueget
 
 from .remote import RemoteConnection
 
@@ -136,8 +136,9 @@ class IPyServer:
 
     async def _queueput(self, queue, value, timeout=0.5):
         while not self._stop:
-            quexit = await queueput(queue, value, timeout)
-            if quexit:
+            try:
+                await asyncio.wait_for(queue.put(value), timeout)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
@@ -488,12 +489,12 @@ class _DriverComms:
 
     async def _queueput(self, queue, value, timeout=0.5):
         while not self._stop:
-            quexit = await queueput(queue, value, timeout)
-            if quexit:
+            try:
+                await asyncio.wait_for(queue.put(value), timeout)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
-
 
     async def __call__(self, readerque, writerque):
         """Called by the driver, should run continuously.

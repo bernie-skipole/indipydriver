@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import queueget, queueput
+from .comms import queueget
 
 
 # All xml data sent from the driver should be contained in one of the following tags
@@ -95,8 +95,9 @@ class ExDriver:
         # send a getProperties into the driver
         xldata = ET.fromstring("""<getProperties version="1.7" />""")
         while not self._stop:
-            quexit = await queueput(self.readerque, xldata)
-            if quexit:
+            try:
+                await asyncio.wait_for(self.readerque.put(xldata), timeout=0.5)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
@@ -156,8 +157,9 @@ class ExDriver:
                         self.snoopvectors.add((devicename,vectorname))
                 # append it to  writerque
                 while not self._stop:
-                    quexit = await queueput(self.writerque, txdata)
-                    if quexit:
+                    try:
+                        await asyncio.wait_for(self.writerque.put(txdata), timeout=0.5)
+                    except asyncio.TimeoutError:
                         # queue is full, continue while loop, checking stop flag
                         continue
                     # txdata is now in writerque, break the inner while loop

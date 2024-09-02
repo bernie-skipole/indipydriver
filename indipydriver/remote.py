@@ -8,8 +8,6 @@ from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import queueput
-
 from indipyclient import IPyClient
 
 from indipyclient.events import getProperties
@@ -26,16 +24,6 @@ class RemoteConnection(IPyClient):
         self.enable_reports = False
         # a list of devicenames that have blobenable sent
         self.clientdata["blobenablesent"] = []
-
-    async def _queueput(self, queue, value, timeout=0.5):
-        while not self._stop:
-            quexit = await queueput(queue, value, timeout)
-            if quexit:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
-
-
 
     async def hardware(self):
         """If connection fails, clear blobenablesent list
@@ -60,7 +48,7 @@ class RemoteConnection(IPyClient):
                         messagedata = ET.Element('message')
                         messagedata.set("timestamp", tstring)
                         messagedata.set("message", f"Remote connection made to {self.indihost}:{self.indiport}")
-                        await self._queueput(serverwriterque, messagedata)
+                        await self.queueput(serverwriterque, messagedata)
                         break
                 continue
             # The connection has failed
@@ -83,7 +71,7 @@ class RemoteConnection(IPyClient):
                     messagedata = ET.Element('message')
                     messagedata.set("timestamp", tstring)
                     messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
-                    await self._queueput(serverwriterque, messagedata)
+                    await self.queueput(serverwriterque, messagedata)
                 for devicename, device in self.items():
                     if device.enable:
                         device.disable()
@@ -92,7 +80,7 @@ class RemoteConnection(IPyClient):
                             xmldata.set("device", devicename)
                             xmldata.set("timestamp", tstring)
                             xmldata.set("message", f"Remote Connection lost, {devicename} disabled")
-                            await self._queueput(serverwriterque, xmldata)
+                            await self.queueput(serverwriterque, xmldata)
 
 
     async def rxevent(self, event):
@@ -111,14 +99,14 @@ class RemoteConnection(IPyClient):
             for driver in self.clientdata["alldrivers"]:
                 if devicename in driver:
                     logger.error(f"A duplicate devicename {devicename} has been detected")
-                    await self._queueput(self.clientdata['serverwriterque'], None)
+                    await self.queueput(self.clientdata['serverwriterque'], None)
                     return
             for remcon in self.clientdata["remotes"]:
                 if remcon is self:
                     continue
                 if devicename in remcon:
                     logger.error(f"A duplicate devicename {devicename} has been detected")
-                    await self._queueput(self.clientdata['serverwriterque'], None)
+                    await self.queueput(self.clientdata['serverwriterque'], None)
                     return
             # on receiving a define vector, send the blobenabled status for that device
             # but record it, so it is not being sent repeatedly
@@ -140,7 +128,7 @@ class RemoteConnection(IPyClient):
                 for driver in self.clientdata["alldrivers"]:
                     if devicename in driver:
                         # this getProperties request is meant for an attached device
-                        await self._queueput(driver.readerque, rxdata)
+                        await self.queueput(driver.readerque, rxdata)
                         # no need to transmit this anywhere else
                         return
                 for remcon in self.clientdata["remotes"]:
@@ -175,15 +163,15 @@ class RemoteConnection(IPyClient):
         for driver in self.clientdata["alldrivers"]:
             if isinstance(event, getProperties):
                 # either no devicename, or an unknown device
-                await self._queueput(driver.readerque, rxdata)
+                await self.queueput(driver.readerque, rxdata)
             else:
                 # Check if this driver is snooping on this device/vector
                 if driver.snoopall:
-                    await self._queueput(driver.readerque, rxdata)
+                    await self.queueput(driver.readerque, rxdata)
                 elif devicename and (devicename in driver.snoopdevices):
-                    await self._queueput(driver.readerque, rxdata)
+                    await self.queueput(driver.readerque, rxdata)
                 elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
-                    await self._queueput(driver.readerque, rxdata)
+                    await self.queueput(driver.readerque, rxdata)
 
         # transmit rxdata out to clients
         serverwriterque = self.clientdata['serverwriterque']
@@ -195,5 +183,5 @@ class RemoteConnection(IPyClient):
             if clientconnection.connected:
                 # at least one is connected, so this data is put into
                 # serverwriterque
-                await self._queueput(serverwriterque, rxdata)
+                await self.queueput(serverwriterque, rxdata)
                 break

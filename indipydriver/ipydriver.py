@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import STDINOUT, Portcomms, queueget, queueput
+from .comms import STDINOUT, Portcomms, queueget
 from . import events
 from .propertyvectors import timestamp_string
 
@@ -149,8 +149,9 @@ class IPyDriver(collections.UserDict):
 
     async def _queueput(self, queue, value, timeout=0.5):
         while not self._stop:
-            quexit = await queueput(queue, value, timeout)
-            if quexit:
+            try:
+                await asyncio.wait_for(queue.put(value), timeout)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
@@ -173,8 +174,9 @@ class IPyDriver(collections.UserDict):
         while not self._stop:
             if not self.comms.connected:
                 return
-            quexit = await queueput(self.writerque, xmldata)
-            if quexit:
+            try:
+                await asyncio.wait_for(self.writerque.put(xmldata), timeout=0.5)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
@@ -539,8 +541,9 @@ class Device(collections.UserDict):
 
     async def _queueput(self, queue, value, timeout=0.5):
         while not self._stop:
-            quexit = await queueput(queue, value, timeout)
-            if quexit:
+            try:
+                await asyncio.wait_for(queue.put(value), timeout)
+            except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
                 continue
             break

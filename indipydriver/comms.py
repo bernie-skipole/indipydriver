@@ -60,16 +60,6 @@ async def queueget(queue, timeout=0.5):
     return False, value
 
 
-async def queueput(queue, value, timeout=0.5):
-    """"Returns True if timed out
-                False if value put"""
-    try:
-        await asyncio.wait_for(queue.put(value), timeout)
-    except asyncio.TimeoutError:
-        return True
-    return False
-
-
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
 
@@ -156,8 +146,9 @@ class STDIN_RX:
                     return
                 # append it to readerque
                 while not self._stop:
-                    quexit = await queueput(readerque, rxdata)
-                    if quexit:
+                    try:
+                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.5)
+                    except asyncio.TimeoutError:
                         # queue is full, continue while loop, checking stop flag
                         continue
                     # rxdata is now in readerque, break the inner while loop
@@ -353,8 +344,9 @@ class Port_RX(STDIN_RX):
                     self.sendchecker.setpermissions(rxdata)
                 # and place rxdata into readerque
                 while not self._stop:
-                    quexit = await queueput(readerque, rxdata)
-                    if quexit:
+                    try:
+                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.5)
+                    except asyncio.TimeoutError:
                         # queue is full, continue while loop, checking stop flag
                         continue
                     # rxdata is now in readerque, break the inner while loop
