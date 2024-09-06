@@ -282,7 +282,7 @@ class IPyServer:
                     for remcon in self.remotes:
                         if devicename in remcon:
                             # this getProperties request is meant for a remote connection
-                            remcon.send(xmldata)
+                            await remcon.send(xmldata)
                             remconfound = True
                             break
                     if not remconfound:
@@ -314,25 +314,25 @@ class IPyServer:
                         # this devicename has been found on this remote,
                         # so it must be a 'new' intended for this connection and
                         # it is not snoopable, since it is data to a device, not from it.
-                        remcon.send(xmldata)
+                        await remcon.send(xmldata)
                         remconfound = True
                         break
                     elif xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
                         # if it were a known devicename the previous block would have handled it.
                         # so send it on all connections
-                        remcon.send(xmldata)
+                        await remcon.send(xmldata)
                     elif not xmldata.tag.startswith("new"):
                         # either devicename is unknown, or this data is to/from another driver.
                         # So check if this remcon is snooping on this device/vector
                         # only forward def's and set's, not 'new' vectors which
                         # do not come from a device, but only from a client to the target device.
                         if remcon.clientdata["snoopall"]:
-                            remcon.send(xmldata)
+                            await remcon.send(xmldata)
                         elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
-                            remcon.send(xmldata)
+                            await remcon.send(xmldata)
                         elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
-                            remcon.send(xmldata)
+                            await remcon.send(xmldata)
 
             if remconfound:
                 # no need to transmit this anywhere else, continue the while loop
@@ -548,7 +548,7 @@ class _DriverComms:
                             continue
                         if devicename in remcon:
                             # this getProperties request is meant for a remote connection
-                            remcon.send(xmldata)
+                            await remcon.send(xmldata)
                             foundflag = True
                             break
                     if foundflag:
@@ -562,15 +562,15 @@ class _DriverComms:
                     # either no devicename, or an unknown device
                     # if it were a known devicename the previous block would have handled it.
                     # so send it on all connections
-                    remcon.send(xmldata)
+                    await remcon.send(xmldata)
                 else:
                     # Check if this remcon is snooping on this device/vector
                     if remcon.clientdata["snoopall"]:
-                        remcon.send(xmldata)
+                        await remcon.send(xmldata)
                     elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
-                        remcon.send(xmldata)
+                        await remcon.send(xmldata)
                     elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
-                        remcon.send(xmldata)
+                        await remcon.send(xmldata)
 
             # transmit xmldata out to other drivers
             for driver in self.alldrivers:
