@@ -8,9 +8,9 @@ from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
 
-from indipyclient import IPyClient
+from .remotelink import IPyClient
 
-from indipyclient.events import getProperties
+from .remotelink.events import getProperties
 
 
 class RemoteConnection(IPyClient):
