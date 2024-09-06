@@ -38,7 +38,7 @@ class RemoteConnection(IPyClient):
                     continue
                 isconnected = True
                 # a new connection has been made
-                self.send_getProperties()
+                await self.send_getProperties()
                 for clientconnection in connectionpool:
                     if clientconnection.connected:
                         # a client is connected, send a message
@@ -111,7 +111,7 @@ class RemoteConnection(IPyClient):
             # on receiving a define vector, send the blobenabled status for that device
             # but record it, so it is not being sent repeatedly
             if devicename and (not (devicename in self.clientdata["blobenablesent"])):
-                self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
+                await self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
                 self.clientdata["blobenablesent"].append(devicename)
 
         # check for a getProperties event, record what is being snooped
@@ -136,7 +136,7 @@ class RemoteConnection(IPyClient):
                         continue
                     if devicename in remcon:
                         # this getProperties request is meant for a remote connection
-                        remcon.send(rxdata)
+                        await remcon.send(rxdata)
                         # no need to transmit this anywhere else
                         return
 
@@ -149,15 +149,15 @@ class RemoteConnection(IPyClient):
                 # either no devicename, or an unknown device
                 # if it were a known devicename the previous block would have handled it.
                 # so send it on all connections
-                remcon.send(rxdata)
+                await remcon.send(rxdata)
             else:
                 # Check if this remcon is snooping on this device/vector
                 if remcon.clientdata["snoopall"]:
-                    remcon.send(rxdata)
+                    await remcon.send(rxdata)
                 elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
-                    remcon.send(rxdata)
+                    await remcon.send(rxdata)
                 elif devicename and vectorname and ((devicename, vectorname) in remcon.clientdata["snoopvectors"]):
-                    remcon.send(rxdata)
+                    await remcon.send(rxdata)
 
         # transmit rxdata out to drivers
         for driver in self.clientdata["alldrivers"]:
