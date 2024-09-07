@@ -649,7 +649,7 @@ class IPyClient(collections.UserDict):
                             nowtime = time.time()
                             telapsed = nowtime - self.idle_timer
                             if telapsed > self.idle_timeout:
-                                self.send_getProperties()
+                                await self.send_getProperties()
                             # check if any vectors have timed out
                             for device in self.data.values():
                                 for vector in device.values():
