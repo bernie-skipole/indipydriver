@@ -2,11 +2,7 @@
 
 If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
 
-Installing indipydriver from Pypi will also install indipyclient which provides a terminal client, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
-
-Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
-
-Indipydriver is a pure python package, and its only dependency, indipyclient, is itself pure python and has no further dependencies.
+Indipydriver is a pure python package and has no dependencies.
 
 The package creates and serves the INDI communications protocol.
 
@@ -14,7 +10,13 @@ INDI - Instrument Neutral Distributed Interface.
 
 See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
-The INDI protocol is defined so that drivers should operate with any INDI client. The indipyclient package is available separately on Pypi so can be installed on a remote computer, and should interwork with other INDI services.
+The INDI protocol is defined so that drivers should operate with any INDI client.
+
+An associated terminal client indipyclient is available, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
+
+Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
+
+Both indipydriver and indipyclient are available on Pypi, and should interwork with other services that follow the INDI specification.
 
 The image below shows the indipyclient terminal connected to a server running an example driver (switching on or off an LED on a RaspberryyPi). The example is described at:
 
@@ -40,7 +42,7 @@ This is called whenever data is received from the client, typically to set an in
 
 **async def hardware(self)**
 
-This should be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
+This could be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
 
 **async def snoopevent(self, event)**
 

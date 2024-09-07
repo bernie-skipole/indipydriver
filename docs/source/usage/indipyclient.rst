@@ -1,11 +1,11 @@
 indipyclient
 ============
 
-If indipydriver is installed from Pypi, the package indipyclient will also be automatically installed.
-
-This is a terminal client which communicates to an INDI service, and can be used to view and control your instruments. It can also be installed separately from the indipydriver package and is available at:
+The associated package indipyclient can be installed from Pypi.
 
 https://pypi.org/project/indipyclient
+
+This is a terminal client which communicates to an INDI service, and can be used to view and control your instruments.
 
 The client can be run with
 

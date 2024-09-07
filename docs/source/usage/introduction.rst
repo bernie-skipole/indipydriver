@@ -5,19 +5,23 @@ Introduction
 indipydriver
 ^^^^^^^^^^^^
 
-This is a pure python package, providing a set of classes which can be used to create an INDI driver and serve the INDI communications protocol on a port.
+If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
 
-It has one dependency, indipyclient, which itself is pure python and has no further dependencies.
+Indipydriver is a pure python package and has no dependencies.
 
-INDI - Instrument Neutral Distributed Interface.
+The package creates and serves the INDI communications protocol.
 
 For further information on INDI, see :ref:`references`.
 
 Typically you would use this package to create drivers to control an instrument, or GPIO pins on the computer itself, and the package functions generate the INDI protocol which communicates to an INDI client.
 
-Installing indipydriver from Pypi will also install indipyclient which provides a terminal client so the instrument can be viewed and controlled from a terminal session. The INDI protocol is defined so that drivers should operate with any INDI client. The indipyclient package can also be installed separately on a remote computer.
+The INDI protocol is defined so that drivers should operate with any INDI client.
 
-The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the format of switches, numbers etc., from the protocol.
+An associated terminal client indipyclient is available, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
+
+Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
+
+Both indipydriver and indipyclient are available on Pypi, and should interwork with other services that follow the INDI specification.
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control if appropriate drivers are written.
 
