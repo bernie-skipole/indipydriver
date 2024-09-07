@@ -23,21 +23,6 @@ All event objects have attributes devicename, vectorname, vector, root
 
 Where vector is the vector object, and root is the received xml parsed as an xml.etree.ElementTree element.
 
-.. autoclass:: indipydriver.enableBLOB
-
-The INDI specification describes enableBLOB when sent from a client::
-
-    Command to control whether setBLOBs should be sent to this channel from a
-    given Device. They can be turned off completely by setting Never (the default),
-    allowed to be intermixed with other INDI commands by setting Also or made the
-    only command by setting Only.
-
-    This behavior is only to be implemented in intermediate INDI server processes;
-    individual Device drivers shall disregard enableBLOB and send all elements at will.
-
-
-Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
-
 The following event objects indicate the client is trying to set new member values of a vector. These events are mappings of membername:value which the client is submitting, you would typically use the rxevent method to accept these new values and set them into your instrument. The event has dict methods available such as get() and iteration through keys(), values() and items().
 
 If you accept the new values, you should also set the vector with the new value, and send the vector back to the client to update it with the new value. The vector which these values apply to is made conveniently available as the event.vector attribute.
@@ -82,6 +67,24 @@ It may be that you expect to receive multiple member values in a vector, and wan
             # followed by:
             event.vector[name] = value
         await event.vector.send_setVector()
+
+
+The rxevent method may also receive an enableBLOB event, which in general should be ignored.
+
+.. autoclass:: indipydriver.enableBLOB
+
+The INDI specification describes enableBLOB when sent from a client::
+
+    Command to control whether setBLOBs should be sent to this channel from a
+    given Device. They can be turned off completely by setting Never (the default),
+    allowed to be intermixed with other INDI commands by setting Also or made the
+    only command by setting Only.
+
+    This behavior is only to be implemented in intermediate INDI server processes;
+    individual Device drivers shall disregard enableBLOB and send all elements at will.
+
+
+Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
 
 
 devrxevent
