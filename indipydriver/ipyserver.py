@@ -351,7 +351,7 @@ class IPyServer:
                         break
                     elif xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
-                        await self._queueput(driver.readerque.put, xmldata)
+                        await self._queueput(driver.readerque, xmldata)
                     elif not xmldata.tag.startswith("new"):
                         # either devicename is unknown, or this data is to/from another driver.
                         # So check if this driver is snooping on this device/vector
