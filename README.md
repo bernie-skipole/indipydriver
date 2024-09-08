@@ -1,6 +1,6 @@
 # indipydriver
 
-If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
+If you are developing a Python project to operate some form of instrument, with switches, indicators or measurement data, this package can be used to send and receive data on a port to control your instrument.
 
 Indipydriver is a pure python package and has no dependencies.
 
@@ -29,8 +29,6 @@ https://indipydriver.readthedocs.io/en/latest/usage/summary.html
 The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the display format of switches, numbers etc., from the protocol.
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control.
-
-The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
 
 Typically you would create a subclass of IPyDriver.
 
@@ -63,8 +61,10 @@ IPyServer also has an add\_remote method which can be used to add connections to
 
 ![INDI Network](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/rem2.png)
 
-With such a layout, one driver can 'snoop' on the data sent by other drivers, and the client can control all the drivers.
+With such a layout, the client can control all the instruments.
 
 Documentation at https://indipydriver.readthedocs.io
 
 Installation from https://pypi.org/project/indipydriver
+
+indipyclient available from https://pypi.org/project/indipyclient
