@@ -570,7 +570,7 @@ class IPyClient(collections.UserDict):
         with threading.Lock():
             # other threads cannot change the client.data dictionary
             # while the snapshot is being taken
-            snap = Snap(self.indihost, self.indiport, self.messages)
+            snap = Snap(self.indihost, self.indiport, self.connected, self.messages)
             if self.data:
                 for devicename, device in self.data.items():
                     snap[devicename] = device._snapshot()
@@ -747,10 +747,11 @@ class Snap(collections.UserDict):
        Unlike IPyClient this has no send_newVector method, and the
        snap vectors do not have the send methods."""
 
-    def __init__(self, indihost, indiport, messages):
+    def __init__(self, indihost, indiport, connected, messages):
         super().__init__()
         self.indihost = indihost
         self.indiport = indiport
+        self.connected = connected
         self.messages = list(messages)
 
     def dictdump(self):
@@ -764,6 +765,7 @@ class Snap(collections.UserDict):
             devdict[devicename] = device.dictdump()
         return {"indihost":self.indihost,
                 "indiport":self.indiport,
+                "connected":self.connected,
                 "messages":messlist,
                 "devices":devdict}
 
