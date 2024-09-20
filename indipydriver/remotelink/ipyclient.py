@@ -754,6 +754,14 @@ class Snap(collections.UserDict):
         self.connected = connected
         self.messages = list(messages)
 
+    @property
+    def enable(self):
+        "Returns True if any device of thisclient has enable True, otherwise False"
+        for device in self.data.values():
+            if device.enable:
+                return True
+        return False
+
     def dictdump(self):
         """Returns a dictionary of this client information
            and is used to generate the JSON output"""
@@ -767,6 +775,7 @@ class Snap(collections.UserDict):
                 "indiport":self.indiport,
                 "connected":self.connected,
                 "messages":messlist,
+                "enable":self.enable,
                 "devices":devdict}
 
     def dumps(self, indent=None, separators=None):
