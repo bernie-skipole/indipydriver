@@ -1,5 +1,5 @@
 
-import collections, sys, time, threading, json
+import collections, sys, time, json
 
 from datetime import datetime, timezone
 
@@ -208,7 +208,12 @@ class PropertyVector(Vector):
         self._timer = False
 
 
-    def _snapshot(self):
+    def snapshot(self):
+        """Take a snapshot of the vector and returns an object which is a restricted copy
+           of the current state of the vector.
+           Vector methods for sending data will not be available.
+           This copy will not be updated by events. This is provided so that you can
+           handle the vector data, without fear of the value changing."""
         snapvector = SnapVector(self.name, self.label, self.group, self.state, self.timestamp, self.message)
         snapvector.vectortype = self.vectortype
         snapvector.devicename = self.devicename
@@ -222,20 +227,6 @@ class PropertyVector(Vector):
         for membername, member in self.data.items():
             snapvector.data[membername] = member._snapshot()
         return snapvector
-
-
-    def snapshot(self):
-        """Take a snapshot of the vector and returns an object which is a restricted copy
-           of the current state of the vector.
-           Vector methods for sending data will not be available.
-           This copy will not be updated by events. This is provided so that you can
-           handle the vector data, without fear of the value changing."""
-        with threading.Lock():
-            # other threads cannot change the data dictionary
-            # while the snapshot is being taken
-            snap = self._snapshot()
-        return snap
-
 
 
 
@@ -421,8 +412,8 @@ class LightVector(PropertyVector):
                 self.data[membername] = LightMember(membername, event.memberlabels[membername], membervalue)
         self.enable = True
 
-    def _snapshot(self):
-        snapvector = PropertyVector._snapshot(self)
+    def snapshot(self):
+        snapvector = PropertyVector.snapshot(self)
         snapvector.perm = "ro"
         return snapvector
 

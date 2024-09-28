@@ -1,6 +1,6 @@
 
 
-import os, sys, collections, threading, asyncio, time, copy, json
+import os, sys, collections, asyncio, time, copy, json
 
 from time import sleep
 
@@ -177,7 +177,6 @@ class IPyClient(collections.UserDict):
                 await asyncio.wait_for(queue.put(value), timeout)
             except asyncio.TimeoutError:
                 # queue is full, continue while loop, checking stop flag
-                # and the self.connected flag
                 continue
             return True
         return False
@@ -515,35 +514,33 @@ class IPyClient(collections.UserDict):
                     # nothing to read, continue while loop which re-checks the _stop flag
                     continue
                 devicename = root.get("device")
-                # block any other thread from accessing data until update is done
                 try:
-                    with threading.Lock():
-                        if devicename is None:
-                            if root.tag == "message":
-                                # create event
-                                event = events.Message(root, None, self)
-                            elif root.tag == "getProperties":
-                                # create event
-                                event = events.getProperties(root, None, self)
-                            else:
-                                # if no devicename and not message or getProperties, do nothing
-                                continue
-                        elif devicename in self:
-                            # device is known about
-                            device = self[devicename]
-                            event = device.rxvector(root)
+                    if devicename is None:
+                        if root.tag == "message":
+                            # create event
+                            event = events.Message(root, None, self)
                         elif root.tag == "getProperties":
-                            # device is not known about, but this is a getProperties, so raise an event
+                            # create event
                             event = events.getProperties(root, None, self)
-                        elif root.tag in DEFTAGS:
-                            # device not known, but a def is received
-                            newdevice = Device(devicename, self)
-                            event = newdevice.rxvector(root)
-                            # no error has occurred, so add this device to self.data
-                            self.data[devicename] = newdevice
                         else:
-                            # device not known, not a def or getProperties, so ignore it
+                            # if no devicename and not message or getProperties, do nothing
                             continue
+                    elif devicename in self:
+                        # device is known about
+                        device = self[devicename]
+                        event = device.rxvector(root)
+                    elif root.tag == "getProperties":
+                        # device is not known about, but this is a getProperties, so raise an event
+                        event = events.getProperties(root, None, self)
+                    elif root.tag in DEFTAGS:
+                        # device not known, but a def is received
+                        newdevice = Device(devicename, self)
+                        event = newdevice.rxvector(root)
+                        # no error has occurred, so add this device to self.data
+                        self.data[devicename] = newdevice
+                    else:
+                        # device not known, not a def or getProperties, so ignore it
+                        continue
                 except ParseException as pe:
                     # if a ParseException is raised, it is because received data is malformed
                     await self.report(str(pe))
@@ -567,14 +564,11 @@ class IPyClient(collections.UserDict):
            Vector methods for sending data will not be available.
            These copies will not be updated by events. This is provided so that you can
            handle the client data, without fear of their values changing."""
-        with threading.Lock():
-            # other threads cannot change the client.data dictionary
-            # while the snapshot is being taken
-            snap = Snap(self.indihost, self.indiport, self.connected, self.messages)
-            if self.data:
-                for devicename, device in self.data.items():
-                    snap[devicename] = device._snapshot()
-        # other threads can now access client.data
+
+        snap = Snap(self.indihost, self.indiport, self.connected, self.messages)
+        if self.data:
+            for devicename, device in self.data.items():
+                snap[devicename] = device.snapshot()
         # return the snapshot
         return snap
 
@@ -754,13 +748,11 @@ class Snap(collections.UserDict):
         self.connected = connected
         self.messages = list(messages)
 
-    @property
-    def enable(self):
-        "Returns True if any device of thisclient has enable True, otherwise False"
-        for device in self.data.values():
-            if device.enable:
-                return True
-        return False
+
+    def enabledlen(self):
+        "Returns the number of enabled devices"
+        return sum(map(lambda x:1 if x.enable else 0, self.data.values()))
+
 
     def dictdump(self):
         """Returns a dictionary of this client information
@@ -909,22 +901,13 @@ class Device(_ParentDevice):
             raise ParseException("Error while attempting to parse received data")
 
 
-    def _snapshot(self):
-        "Creates snapshot of this device and its vectors"
-        snapdevice = SnapDevice(self.devicename, self.messages)
-        for vectorname, vector in self.data.items():
-            snapdevice[vectorname] = vector._snapshot()
-        return snapdevice
-
-
     def snapshot(self):
         """Take a snapshot of the device and returns an object which is a restricted copy
            of the current state of the device and its vectors.
            Vector methods for sending data will not be available.
            This copy will not be updated by events. This is provided so that you can
            handle the device data, without fear of the value changing."""
-        with threading.Lock():
-            # other threads cannot change the data dictionary
-            # while the snapshot is being taken
-            snap = self._snapshot()
-        return snap
+        snapdevice = SnapDevice(self.devicename, self.messages)
+        for vectorname, vector in self.data.items():
+            snapdevice[vectorname] = vector.snapshot()
+        return snapdevice
