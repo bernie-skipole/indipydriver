@@ -322,6 +322,8 @@ class BLOBMember(PropertyMember):
         if isinstance(self._membervalue, bytes):
             bytescontent = self._membervalue
         elif isinstance(self._membervalue, pathlib.Path):
+            if not self.blobformat:
+                self.blobformat = "".join(self._membervalue.suffixes)
             try:
                 bytescontent = self._membervalue.read_bytes()
             except Exception:
@@ -338,6 +340,8 @@ class BLOBMember(PropertyMember):
                 raise ValueError(f"The BLOBMember {self.name} value is empty")
         else:
             # could be a path to a file
+            if not self.blobformat:
+                self.blobformat = "".join(pathlib.Path(self._membervalue).suffixes)
             try:
                 with open(self._membervalue, "rb") as fp:
                     bytescontent = fp.read()
@@ -348,5 +352,6 @@ class BLOBMember(PropertyMember):
         if not self.blobsize:
             self.blobsize = len(bytescontent)
         xmldata.set("size", str(self.blobsize))
+        xmldata.set("format", self.blobformat)
         xmldata.text = standard_b64encode(bytescontent).decode("utf-8")
         return xmldata
