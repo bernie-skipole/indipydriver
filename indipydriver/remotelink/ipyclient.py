@@ -575,8 +575,8 @@ class IPyClient(collections.UserDict):
 
     async def send_newVector(self, devicename, vectorname, timestamp=None, members={}):
         """Send a Vector with updated member values, members is a membername
-           to value dictionary. It could also be a vector, which is itself a
-           membername to value mapping"""
+           to value dictionary. Note, if this vector is a BLOB Vector, the members
+           dictionary should be {membername:(value, blobsize, blobformat)}"""
         device = self.data.get(devicename)
         if device is None:
             return
@@ -598,20 +598,16 @@ class IPyClient(collections.UserDict):
 
 
     def set_vector_timeouts(self, timeout_enable=None, timeout_min=None, timeout_max=None):
-        """Whenever you send updated values, a timer is started and if a timeout occurs
-           before the server responds, a VectorTimeOut event will be created, which you
-           could choose to ignore, or take action such as setting an Alert flag.
-           The INDI protocol allows the server to suggest a timeout for each vector. This
+        """The INDI protocol allows the server to suggest a timeout for each vector. This
            method allows you to set minimum and maximum timeouts which restricts the
-           suggested values. These should be given as integer seconds. If any parameter
+           suggested values.
+
+           These should be given as integer seconds. If any parameter
            is not provided (left at None) then that value will not be changed.
+
            If timeout_enable is set to False, no VectorTimeOut events will occur.
+
            As default, timeouts are enabled, minimum is set to 2 seconds, maximum 10 seconds.
-           Timeout_enable also enables two other timers:
-           self.idle_timeout is set to twice timeout_max, and will cause a getProperties to be sent
-           if nothing is either transmitted or received in that time.
-           self.respond_timeout is set to four times timeout_max, and will assume a call failure
-           and attempt a reconnect, if after any transmission, nothing is received for that time
            """
         if not timeout_enable is None:
             self.timeout_enable = timeout_enable
@@ -752,6 +748,18 @@ class Snap(collections.UserDict):
     def enabledlen(self):
         "Returns the number of enabled devices"
         return sum(map(lambda x:1 if x.enable else 0, self.data.values()))
+
+
+    def get_vector_state(self, devicename, vectorname):
+        """Gets the state string of the given vectorname, if this vector does not exist
+           returns None"""
+        device = self.data.get(devicename)
+        if device is None:
+            return
+        propertyvector = device.get(vectorname)
+        if propertyvector is None:
+            return
+        return propertyvector.state
 
 
     def dictdump(self):
