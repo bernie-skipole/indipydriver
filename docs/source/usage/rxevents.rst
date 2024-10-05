@@ -13,8 +13,7 @@ When a request is received from the client, an event is produced, and this metho
 Typically you would start with::
 
     async def rxevent(self, event):
-        match event:
-            case newXXXXXVector( ....
+        if isinstance( event, newXXXXXVector ):
 
 
 The client event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
@@ -45,29 +44,16 @@ Typically, if you accept a new member value, you would have code that controls y
     # so event.vector is the vector belonging to this device
     # and with this vectorname
 
-    case newXXXXXVector(devicename='AAA',
-                        vectorname='BBB') if 'membername' in event:
+    if isinstance( event, newXXXXXVector ):
+        if event.devicename == 'AAA' and vectorname == 'BBB':
+            for membername, value in event.items():
+                # your code to act on these values
+                # followed by:
+                event.vector[membername] = value
+            await event.vector.send_setVector()
 
-        newvalue = event['membername']
 
-        # your code to act on this newvalue, followed by:
-
-        event.vector['membername'] = newvalue
-        await event.vector.send_setVector()
-
-When the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed. Calling vector.send_setVector() therefore informs the client of the new value and resets the state on the client display.
-
-It may be that you expect to receive multiple member values in a vector, and want to act on them all, in which case you may do something like::
-
-    case newXXXXXVector(devicename='AAA',
-                        vectorname='BBB'):
-
-        for name, value in event.items():
-            # your code to act on these values
-            # followed by:
-            event.vector[name] = value
-        await event.vector.send_setVector()
-
+When the client transmits the change, it assumes a state of Busy, until it gets confirmation the state has changed. Calling vector.send_setVector() therefore informs the client of the new member values and resets the state on the client display.
 
 The rxevent method may also receive an enableBLOB event, which in general should be ignored.
 
@@ -100,9 +86,6 @@ If desired you could subclass Device, and overwrite this method to handle events
 ensure devrxevent(event) is called using something like the code below in the driver::
 
     async def rxevent(self, event):
-        match event:
+        await self[event.devicename].devrxevent(event)
 
-            case newNumberVector(devicename='Thermostat'):
-                await self['Thermostat'].devrxevent(event)
-
-The Thermostat device method devrxevent(event) then handles those events targeted at devicename Thermostat.
+The device method devrxevent(event) then handles those events targeted at that particular device.

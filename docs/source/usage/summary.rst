@@ -44,30 +44,33 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
             self.is_lit = False
 
 
-    class LEDDriver(ipd.IPyDriver):
+    class _LEDDriver(ipd.IPyDriver):
 
         """IPyDriver is subclassed here to create an LED driver."""
 
         async def rxevent(self, event):
-            """On receiving data from the client, this is called
-               event.vector is the vector being altered
-               event[membername] is the new value"""
+            "On receiving data from the client, this is called"
 
             # get the LED object controlling the instrument, which is
             # available in the named arguments dictionary 'self.driverdata'
-            led = self.driverdata["led"]
 
-            match event:
+            ledobject = self.driverdata["ledobj"]
 
-                case ipd.newSwitchVector(devicename="led",
-                                         vectorname="ledvector") if 'ledmember' in event:
+            # event.vector is the vector being requested or altered
+            # event[membername] is the new value.
+
+            # There is only one device in this driver,
+            # so no need to check devicename
+
+            if isinstance(event, ipd.newSwitchVector):
+                if event.vectorname == "ledvector" and 'ledmember' in event:
                     # a new value has been received from the client
                     ledvalue = event["ledmember"]
                     # turn on or off the led
                     if ledvalue == "On":
-                        led.on()
+                        ledobject.on()
                     elif ledvalue == "Off":
-                        led.off()
+                        ledobject.off()
                     else:
                         # not valid
                         return
@@ -86,7 +89,7 @@ The enableBLOB event can be ignored - it is used internally by IPyServer.
 
 The new vector events are sent by the client to change the instrument settings, in this case to switch on or off the LED. These events are mappings of membername to value which the client is submitting, not all membernames may be present if they are not being changed.
 
-In this case the only event to be received will be a newSwitchVector for the devicename "led", and vectorname "ledvector" - as this is the only device and vector defined which can be controlled by the client. If any other device or vector event is received, it can be ignored.
+In this case the only event to be received will be a newSwitchVector for the devicename "led", and vectorname "ledvector" - as this is the only device and vector defined which can be controlled by the client.
 
 The client is setting the member's value, 'On' or 'Off' which is obtained from event["ledmember"].::
 
@@ -122,14 +125,15 @@ Make the driver
 
 The driver, device, vectors etc,. have to be instantiated, it is suggested this is done in a make_driver() function::
 
-    def make_driver(led):
-        "Creates the driver, led is the instrument LED object"
+    def make_driver(devicename, pin):
+        "Creates the driver"
 
         # Note that “is_lit” is a property of the LED object
         # and is True if the LED is on, this is used to
         # set up the initial value of ledmember.
 
-        ledvalue = "On" if led.is_lit else "Off"
+        ledobject = LED(pin)
+        ledvalue = "On" if ledobject.is_lit else "Off"
 
         # create switch member
         ledmember = ipd.SwitchMember(name="ledmember",
@@ -139,20 +143,19 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
         ledvector = ipd.SwitchVector(name="ledvector",
                                      label="LED",
                                      group="Control Group",
-                                     perm="wo"
+                                     perm="wo",
                                      rule='AtMostOne',
                                      state="Ok",
                                      switchmembers=[ledmember] )
         # create a Device with this vector
-        leddevice = ipd.Device( devicename="led", properties=[ledvector] )
+        leddevice = ipd.Device( devicename, properties=[ledvector])
 
-        # Create the Driver containing this device, and the actual
-        # LED object used for instrument control as a named argument
-        driver = LEDDriver(leddevice, led=led)
+        # Create the Driver containing this device, and as named argument
+        # add the LED object used for instrument control
+        driver = _LEDDriver(leddevice, ledobj=ledobject )
 
         # and return the driver
         return driver
-
 
 The various vector and member classes and their arguments are detailed further in this documentation.
 
@@ -164,14 +167,20 @@ To run the driver include::
     if __name__ == "__main__":
 
         # set up the LED pin and create and serve the driver
-        led = LED(17)
-        driver = make_driver(led)
+        # the devicename has to be unique in a network of devices,
+        # and this name and pin could come from script arguments
+
+        # in this case the devicename is "led", pin 17
+        driver = make_driver("led", 17)
         server = ipd.IPyServer(driver, host="localhost", port=7624, maxconnections=5)
+        print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
 
 If the host, port and maxconnections are not specified in the IPyServer call, the values shown above are the defaults.
 
-The IPyServer class takes drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. The drivers in the positional arguments must all be created from IPyDriver subclasses.
+The IPyServer class takes drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. If more than one driver is to be served, the call would be::
+
+    server = ipd.IPyServer(driver1, driver2, driver3,...., host="localhost", port=7624, maxconnections=5)
 
 To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate to it by stdin and stdout. The method can be called multiple times to add several executable drivers.
 

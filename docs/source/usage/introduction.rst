@@ -25,8 +25,6 @@ Both indipydriver and indipyclient are available on Pypi, and should interwork w
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control if appropriate drivers are written.
 
-The driver object created contains 'device' objects, each of which can contain 'vector' objects, such as a SwitchVector or LightVector. These Vector objects can contain one or more 'members', such as a number of 'switches', or a number of 'lights'.
-
 The package can be installed from:
 
 https://pypi.org/project/indipydriver
