@@ -7,23 +7,20 @@ a 'newNumberVector', which causes the rxevent method to be called::
 
     import asyncio
 
-    from indipydriver import (IPyDriver, Device,
-                              NumberVector, NumberMember,
-                              newNumberVector, IPyServer
-                             )
-
-    # Other vectors, members and events are available,
-    # this example only imports those used.
+    import indipydriver as ipd
 
     class ThermalControl:
         """This is a simulation containing variables only, normally it
            would control a real heater, and take temperature measurements
            from a sensor."""
 
-        def __init__(self):
+        def __init__(self, devicename, target=15):
             """Set start up values"""
+            # It is useful to give this controlling object the devicename
+            # reference, so it can be identified throughout the code
+            self.devicename = devicename
+            self.target = target
             self.temperature = 20
-            self.target = 15
             self.heater = "Off"
             self.stop = False
 
@@ -51,29 +48,30 @@ a 'newNumberVector', which causes the rxevent method to be called::
                     self.heater = "On"
 
 
-    class ThermoDriver(IPyDriver):
-        """IPyDriver is subclassed here, with two methods created to handle incoming events
+    class _ThermoDriver(ipd.IPyDriver):
+
+        """IPyDriver is subclassed here, with a method
+           to run the thermalcontrol.run_thermostat() method,
+           accept a target temperature,
            and to transmit the temperature to the client"""
 
         async def rxevent(self, event):
-            """On receiving data, this is called, and should handle any necessary actions
-               The event object has property 'vector' which is the propertyvector being
-               updated or requested by the client.
-               """
+            "On receiving data, this is called"
 
             thermalcontrol = self.driverdata["thermalcontrol"]
 
-            match event:
+            # There is only one device in this driver,
+            # so no need to check devicename
 
-                case newNumberVector(devicename='Thermostat',
-                                     vectorname='targetvector') if 'target' in event:
+            if isinstance(event, ipd.newNumberVector):
+                if event.vectorname == "targetvector" and 'target' in event:
                     # Set the received value as the thermostat target
-                    newtarget = event['target']
+
                     # The self.indi_number_to_float method converts the received string,
                     # which may be in a number of formats to a Python float value. This
                     # can then be set into thermalcontrol
                     try:
-                        target = self.indi_number_to_float(newtarget)
+                        target = self.indi_number_to_float( event['target'] )
                     except TypeError:
                         # ignore an incoming invalid number
                         return
@@ -84,13 +82,18 @@ a 'newNumberVector', which causes the rxevent method to be called::
                     event.vector['target'] = target
                     await event.vector.send_setVector()
 
-
         async def hardware(self):
-            """This is a continuously running coroutine which is used
-               to transmit the temperature to connected clients."""
+            """This coroutine starts when the driver starts."""
 
+            # get the object controlling the instrument, which is available
+            # in the named arguments dictionary 'self.driverdata'.
             thermalcontrol = self.driverdata["thermalcontrol"]
-            vector = self['Thermostat']['temperaturevector']
+            devicename = thermalcontrol.devicename
+
+            # set the thermalcontrol instrument running
+            controltask = asyncio.create_task(thermalcontrol.run_thermostat())
+
+            vector = self[devicename]['temperaturevector']
             while not self.stop:
                 await asyncio.sleep(10)
                 # Send the temperature every 10 seconds
@@ -98,61 +101,68 @@ a 'newNumberVector', which causes the rxevent method to be called::
                 # and transmit it to the client
                 await vector.send_setVector()
 
+            # the loop above has finished, so stop the controltask
+            thermalcontrol.shutdown()
+            # and wait for it to stop
+            await controltask
 
-    def make_driver(thermalcontrol):
+
+    def make_driver(devicename, target):
         "Returns an instance of the driver"
 
-        # create a vector with one number 'temperaturemember' as its member
-        temperaturemember = NumberMember( name="temperature",
-                                          format='%3.1f', min=-50, max=99,
-                                          membervalue=thermalcontrol.temperature )
-        temperaturevector = NumberVector( name="temperaturevector",
-                                          label="Temperature",
-                                          group="Values",
-                                          perm="ro",
-                                          state="Ok",
-                                          numbermembers=[temperaturemember] )
+        # Make an instance of the object controlling the instrument
+        thermalcontrol = ThermalControl(devicename, target)
+
+        # Make a NumberMember holding the temperature value
+        temperaturemember = ipd.NumberMember( name="temperature",
+                                              format='%3.1f', min=-50, max=99,
+                                              membervalue=thermalcontrol.temperature )
+        # Make a NumberVector instance, containing the member.
+        temperaturevector = ipd.NumberVector( name="temperaturevector",
+                                              label="Temperature",
+                                              group="Values",
+                                              perm="ro",
+                                              state="Ok",
+                                              numbermembers=[temperaturemember] )
 
         # create a vector with one number 'targetmember' as its member
-        targetmember = NumberMember( name="target",
-                                     format='%3.1f', min=-50, max=99,
-                                     membervalue=thermalcontrol.target )
-        targetvector = NumberVector( name="targetvector",
-                                     label="Target",
-                                     group="Values",
-                                     perm="rw",
-                                     state="Ok",
-                                     numbermembers=[targetmember] )
+        targetmember = ipd.NumberMember( name="target",
+                                         format='%3.1f', min=-50, max=99,
+                                         membervalue=thermalcontrol.target )
+        targetvector = ipd.NumberVector( name="targetvector",
+                                         label="Target",
+                                         group="Values",
+                                         perm="rw",
+                                         state="Ok",
+                                         numbermembers=[targetmember] )
 
         # note the targetvector has permission rw so the client can set it
 
         # create a device with the two vectors
-        thermostat = Device( devicename="Thermostat",
-                             properties=[temperaturevector, targetvector] )
+        thermostat = ipd.Device( devicename=devicename,
+                                 properties=[temperaturevector, targetvector] )
 
         # Create the Driver which will contain this Device,
-        #  and the instrument controlling object
-        driver = ThermoDriver( thermostat,
-                               thermalcontrol=thermalcontrol )
-
+        # and the instrument controlling object
+        driver = _ThermoDriver( thermostat,
+                                thermalcontrol=thermalcontrol )
 
         # and return the driver
         return driver
 
 
-    async def main(thermalcontrol, server):
-        "Run the instrument and the server async tasks"
-        await asyncio.gather(thermalcontrol.run_thermostat(),
-                             server.asyncrun() )
-
 
     if __name__ == "__main__":
 
-        # Make an instance of the object controlling the instrument
-        thermalcontrol = ThermalControl()
+        # create and serve the driver
+        # the devicename has to be unique in a network of devices,
+        # and this name and target could come from script arguments
+
+        # in this case the devicename is "Thermostat", target 15
+
         # make a driver for the instrument
-        thermodriver = make_driver(thermalcontrol)
+        thermodriver = make_driver("Thermostat", 15)
         # and a server, which serves this driver
-        server = IPyServer(thermodriver)
-        # and run them together
-        asyncio.run( main(thermalcontrol, server) )
+        server = ipd.IPyServer(thermodriver)
+        print(f"Running {__file__}")
+        asyncio.run(server.asyncrun())
