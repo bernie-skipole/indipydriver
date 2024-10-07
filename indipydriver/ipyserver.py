@@ -206,9 +206,14 @@ class IPyServer:
         "Runs the server on the given host and port"
         logger.info(f"{self.__class__.__name__} listening on {self.host} : {self.port}")
         self.server = await asyncio.start_server(self.handle_data, self.host, self.port)
-        async with self.server:
-            await self.server.serve_forever()
-
+        try:
+            async with self.server:
+                await self.server.serve_forever()
+        except asyncio.CancelledError:
+            # self._stop raises an unwanted CancelledError
+            # propogate this only if it is not due to self._stop
+            if not self._stop:
+                raise
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"

@@ -11,26 +11,23 @@ It is possible to import ConsoleClient from indipyclient.console to run the term
     async def main(client, driver):
         """Run the client and driver"""
 
+        # start the driver
+        drivertask = asyncio.create_task( driver.asyncrun() )
+
+        # start the client, and wait for it to close
         try:
-
-            # start the driver
-            drivertask = asyncio.create_task( driver.asyncrun() )
-
-            # start the client, and wait for it to close
             await client.asyncrun()
-
-            # ask the driver to stop
-            driver.shutdown()
-
-            # wait for the driver to shutdown
-            await drivertask
-
-        except asyncio.CancelledError:
-            # avoid outputting stuff on the command line
-            pass
         finally:
-            # clear the curses terminal setup
+            # Ensure the terminal is cleared
             client.console_reset()
+        print("Shutting down, please wait")
+
+        # ask the driver to stop
+        driver.shutdown()
+
+        # wait for the driver to shutdown
+        await drivertask
+
 
 
     if __name__ == "__main__":
@@ -43,7 +40,6 @@ It is possible to import ConsoleClient from indipyclient.console to run the term
         client = ConsoleClient()
         # run all coroutines
         asyncio.run( main(client, thermodriver) )
-
 
 For more information on ConsoleClient, see the indipyclient documentation, in particular:
 
