@@ -80,6 +80,16 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
                     await event.vector.send_setVector()
 
 
+If you are trying the above code on a Raspberry pi, you may want to use your system gpiozero package. In which case, when creating the virtual environment, use the --system-site-packages option to allow your script to use system packages::
+
+    python3 -m venv --system-site-packages my_env_directory
+
+    source my_env_directory/bin/activate
+
+    pip install indipydriver
+
+
+
 rxevent method
 ^^^^^^^^^^^^^^
 
