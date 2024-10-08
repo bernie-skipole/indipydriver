@@ -16,7 +16,16 @@ Keyword arguments set into 'driverdata' could contain any optional data you wish
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
-In this example an LED will be controlled. A device object will have name "led", and will contain a single switch vector with name "ledvector".
+In this example an LED will be controlled. If you are trying this on a Raspberry pi, you may want to use your system gpiozero package. In which case, when creating the virtual environment, use the --system-site-packages option to allow your script to use system packages::
+
+    python3 -m venv --system-site-packages my_env_directory
+
+    source my_env_directory/bin/activate
+
+    pip install indipydriver
+
+
+A Device object will have name "led", and will contain a single switch vector with name "ledvector".
 
 This switch vector will have a single member, with name "ledmember"
 
@@ -78,16 +87,6 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
                     event.vector["ledmember"] = ledvalue
                     # send the updated vector back to the client
                     await event.vector.send_setVector()
-
-
-If you are trying the above code on a Raspberry pi, you may want to use your system gpiozero package. In which case, when creating the virtual environment, use the --system-site-packages option to allow your script to use system packages::
-
-    python3 -m venv --system-site-packages my_env_directory
-
-    source my_env_directory/bin/activate
-
-    pip install indipydriver
-
 
 
 rxevent method
