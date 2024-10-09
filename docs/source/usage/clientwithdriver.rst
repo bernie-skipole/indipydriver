@@ -5,6 +5,11 @@ It is possible to import ConsoleClient from indipyclient.console to run the term
 
     import asyncio
 
+    # stop anything going to the screen
+    import logging
+    logger = logging.getLogger()
+    logger.addHandler(logging.NullHandler())
+
     from indipyclient.console import ConsoleClient
     from example1 import make_driver
 

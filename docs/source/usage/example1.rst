@@ -73,7 +73,7 @@ In this example a NumberVector and NumberMember contain the temperature which is
             controltask = asyncio.create_task(thermalcontrol.run_thermostat())
 
             vector = self[devicename]['temperaturevector']
-            while not self.stop:
+            while not self._stop:
                 await asyncio.sleep(10)
                 # Send the temperature every 10 seconds
                 vector['temperature'] = thermalcontrol.temperature
@@ -138,6 +138,13 @@ In summary. You create any objects needed to operate your hardware,
 and these can be inserted into the IPyDriver constructor and will be available
 in the dictionary of named arguments 'driverdata'.
 
+When creating control objects, (the ThermalControl class above) it is convenient
+if they have a reference to their devicename, so that the name and control object is associated.
+
+In a network of INDI devices, all devicenames must be unique, and though the devicename could be literally set
+throughout the code above, it is better to have it passed in to the devices in the make_driver() function, so this code
+can be reused.
+
 You would typically create your own child class of IPyDriver, overriding methods:
 
 **async def rxevent(self, event)**
@@ -154,7 +161,7 @@ used to run a continuous long running task to send data to the client. Like
 all async tasks, this should be non blocking, so generally should include a call
 to await asyncio.sleep() in its loop.
 
-Testing self.stop is also useful, as this stop flag is set to True when shutdown() is
+Testing self._stop is also useful, as this stop flag is set to True when shutdown() is
 called on the driver, and would therefore stop this hardware while loop.
 
 You would then create the IPyServer object to serve the driver, and run the server.asyncrun()

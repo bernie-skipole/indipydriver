@@ -22,14 +22,13 @@ The package help is::
     Terminal client to communicate to an INDI service.
 
     options:
-      -h, --help            show this help message and exit
-      -p PORT, --port PORT  Port of the INDI server (default 7624).
-      --host HOST           Hostname/IP of the INDI server (default localhost).
-      -b BLOBS, --blobs BLOBS
-                            Optional folder where BLOB's will be saved.
-      --loglevel LOGLEVEL   Enables logging, value 1, 2, 3 or 4.
-      --logfile LOGFILE     File where logs will be saved
-      --version             show program's version number and exit
+      -h, --help               show this help message and exit
+      -p PORT, --port PORT     Port of the INDI server (default 7624).
+      --host HOST              Hostname/IP of the INDI server (default localhost).
+      -b BLOBS, --blobs BLOBS  Optional folder where BLOB's will be saved.
+      --loglevel LOGLEVEL      Enables logging, value 1, 2, 3 or 4.
+      --logfile LOGFILE        File where logs will be saved
+      --version                show program's version number and exit
 
     The BLOB's folder can also be set from within the session.
     Setting loglevel and logfile should only be used for brief
@@ -40,7 +39,7 @@ The package help is::
     loglevel:4 As 1 plus xml vectors and all contents
 
 
-A typical sesssion would look like:
+A typical session would look like:
 
 .. image:: ./images/image1.png
 

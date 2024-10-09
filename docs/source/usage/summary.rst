@@ -3,6 +3,20 @@ Summary
 
 The following summarises how a driver could be structured, describing an LED control on a Raspberry Pi.
 
+Install indipydriver
+^^^^^^^^^^^^^^^^^^^^
+
+Generally you would install from Pypi into a virtual environment.
+
+If you are trying this on a Raspberry pi, you may want to use your system gpiozero package. In which case, when creating the virtual environment, use the --system-site-packages option to allow your script to use system packages::
+
+    python3 -m venv --system-site-packages my_env_directory
+
+    source my_env_directory/bin/activate
+
+    pip install indipydriver
+
+
 Subclass IPyDriver
 ^^^^^^^^^^^^^^^^^^
 
@@ -16,16 +30,9 @@ Keyword arguments set into 'driverdata' could contain any optional data you wish
 
 A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
 
-In this example an LED will be controlled. If you are trying this on a Raspberry pi, you may want to use your system gpiozero package. In which case, when creating the virtual environment, use the --system-site-packages option to allow your script to use system packages::
+In this example an LED will be controlled.
 
-    python3 -m venv --system-site-packages my_env_directory
-
-    source my_env_directory/bin/activate
-
-    pip install indipydriver
-
-
-A Device object will have name "led", and will contain a single switch vector with name "ledvector".
+A Device object will be created with name "led", and will contain a single switch vector with name "ledvector".
 
 This switch vector will have a single member, with name "ledmember"
 

@@ -9,7 +9,7 @@ If you are developing a Python project to control some form of instrument, with 
 
 Indipydriver is a pure python package and has no dependencies.
 
-The package creates and serves the INDI communications protocol.
+The package creates and serves the INDI protocol.
 
 For further information on INDI, see :ref:`references`.
 

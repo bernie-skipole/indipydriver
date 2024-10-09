@@ -10,10 +10,10 @@ This  is started when the driver is run, and could be a long running co-routine,
 
 If a continuous loop is run in this hardware method, then use something like::
 
-    while not self.stop:
+    while not self._stop:
         ...
 
-The flag self.stop is set to True when the shutdown() method of the driver is called, so this exits the hardware co-routine.
+The flag self._stop is set to True when the shutdown() method of the driver is called, so this exits the hardware co-routine.
 
 Within this hardware method any vector can be accessed with::
 

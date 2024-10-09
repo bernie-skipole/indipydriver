@@ -94,7 +94,7 @@ a 'newNumberVector', which causes the rxevent method to be called::
             controltask = asyncio.create_task(thermalcontrol.run_thermostat())
 
             vector = self[devicename]['temperaturevector']
-            while not self.stop:
+            while not self._stop:
                 await asyncio.sleep(10)
                 # Send the temperature every 10 seconds
                 vector['temperature'] = thermalcontrol.temperature
