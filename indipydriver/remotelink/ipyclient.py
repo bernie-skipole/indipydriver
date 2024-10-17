@@ -165,13 +165,11 @@ class IPyClient(collections.UserDict):
 
 
     async def queueput(self, queue, value, timeout=0.5):
-        """Given an asyncio.Queue object, if self.stop is not set, this
-           attempts to put value into the queue.
-           If the queue is full, and the put operation is waiting, then
-           after the timeout period the check and put will be repeated
-           until successful, or self.stop becomes True.
-           Returns True if value added to queue.
-           Returns False if stop is True and the value not added."""
+        """Method used internally, but available if usefull.
+           Given an asyncio.Queue object attempts to put value into the queue.
+           If the queue is full, checks self._stop every timeout seconds.
+           Returns True when the value is added to queue,
+           or False if self._stop is True and the value not added."""
         while not self._stop:
             try:
                 await asyncio.wait_for(queue.put(value), timeout)
@@ -183,8 +181,8 @@ class IPyClient(collections.UserDict):
 
 
     async def report(self, message):
-        """If logging is enabled message will be logged at level INFO.
-           If self.enable_reports is True, the message will be injected into
+        """If self.enable_reports is True, the given string message will
+           be logged at level INFO and injected into
            the received data, which will be picked up by the rxevent method.
            It is a way to set a message on to your client display, in the
            same way messages come from the INDI service."""
@@ -199,6 +197,25 @@ class IPyClient(collections.UserDict):
             await self.queueput(self._readerque, root)
         except Exception :
             logger.exception("Exception report from IPyClient.report method")
+
+
+    async def warning(self, message):
+        """If self.enable_reports is True, the given string message will
+           be logged at level WARNING and injected into
+           the received data, which will be picked up by the rxevent method.
+           It is a way to set a message on to your client display, in the
+           same way messages come from the INDI service."""
+        try:
+            logger.warning(message)
+            if not self.enable_reports:
+                return
+            timestamp = datetime.now(tz=timezone.utc)
+            timestamp = timestamp.replace(tzinfo=None)
+            root = ET.fromstring(f"<message timestamp=\"{timestamp.isoformat(sep='T')}\" message=\"{message}\" />")
+            # and place root into readerque
+            await self.queueput(self._readerque, root)
+        except Exception :
+            logger.exception("Exception report from IPyClient.warning method")
 
 
     def enabledlen(self):
@@ -222,24 +239,26 @@ class IPyClient(collections.UserDict):
                 t3 = None
                 try:
                     # start by openning a connection
-                    await self.report(f"Attempting to connect to {self.indihost}:{self.indiport}")
+                    await self.warning(f"Attempting to connect to {self.indihost}:{self.indiport}")
                     reader, writer = await asyncio.open_connection(self.indihost, self.indiport)
                     self.connected = True
                     self.messages.clear()
                     # clear devices etc
                     self.clear()
-                    await self.report(f"Connected to {self.indihost}:{self.indiport}")
+                    await self.warning(f"Connected to {self.indihost}:{self.indiport}")
                     t1 = asyncio.create_task(self._run_tx(writer))
                     t2 = asyncio.create_task(self._run_rx(reader))
                     t3 = asyncio.create_task(self._check_alive(writer))
                     await asyncio.gather(t1, t2, t3)
                 except ConnectionRefusedError:
-                    await self.report(f"Connection refused on {self.indihost}:{self.indiport}")
+                    await self.warning(f"Connection refused on {self.indihost}:{self.indiport}")
                 except ConnectionError:
-                    await self.report(f"Connection Lost on {self.indihost}:{self.indiport}")
+                    await self.warning(f"Connection Lost on {self.indihost}:{self.indiport}")
+                except OSError:
+                    await self.warning(f"Connection Error on {self.indihost}:{self.indiport}")
                 except Exception:
                     logger.exception(f"Connection Error on {self.indihost}:{self.indiport}")
-                    await self.report("Connection failed")
+                    await self.warning("Connection failed")
                 self._clear_connection()
                 # connection has failed, ensure all tasks are done
                 if t1:
@@ -254,7 +273,7 @@ class IPyClient(collections.UserDict):
                 if self._stop:
                     break
                 else:
-                    await self.report(f"Connection failed, re-trying...")
+                    await self.warning(f"Connection failed, re-trying...")
                 # wait five seconds before re-trying, but keep checking
                 # that self._stop has not been set
                 count = 0
@@ -297,7 +316,7 @@ class IPyClient(collections.UserDict):
                        await writer.wait_closed()
                        self._clear_connection()
                        if not self._stop:
-                           await self.report("Error: Connection timed out")
+                           await self.warning("Error: Connection timed out")
             if self.connected and self._stop:
                 writer.close()
                 await writer.wait_closed()
@@ -360,6 +379,8 @@ class IPyClient(collections.UserDict):
                 self.idle_timer = time.time()
                 if logger.isEnabledFor(logging.DEBUG):
                     self._logtx(txdata)
+        except ConnectionError:
+            raise
         except Exception:
             logger.exception("Exception report from IPyClient._run_tx method")
             raise
@@ -405,6 +426,8 @@ class IPyClient(collections.UserDict):
                 # rxdata in readerque, log it, then continue with next block
                 if logger.isEnabledFor(logging.DEBUG):
                     self._logrx(rxdata)
+        except ConnectionError:
+            raise
         except Exception:
             logger.exception("Exception report from IPyClient._run_rx")
             raise
@@ -543,7 +566,7 @@ class IPyClient(collections.UserDict):
                         continue
                 except ParseException as pe:
                     # if a ParseException is raised, it is because received data is malformed
-                    await self.report(str(pe))
+                    await self.warning(str(pe))
                     continue
                 finally:
                     self._readerque.task_done()
@@ -775,7 +798,6 @@ class Snap(collections.UserDict):
                 "indiport":self.indiport,
                 "connected":self.connected,
                 "messages":messlist,
-                "enable":self.enable,
                 "devices":devdict}
 
     def dumps(self, indent=None, separators=None):

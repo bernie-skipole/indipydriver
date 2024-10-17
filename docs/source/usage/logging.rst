@@ -5,9 +5,11 @@ This indipydriver package uses the Python standard library logging module, and e
 
 *ERROR* Logs errors including tracebacks from exceptions
 
-*INFO* Logs informational messages and error messages.
+*WARNING* Logs connection status for remote links
 
-*DEBUG* Logs xml data transmitted and received, and the info and error messages. The logs of BLOB tags do not include contents.
+*INFO* Logs informational messages.
+
+*DEBUG* Logs xml data transmitted and received. The logs of BLOB tags do not include contents.
 
 
 To log to a file, at the top of your script add::
