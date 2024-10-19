@@ -9,7 +9,6 @@ indipydriver = Enabling remote instrument control
    usage/introduction
    usage/concept
    usage/summary
-   usage/indipyclient
    usage/ipydriver
    usage/device
    usage/propertyvectors
