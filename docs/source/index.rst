@@ -7,6 +7,7 @@ indipydriver = Enabling remote instrument control
    :maxdepth: 1
 
    usage/introduction
+   usage/concept
    usage/summary
    usage/indipyclient
    usage/ipydriver
