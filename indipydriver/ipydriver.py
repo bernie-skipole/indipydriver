@@ -21,9 +21,9 @@ class IPyDriver(collections.UserDict):
 
        devices are Device objects this driver handles.
 
-       You may optionally include named arguments of any hardware
-       data that may be usefull to you, these will be available as
-       attribute dictionary self.driverdata.
+       You may optionally include named arguments of any instrumentation
+       objects that may be useful to you, these will be available in
+       the dictionary self.driverdata.
 
        This object is also a mapping, of devicename:deviceobject
        """
