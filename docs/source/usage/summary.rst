@@ -17,26 +17,12 @@ If you are trying this on a Raspberry pi, you may want to use your system gpioze
     pip install indipydriver
 
 
-Subclass IPyDriver
-^^^^^^^^^^^^^^^^^^
+Define your instrumentation objects
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The IPyDriver class has signature::
+.. image:: ./images/stage1.png
 
-    class IPyDriver(*devices, **driverdata)
-
-Where 'devices' is one or more devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
-
-Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In general this can be used to pass in your object which does the actual instrument control. In this example this feature is used to pass in an LED object.
-
-A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
-
-In this example an LED will be controlled.
-
-A Device object will be created with name "led", and will contain a single switch vector with name "ledvector".
-
-This switch vector will have a single member, with name "ledmember"
-
-The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
+You would initially start the script by defining your own classes. In this example an LED will be controlled::
 
     import asyncio
     import indipydriver as ipd
@@ -58,6 +44,28 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
 
         def off(self):
             self.is_lit = False
+
+
+Subclass IPyDriver
+^^^^^^^^^^^^^^^^^^
+
+.. image:: ./images/stage2.png
+
+The IPyDriver class has signature::
+
+    class IPyDriver(*devices, **driverdata)
+
+Where 'devices' is one or more devices this driver will control, each device being an instance of the 'Device' class. In this example a single device will be created with devicename set to "led".
+
+Keyword arguments set into 'driverdata' could contain any optional data you wish to set into the class, and which will then be available to your rxevent and hardware methods. In general this can be used to pass in your object which does the actual instrument control. In this example this feature is used to pass in an LED object.
+
+A note on terminology here - a driver object can contain one or more devices, a device consists of one or more property 'vectors', where each vector object contains one or more members. A vector can be a 'Switch' vector, which may for example hold a number of switches which could define a radio button. Similarly a 'Text' vector holds text members, a 'Light' vector holds light members, a Numbers vector holds numbers and a BLOB vector holds Binary Large Objects.
+
+A Device object will be created with name "led", and will contain a single switch vector with name "ledvector".
+
+This switch vector will have a single member, with name "ledmember"
+
+The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
 
 
     class _LEDDriver(ipd.IPyDriver):
@@ -139,6 +147,8 @@ This vector, with updated member value can then be sent to the client using the 
 Make the driver
 ^^^^^^^^^^^^^^^
 
+.. image:: ./images/stage3.png
+
 The driver, device, vectors etc,. have to be instantiated, it is suggested this is done in a make_driver() function::
 
     def make_driver(devicename, pin):
@@ -177,6 +187,8 @@ The various vector and member classes and their arguments are detailed further i
 
 Run the driver
 ^^^^^^^^^^^^^^
+
+.. image:: ./images/stage4.png
 
 To run the driver include::
 

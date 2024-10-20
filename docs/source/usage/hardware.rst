@@ -6,7 +6,7 @@ The driver has method::
 
     async def hardware(self)
 
-This  is started when the driver is run, and could be a long running co-routine, controlling whatever hardware is required, and calling appropriate vector methods to send data back to the client.
+This  is started when the driver is run, and could be a long running co-routine, calling on your instrumentation objects, and appropriate vector methods to send data back to the client.
 
 If a continuous loop is run in this hardware method, then use something like::
 
@@ -52,7 +52,7 @@ The Device class has method::
 
     async def devhardware(self, *args, **kwargs):
 
-You could subclass the Device class, and override this method to control the hardware of that particular device. To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any hardware related object required.
+You could subclass the Device class, and override this method to control that particular device. To help in doing this, the constructor for each device has keyword dictionary 'devicedata' set as an attribute of the device, so when you create an instance of the device you can include any related object required.
 
 The driver hardware method would need to await each of the devices devhardware methods.
 
