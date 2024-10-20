@@ -11,11 +11,13 @@ The package can be installed from:
 
 https://pypi.org/project/indipydriver
 
-The associated indipyclient development site:
+The associated indipyclient sites:
 
 https://github.com/bernie-skipole/indipyclient
 
 https://indipyclient.readthedocs.io
+
+https://pypi.org/project/indipyclient
 
 Examples of clients and drivers are collected at:
 

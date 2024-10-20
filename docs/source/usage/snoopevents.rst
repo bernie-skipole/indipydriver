@@ -12,7 +12,7 @@ If this driver is 'snooping' on other drivers, this method should be written to 
 
 Snooping is typically used when an instrument should only take actions if another remote instrument has already taken a required prior action.  Snooping may also be useful as a method of logging traffic.
 
-Your code should typically use match and case to determine the type of event, and read the event contents, and then take any appropriate action.
+Your code should read the event contents, and then take any appropriate action.
 
 Snooping
 ^^^^^^^^
