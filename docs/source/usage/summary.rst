@@ -185,12 +185,12 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
 
 The various vector and member classes and their arguments are detailed further in this documentation.
 
-Run the driver
-^^^^^^^^^^^^^^
+Create and serve the driver
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. image:: ./images/stage4.png
 
-To run the driver include::
+To serve this driver on a port include::
 
     if __name__ == "__main__":
 
