@@ -78,20 +78,18 @@ class IPyDriver(collections.UserDict):
     def __init__(self, *devices, **driverdata):
         super().__init__()
 
-        self.devices = {}
+        # self.data is defined as empty dictionary in UserDict
         for device in devices:
             devicename = device.devicename
-            if devicename in self.devices:
+            if devicename in self.data:
                 # duplicate devicename
                 raise ValueError(f"Device name {devicename} is duplicated in this driver.")
-            self.devices[devicename] = device
+            self.data[devicename] = device
             # set driver into devices
             device.driver = self
 
-        self.data = self.devices
-
-        # self.data is used by UserDict, it is an alias of self.devices
-        # simply because 'devices' is more descriptive
+        # self.data is used by UserDict, it will become
+        # a dictionary of {devicename:device, ... }
 
         # dictionary of optional data
         self.driverdata = driverdata
@@ -133,12 +131,16 @@ class IPyDriver(collections.UserDict):
         # this is set when asyncrun is finished
         self.stopped = asyncio.Event()
 
+    def devices(self):
+        "Returns a list of device objects"
+        return list(self.data.values())
+
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
         if not self.comms is None:
             self.comms.shutdown()
-        for device in self.devices.values():
+        for device in self.data.values():
             device.shutdown()
 
     @property
@@ -164,7 +166,7 @@ class IPyDriver(collections.UserDict):
            In general, using IPyServer is preferred."""
         if not self.comms is None:
              raise RuntimeError("A communications method has already been set, there can only be one")
-        self.comms = Portcomms(self.devices, host, port)
+        self.comms = Portcomms(self.data, host, port)
 
 
     async def send(self, xmldata):
@@ -225,12 +227,12 @@ class IPyDriver(collections.UserDict):
                 devicename = root.get("device")
                 # devicename is None (for all devices), or a named device
                 if devicename is None:
-                    for d in self.devices.values():
+                    for d in self.data.values():
                         if d.enable:
                             await self._queueput(d.dataque, root)
-                elif devicename in self.devices:
-                    if self.devices[devicename].enable:
-                        await self._queueput(self.devices[devicename].dataque, root)
+                elif devicename in self.data:
+                    if self.data[devicename].enable:
+                        await self._queueput(self.data[devicename].dataque, root)
                 # else device not recognised
             elif root.tag in client_tags:
                 # xml received from client
@@ -239,9 +241,9 @@ class IPyDriver(collections.UserDict):
                     # device not given, ignore this
                     self.readerque.task_done()
                     continue
-                elif devicename in self.devices:
-                    if self.devices[devicename].enable:
-                        await self._queueput(self.devices[devicename].dataque, root)
+                elif devicename in self.data:
+                    if self.data[devicename].enable:
+                        await self._queueput(self.data[devicename].dataque, root)
                 # else device not recognised
             elif root.tag in snoop_tags:
                 # xml received from other devices
@@ -269,7 +271,7 @@ class IPyDriver(collections.UserDict):
             if devicename is not None:
                 # if a device name is given, check
                 # it is not in this drivers devices
-                if devicename in self.devices:
+                if devicename in self.data:
                     logger.error("Cannot snoop on a device already controlled by this driver")
                     self.snoopque.task_done()
                     continue
@@ -351,7 +353,7 @@ class IPyDriver(collections.UserDict):
            broadcast snooping traffic. This method is only applicable when
            snooping on a specific device vector.
            timeout must be an integer equal or greater than 5 seconds."""
-        if devicename in self.devices:
+        if devicename in self.data:
             logger.error("Cannot snoop on a device already controlled by this driver")
             return
         timeout = int(timeout)
@@ -397,7 +399,7 @@ class IPyDriver(collections.UserDict):
             await self.send(xmldata)
             self.snoopall = True
             return
-        if devicename in self.devices:
+        if devicename in self.data:
             logger.error("Cannot snoop on a device already controlled by this driver")
             return
         xmldata.set("device", devicename)
@@ -470,7 +472,7 @@ class IPyDriver(collections.UserDict):
                   self._monitorsnoop(),                          # task to monitor if a getproperties needs to be sent
                   self._snoophandler() ]                         # task to handle incoming snoop data
 
-        for device in self.devices.values():
+        for device in self.data.values():
             tasks.append(device._handler())                           # each device handles its incoming data
             for pv in device.propertyvectors.values():
                 tasks.append(pv._handler())                           # each property handles its incoming data
@@ -492,6 +494,9 @@ class Device(collections.UserDict):
 
     def __init__(self, devicename, properties, **devicedata):
         super().__init__()
+
+        if not devicename.isascii():
+            raise ValueError("Device name should be all ascii characters.")
 
         # This device name
         self.devicename = devicename

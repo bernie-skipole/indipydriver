@@ -10,6 +10,8 @@ class PropertyMember:
     "Parent class of SwitchMember etc"
 
     def __init__(self, name, label=None):
+        if not name.isascii():
+            raise ValueError("Member name should be all ascii characters.")
         self.name = name
         if label:
             self.label = label

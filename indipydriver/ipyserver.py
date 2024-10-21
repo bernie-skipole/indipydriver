@@ -81,12 +81,11 @@ class IPyServer:
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
             if not driver.comms is None:
                  raise RuntimeError("A driver communications method has already been set, there can only be one")
-            devicesindriver = driver.devices.copy()
-            for devicename in devicesindriver:
+            for devicename in driver:
                 if devicename in self.devices:
                     # duplicate devicename
                     raise ValueError(f"Device name {devicename} is duplicated in the attached drivers.")
-            self.devices.update(devicesindriver)
+            self.devices.update(driver.data)
 
         self.connectionpool = []
         for clientconnection in range(0, maxconnections):

@@ -38,6 +38,9 @@ class PropertyVector(collections.UserDict):
 
     def __init__(self, name, label, group, state):
         super().__init__()
+
+        if not name.isascii():
+            raise ValueError("Vector name should be all ascii characters.")
         self.name = name
         self.label = label
         self.group = group
@@ -71,7 +74,7 @@ class PropertyVector(collections.UserDict):
 
     @property
     def device(self):
-        return self.driver.devices[self.devicename]
+        return self.driver[self.devicename]
 
     async def send_delProperty(self, message="", timestamp=None):
         """Informs the client this vector is not available, it also sets an 'enable' attribute to
