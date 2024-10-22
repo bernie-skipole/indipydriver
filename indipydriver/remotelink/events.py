@@ -115,17 +115,14 @@ class delProperty(Event):
             raise ParseException("device already deleted")
         self.vectorname = root.get("name")
         self.message = root.get("message", "")
-        # properties is a dictionary of property name to propertyvector this device owns
-        # This method updates a property vector and sets it into properties
-        properties = device.data
         if self.vectorname:
             # does this vector already exist, if it does, disable it
-            if self.vectorname in properties:
-                vector = properties[self.vectorname]
+            if self.vectorname in device:
+                vector = device[self.vectorname]
                 vector.enable = False
         else:
-            # No vectorname given, disable all properties
-            for vector in properties.values():
+            # No vectorname given, disable all vectors
+            for vector in device.values():
                 vector.enable = False
 
 
@@ -202,21 +199,19 @@ class defSwitchVector(defVector):
         if not self.data:
             raise ParseException("defSwitchVector has no valid contents")
 
-        # This method updates a property vector and sets it into the device 'data' dictionary
-        # which is a dictionary of property name to propertyvector this device owns
-        properties = device.data
+        # This method updates a property vector and sets it into the device
 
         # does this vector already exist
-        if self.vectorname in properties:
-            self.vector = properties[self.vectorname]
+        if self.vectorname in device:
+            self.vector = device[self.vectorname]
             # set changed values into self.vector by calling vector._defvector
             # with this event as its argument
             self.vector._defvector(self)
         else:
             # create a new SwitchVector
             self.vector = propertyvectors.SwitchVector(self)
-            # add it to properties
-            properties[self.vectorname] = self.vector
+            # add it to the device data dictionary
+            device.data[self.vectorname] = self.vector
 
 
 class defTextVector(defVector):
@@ -259,21 +254,19 @@ class defTextVector(defVector):
         if not self.data:
             raise ParseException("No member values in defTextVector")
 
-        # This method updates a property vector and sets it into the device 'data' dictionary
-        # which is a dictionary of property name to propertyvector this device owns
-        properties = device.data
+        # This method updates a property vector and sets it into the device
 
         # does this vector already exist
-        if self.vectorname in properties:
-            self.vector = properties[self.vectorname]
+        if self.vectorname in device:
+            self.vector = device[self.vectorname]
             # set changed values into self.vector by calling vector._defvector
             # with this event as its argument
             self.vector._defvector(self)
         else:
             # create a new TextVector
             self.vector = propertyvectors.TextVector(self)
-            # add it to properties
-            properties[self.vectorname] = self.vector
+            # add it to the device data dictionary
+            device.data[self.vectorname] = self.vector
 
 
 class defNumberVector(defVector):
@@ -330,20 +323,18 @@ class defNumberVector(defVector):
             raise ParseException("No member values in defNumberVector")
 
 
-        # This method updates a property vector and sets it into the device 'data' dictionary
-        # which is a dictionary of property name to propertyvector this device owns
-        properties = device.data
+        # This method updates a property vector and sets it into the device
 
         # does this vector already exist
-        if self.vectorname in properties:
-            self.vector = properties[self.vectorname]
+        if self.vectorname in device:
+            self.vector = device[self.vectorname]
             # set changed values into self.vector
             self.vector._defvector(self)
         else:
             # create a new NumberVector
             self.vector = propertyvectors.NumberVector(self)
-            # add it to properties
-            properties[self.vectorname] = self.vector
+            # add it to the device data dictionary
+            device.data[self.vectorname] = self.vector
 
 
 
@@ -376,21 +367,19 @@ class defLightVector(defVector):
             raise ParseException("No member values present")
 
 
-        # This method updates a property vector and sets it into the device 'data' dictionary
-        # which is a dictionary of property name to propertyvector this device owns
-        properties = device.data
+        # This method updates a property vector and sets it into the device
 
         # does this vector already exist
-        if self.vectorname in properties:
-            self.vector = properties[self.vectorname]
+        if self.vectorname in device:
+            self.vector = device[self.vectorname]
             # set changed values into self.vector by calling vector._defvector
             # with this event as its argument
             self.vector._defvector(self)
         else:
             # create a new LightVector
             self.vector = propertyvectors.LightVector(self)
-            # add it to properties
-            properties[self.vectorname] = self.vector
+            # add it to the device data dictionary
+            device.data[self.vectorname] = self.vector
 
 
 
@@ -435,21 +424,19 @@ class defBLOBVector(defVector):
         if not self.memberlabels:
             raise ParseException("No labels given in defBLOBVector")
 
-        # properties is a dictionary of property name to propertyvector this device owns
-        # This method updates a property vector and sets it into properties
-        properties = device.data
+        # This method updates a property vector and sets it into the device
 
         # does this vector already exist
-        if self.vectorname in properties:
-            self.vector = properties[self.vectorname]
+        if self.vectorname in device:
+            self.vector = device[self.vectorname]
             # set changed values into self.vector by calling vector._defvector
             # with this event as its argument
             self.vector._defvector(self)
         else:
             # create a new BLOBVector
             self.vector = propertyvectors.BLOBVector(self)
-            # add it to properties
-            properties[self.vectorname] = self.vector
+            # add it to the device data dictionary
+            device.data[self.vectorname] = self.vector
 
 
 class setVector(Event, UserDict):
@@ -513,8 +500,7 @@ class setSwitchVector(setVector):
                     raise ParseException("Invalid value in oneSwitch")
             else:
                 raise ParseException("Invalid child tag of setSwitchVector")
-        properties = device.data
-        self.vector = properties[self.vectorname]
+        self.vector = device[self.vectorname]
         # set changed values into self.vector
         self.vector._setvector(self)
 
@@ -546,8 +532,7 @@ class setTextVector(setVector):
                 self.data[membername] = value
             else:
                 raise ParseException("Invalid child tag of setTextVector")
-        properties = device.data
-        self.vector = properties[self.vectorname]
+        self.vector = device[self.vectorname]
         # set changed values into self.vector
         self.vector._setvector(self)
 
@@ -586,8 +571,7 @@ class setNumberVector(setVector):
                 self.data[membername] = membervalue
             else:
                 raise ParseException("Invalid child tag of setNumberVector")
-        properties = device.data
-        self.vector = properties[self.vectorname]
+        self.vector = device[self.vectorname]
         # set changed values into self.vector
         self.vector._setvector(self)
 
@@ -614,8 +598,7 @@ class setLightVector(setVector):
                 self.data[membername] = value
             else:
                 raise ParseException("Invalid child tag of setLightVector")
-        properties = device.data
-        self.vector = properties[self.vectorname]
+        self.vector = device[self.vectorname]
         # set changed values into self.vector
         self.vector._setvector(self)
 

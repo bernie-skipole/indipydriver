@@ -474,7 +474,7 @@ class IPyDriver(collections.UserDict):
 
         for device in self.data.values():
             tasks.append(device._handler())                           # each device handles its incoming data
-            for pv in device.propertyvectors.values():
+            for pv in device.values():
                 tasks.append(pv._handler())                           # each property handles its incoming data
                 # also give the propertyvector a reference to this driver
                 # so it can call eventaction and have access to writerque
@@ -490,6 +490,8 @@ class Device(collections.UserDict):
     """An instance of this should be created for each device controlled by this driver.
        The properties argument is a list of vectors controlling this device.
        devicedata will be an attribute dictionary of any hardware data that may be usefull.
+
+       This object will be a mapping of vector name to vector object
     """
 
     def __init__(self, devicename, properties, **devicedata):
@@ -518,24 +520,25 @@ class Device(collections.UserDict):
         # this will be set when the driver asyncrun is run
         self.driver = None
 
-        # this is a dictionary of property name to propertyvector this device owns
-        self.propertyvectors = {}
+        # self.data is a dictionary of name to vector this device owns
         for p in properties:
             p.devicename = self.devicename
-            self.propertyvectors[p.name] = p
+            self.data[p.name] = p
 
-        self.data = self.propertyvectors
-        # self.data is used by UserDict, it is an alias of self.propertyvectors
-        # simply because 'propertyvectors' is more descriptive
-
-       # shutdown routine sets this to True to stop coroutines
+        # shutdown routine sets this to True to stop coroutines
         self._stop = False
+
+
+    def properties(self):
+        "Returns a list of vector objects"
+        return list(self.data.values())
+
 
     def shutdown(self):
         """Shuts down the device, sets the flag self._stop to True
            and shuts down property vector handlers"""
         self._stop = True
-        for pv in self.propertyvectors.values():
+        for pv in self.data.values():
             pv.shutdown()
 
     @property
@@ -633,12 +636,12 @@ class Device(collections.UserDict):
                 name = root.get("name")
                 # name is None (for all properties), or a named property
                 if name is None:
-                    for pvector in self.propertyvectors.values():
+                    for pvector in self.data.values():
                         if pvector.enable:
                             await self._queueput(pvector.dataque, root)
-                elif name in self.propertyvectors:
-                    if self.propertyvectors[name].enable:
-                        await self._queueput(self.propertyvectors[name].dataque, root)
+                elif name in self.data:
+                    if self.data[name].enable:
+                        await self._queueput(self.data[name].dataque, root)
                 else:
                     # property name not recognised
                     self.dataque.task_done()
@@ -647,12 +650,12 @@ class Device(collections.UserDict):
                 name = root.get("name")
                 # name is None (for all properties), or a named property
                 if name is None:
-                    for pvector in self.propertyvectors.values():
+                    for pvector in self.data.values():
                         if pvector.enable:
                             await self._queueput(pvector.dataque, root)
-                elif name in self.propertyvectors:
-                    if self.propertyvectors[name].enable:
-                        await self._queueput(self.propertyvectors[name].dataque, root)
+                elif name in self.data:
+                    if self.data[name].enable:
+                        await self._queueput(self.data[name].dataque, root)
                 else:
                     # property name not recognised
                     self.dataque.task_done()
@@ -665,8 +668,8 @@ class Device(collections.UserDict):
                     # name not given, ignore this
                     self.dataque.task_done()
                     continue
-                elif name in self.propertyvectors:
-                    pvector = self.propertyvectors[name]
+                elif name in self.data:
+                    pvector = self.data[name]
                     if pvector.perm != "ro" and pvector.enable:
                         # all ok, add to the vector dataque
                         await self._queueput(pvector.dataque, root)
