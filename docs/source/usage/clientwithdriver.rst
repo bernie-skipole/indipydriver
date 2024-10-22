@@ -1,7 +1,7 @@
 Driver with Client
 ==================
 
-It is possible to import ConsoleClient from indipyclient.console to run the terminal client, and a driver with instrument in a single script. The example below imports 'make_driver' and ThermalControl from example1, and also the ConsoleClient, and runs their co-routines together::
+It is possible to import ConsoleClient from indipyclient.console to run the terminal client, and a driver with instrument in a single script. The example below imports 'make_driver' from example1, and also the ConsoleClient, and runs their co-routines together. It stops the driver when the user chooses quit on the client terminal::
 
     import asyncio
 
