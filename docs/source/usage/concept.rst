@@ -39,7 +39,9 @@ or with
 
 python3 -m indipyclient [options]
 
-The package help is::
+The package help is:
+
+.. code-block:: text
 
     usage: indipyclient [options]
 
