@@ -14,6 +14,54 @@ from . import events
 from .propertyvectors import timestamp_string
 
 
+def getfloat(value):
+    """The INDI spec specifies several different number formats, given a number
+       in any of these formats, this returns a float.
+       If an error occurs while parsing the number, a TypeError exception is raised."""
+    try:
+        if isinstance(value, float):
+            return value
+        if isinstance(value, int):
+            return float(value)
+        if not isinstance(value, str):
+            raise TypeError
+        # negative is True, if the value is negative
+        value = value.strip()
+        negative = value.startswith("-")
+        if negative:
+            value = value.lstrip("-")
+        # Is the number provided in sexagesimal form?
+        if value == "":
+            parts = ["0", "0", "0"]
+        elif " " in value:
+            parts = value.split(" ")
+        elif ":" in value:
+            parts = value.split(":")
+        elif ";" in value:
+            parts = value.split(";")
+        else:
+            # not sexagesimal
+            parts = [value, "0", "0"]
+        if len(parts) > 3:
+            raise TypeError
+        # Any missing parts should have zero
+        if len(parts) == 1:
+            parts.append("0")
+            parts.append("0")
+        if len(parts) == 2:
+            parts.append("0")
+        assert len(parts) == 3
+        # a part could be empty string, ie if 2:5: is given
+        numbers = list(float(x) if x else 0.0 for x in parts)
+        floatvalue = numbers[0] + (numbers[1]/60) + (numbers[2]/3600)
+        if negative:
+            floatvalue = -1 * floatvalue
+    except Exception:
+        raise TypeError("Unable to parse number value")
+    return floatvalue
+
+
+
 class IPyDriver(collections.UserDict):
 
     """A subclass of this should be created with methods written
@@ -32,47 +80,7 @@ class IPyDriver(collections.UserDict):
     def indi_number_to_float(value):
         """The INDI spec allows a number of different number formats, given any number string, this returns a float.
            If an error occurs while parsing the number, a TypeError exception is raised."""
-        try:
-            if isinstance(value, float):
-                return value
-            if isinstance(value, int):
-                return float(value)
-            if not isinstance(value, str):
-                raise TypeError
-            # negative is True, if the value is negative
-            value = value.strip()
-            negative = value.startswith("-")
-            if negative:
-                value = value.lstrip("-")
-            # Is the number provided in sexagesimal form?
-            if value == "":
-                parts = ["0", "0", "0"]
-            elif " " in value:
-                parts = value.split(" ")
-            elif ":" in value:
-                parts = value.split(":")
-            elif ";" in value:
-                parts = value.split(";")
-            else:
-                # not sexagesimal
-                parts = [value, "0", "0"]
-            if len(parts) > 3:
-                raise TypeError
-            # Any missing parts should have zero
-            if len(parts) == 1:
-                parts.append("0")
-                parts.append("0")
-            if len(parts) == 2:
-                parts.append("0")
-            assert len(parts) == 3
-            # a part could be empty string, ie if 2:5: is given
-            numbers = list(float(x) if x else 0.0 for x in parts)
-            floatvalue = numbers[0] + (numbers[1]/60) + (numbers[2]/3600)
-            if negative:
-                floatvalue = -1 * floatvalue
-        except Exception:
-            raise TypeError("Error: Unable to parse number value")
-        return floatvalue
+        return getfloat(value)
 
 
     def __init__(self, *devices, **driverdata):

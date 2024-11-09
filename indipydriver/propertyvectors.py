@@ -1010,6 +1010,9 @@ class BLOBVector(PropertyVector):
            Transmits the vector (setBLOBVector) and members with their values to the client.
            The members list specifies the member names which will have their values sent.
 
+           If the members list is empty, then the vector will be sent with no members, this is used
+           to send an acknowledgement of a received BLOB, with state Ok,
+
            The member values can be set via vector[membername] = membervalue prior to calling
            this send_setVectorMembers method
 
@@ -1045,10 +1048,14 @@ class BLOBVector(PropertyVector):
             xmldata.set("timeout", self.timeout)
         if message:
             xmldata.set("message", message)
+
+        loop = asyncio.get_running_loop()
+
         for blob in self.data.values():
             if (blob.name in members) and (blob.membervalue is not None):
                 try:
-                    xmldata.append(blob.oneblob())
+                    bytescontent = await loop.run_in_executor(None, blob.getbytes, blob.membervalue)
+                    xmldata.append(blob.oneblob(bytescontent))
                 except ValueError as ex:
                     logger.exception("Unable to create setBLOBVector")
         await self.driver.send(xmldata)
