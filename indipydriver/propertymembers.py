@@ -340,7 +340,7 @@ class BLOBMember(PropertyMember):
             xmldata.set("format", "".join(pathlib.Path(value).suffixes) )
         else:
             xmldata.set("format", "")
-       if not self.blobsize:
+        if not self.blobsize:
             self.blobsize = len(bytescontent)
         xmldata.set("size", str(self.blobsize))
         xmldata.text = standard_b64encode(bytescontent).decode("utf-8")
