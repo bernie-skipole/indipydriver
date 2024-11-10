@@ -294,18 +294,15 @@ class BLOBMember(PropertyMember):
         self.blobsize = blobsize
         self.blobformat = blobformat
 
-
     @property
     def membervalue(self):
         return self._membervalue
-
 
     @membervalue.setter
     def membervalue(self, value):
         if not value:
             raise ValueError(f"The BLOBMember {self.name} value cannot be empty")
         self._membervalue = value
-
 
     def defblob(self):
         """Returns a defBlob, does not contain a membervalue"""
@@ -329,16 +326,20 @@ class BLOBMember(PropertyMember):
 
         if self.blobformat:
             xmldata.set("format", self.blobformat)
-        elif value is None:
-            # no blobformat givent, if possible get it from self._membervalue
+        elif (value is None) or isinstance(value, bytes):
+            # no self.blobformat available, if possible get it from self._membervalue
             if isinstance(self._membervalue, pathlib.Path):
                 xmldata.set("format", "".join(self._membervalue.suffixes) )
             elif isinstance(self._membervalue, str):
                 xmldata.set("format", "".join(pathlib.Path(self._membervalue).suffixes) )
+            else:
+                xmldata.set("format", "")
         elif isinstance(value, pathlib.Path):
             xmldata.set("format", "".join(value.suffixes) )
         elif isinstance(value, str):
             xmldata.set("format", "".join(pathlib.Path(value).suffixes) )
+        else:
+            xmldata.set("format", "")
        if not self.blobsize:
             self.blobsize = len(bytescontent)
         xmldata.set("size", str(self.blobsize))
