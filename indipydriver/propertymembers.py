@@ -357,7 +357,7 @@ class BLOBMember(PropertyMember):
                 bytescontent = value
             elif isinstance(value, pathlib.Path):
                 bytescontent = value.read_bytes()
-            elif hasattr(value, "seek") and hasattr(ervalue, "read") and callable(value.read):
+            elif hasattr(value, "seek") and hasattr(value, "read") and callable(value.read):
                 # a file-like object
                 # set seek(0) so is read from start of file
                 value.seek(0)
