@@ -660,10 +660,10 @@ class _ClientConnection:
             rxtask = asyncio.create_task(self.rx.run_rx(self.serverreaderque))
             await asyncio.gather(txtask, rxtask)
         except ConnectionError:
+            pass
+        finally:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-        finally:
-            self.connected = False
             cleanque(self.txque)
             logger.info(f"Connection from {addr} closed")
