@@ -645,8 +645,6 @@ class _ClientConnection:
         if not self.tx is None:
             self.tx.shutdown()
 
-
-
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
@@ -654,7 +652,7 @@ class _ClientConnection:
         addr = writer.get_extra_info('peername')
         self.rx = Port_RX(sendchecker, reader)
         self.tx = Port_TX(sendchecker, writer)
-        logger.info(f"Connection received from {addr}")
+        logger.warning(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(self.tx.run_tx(self.txque))
             rxtask = asyncio.create_task(self.rx.run_rx(self.serverreaderque))
@@ -665,5 +663,9 @@ class _ClientConnection:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-            cleanque(self.txque)
-            logger.info(f"Connection from {addr} closed")
+        cleanque(self.txque)
+        logger.warning(f"Connection from {addr} closed")
+        while True:
+            if txtask.done() and rxtask.done():
+                break
+            await asyncio.sleep(1)

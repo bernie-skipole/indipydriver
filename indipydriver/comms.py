@@ -373,9 +373,10 @@ class Port_RX(STDIN_RX):
                 data = await self.reader.read(n=32000)
             except asyncio.IncompleteReadError:
                 binarydata = b""
+                await asyncio.sleep(0.1)
                 continue
             if not data:
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.1)
                 continue
             # data received
             if b">" in data:
@@ -450,14 +451,18 @@ class Portcomms():
             txtask = asyncio.create_task(self.tx.run_tx(self.writerque))
             rxtask = asyncio.create_task(self.rx.run_rx(self.readerque))
             await asyncio.gather(txtask, rxtask)
-        except Exception as e:
+        except ConnectionError:
+            pass
+        finally:
             self.connected = False
             txtask.cancel()
             rxtask.cancel()
-        finally:
-            self.connected = False
-            cleanque(self.writerque)
-            logger.info(f"Connection from {addr} closed")
+        cleanque(self.writerque)
+        logger.info(f"Connection from {addr} closed")
+        while True:
+            if txtask.done() and rxtask.done():
+                break
+            await asyncio.sleep(1)
 
 
 def cleanque(que):
