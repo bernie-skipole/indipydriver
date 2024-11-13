@@ -84,9 +84,14 @@ class SnapMember(Member):
        the snapshot members for Switch, Light and Text will be objects
        of this class."""
 
+    def __init__(self, name, label, membervalue, user_string):
+        super().__init__(name, label, membervalue)
+        self.user_string = user_string
+
     def dictdump(self):
         "Returns a dictionary of this member"
         return {"label": self.label,
+                "user_string":self.user_string,
                 "value": self._membervalue}
 
 
@@ -97,6 +102,9 @@ class SwitchMember(Member):
         super().__init__(name, label, membervalue)
         if membervalue not in ('On', 'Off'):
             raise ParseException(f"Invalid value {membervalue}, should be On or Off")
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -117,7 +125,7 @@ class SwitchMember(Member):
         return value
 
     def _snapshot(self):
-        snapmember = SnapMember(self.name, self.label, self._membervalue)
+        snapmember = SnapMember(self.name, self.label, self._membervalue, self.user_string)
         return snapmember
 
     def oneswitch(self, newvalue):
@@ -135,6 +143,9 @@ class LightMember(Member):
         super().__init__(name, label, membervalue)
         if membervalue not in ('Idle','Ok','Busy','Alert'):
             raise ParseException(f"Invalid light value {membervalue}")
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -155,7 +166,7 @@ class LightMember(Member):
         return value
 
     def _snapshot(self):
-        snapmember = SnapMember(self.name, self.label, self._membervalue)
+        snapmember = SnapMember(self.name, self.label, self._membervalue, self.user_string)
         return snapmember
 
 
@@ -166,6 +177,9 @@ class TextMember(Member):
         super().__init__(name, label, membervalue)
         if not isinstance(membervalue, str):
             raise ParseException("The text value should be a string")
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -179,7 +193,7 @@ class TextMember(Member):
             self._membervalue = value
 
     def _snapshot(self):
-        snapmember = SnapMember(self.name, self.label, self._membervalue)
+        snapmember = SnapMember(self.name, self.label, self._membervalue, self.user_string)
         return snapmember
 
     def onetext(self, newvalue):
@@ -323,9 +337,14 @@ class SnapNumberMember(ParentNumberMember):
     """Should you use the ipyclient.snapshot method to create a snapshot,
        the snapshot members for Numbers will be objects of this class."""
 
+    def __init__(self, name, label, format, min, max, step, membervalue, user_string):
+        super().__init__(name, label, format, min, max, step, membervalue)
+        self.user_string = user_string
+
     def dictdump(self):
         "Returns a dictionary of this member"
         return {"label": self.label,
+                "user_string":self.user_string,
                 "format": self.format,
                 "min": self.min,
                 "max": self.max,
@@ -366,6 +385,9 @@ class NumberMember(ParentNumberMember):
         except Exception:
             raise ParseException("Cannot parse number received.")
         self._membervalue = value
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -404,7 +426,7 @@ class NumberMember(ParentNumberMember):
         return xmldata
 
     def _snapshot(self):
-        snapmember = SnapNumberMember(self.name, self.label, self.format, self.min, self.max, self.step, self._membervalue)
+        snapmember = SnapNumberMember(self.name, self.label, self.format, self.min, self.max, self.step, self._membervalue, self.user_string)
         return snapmember
 
 
@@ -416,6 +438,8 @@ class ParentBLOBMember(Member):
 
     def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=None):
         super().__init__(name, label, membervalue)
+        if not isinstance(blobsize, int):
+            raise ParseException("Blobsize must be given as an integer")
         self.blobsize = blobsize
         self.blobformat = blobformat
 
@@ -425,9 +449,14 @@ class SnapBLOBMember(ParentBLOBMember):
     """Should you use the ipyclient.snapshot method to create a snapshot,
        the snapshot members for BLOBs will be objects of this class."""
 
+    def __init__(self, name, label, blobsize, blobformat, membervalue, user_string):
+        super().__init__(name, label, blobsize, blobformat, membervalue)
+        self.user_string = user_string
+
     def dictdump(self):
         "Returns a dictionary of this member, value is always None"
         return {"label": self.label,
+                "user_string":self.user_string,
                 "blobsize": self.blobsize,
                 "blobformat": self.blobformat,
                 "value": None}
@@ -437,12 +466,11 @@ class BLOBMember(ParentBLOBMember):
     """Contains a 'binary large object' such as an image."""
 
     def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=None):
-        super().__init__(name, label, membervalue)
-        if not isinstance(blobsize, int):
-            raise ParseException("Blobsize must be given as an integer")
+        super().__init__(name, label, blobsize, blobformat, membervalue)
         # membervalue can be a byte string, path, string path or file like object
-        self.blobsize = blobsize
-        self.blobformat = blobformat
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -459,34 +487,12 @@ class BLOBMember(ParentBLOBMember):
         """Returns xml of a oneBLOB"""
         xmldata = ET.Element('oneBLOB')
         xmldata.set("name", self.name)
-        xmldata.set("format", newformat)
-        # the value set in the xmldata object should be a bytes object
-        if isinstance(newvalue, bytes):
-            bytescontent = newvalue
-        elif isinstance(newvalue, pathlib.Path):
-            try:
-                bytescontent = newvalue.read_bytes()
-            except Exception:
-                raise ParseException("Unable to read the given file")
-        elif hasattr(newvalue, "seek") and hasattr(newvalue, "read") and callable(newvalue.read):
-            # a file-like object
-            # set seek(0) so is read from start of file
-            newvalue.seek(0)
-            bytescontent = newvalue.read()
-            newvalue.close()
-            if not isinstance(bytescontent, bytes):
-                raise ParseException("The read BLOB is not a bytes object")
-            if bytescontent == b"":
-                raise ParseException("The read BLOB value is empty")
+        if newformat:
+            xmldata.set("format", newformat)
         else:
-            # could be a path to a file
-            try:
-                with open(newvalue, "rb") as fp:
-                    bytescontent = fp.read()
-            except Exception:
-                raise ParseException("Unable to read the given file")
-            if bytescontent == b"":
-                raise ParseException("The read BLOB value is empty")
+            xmldata.set("format", self.blobformat)
+        # the value set in the xmldata object should be a bytes object
+        bytescontent = self.getbytes(newvalue)
         if not newsize:
             newsize = len(bytescontent)
         xmldata.set("size", str(newsize))
@@ -494,6 +500,37 @@ class BLOBMember(ParentBLOBMember):
         return xmldata
 
 
+    @staticmethod
+    def getbytes(value):
+        "Given a blob value, as bytes or file path, return the bytes"
+        if not value:
+            raise ValueError("The BLOB value is empty")
+        try:
+            if isinstance(value, bytes):
+                bytescontent = value
+            elif isinstance(value, pathlib.Path):
+                bytescontent = value.read_bytes()
+            elif hasattr(value, "seek") and hasattr(value, "read") and callable(value.read):
+                # a file-like object
+                # set seek(0) so is read from start of file
+                value.seek(0)
+                bytescontent = value.read()
+                value.close()
+            else:
+                # could be a path to a file
+                with open(value, "rb") as fp:
+                    bytescontent = fp.read()
+        except Exception:
+            raise ValueError("Unable to read the given BLOB value")
+
+        if not isinstance(bytescontent, bytes):
+            raise ValueError("On being read, the BLOB value does not give bytes")
+        if not bytescontent:
+            raise ValueError("The BLOB value is empty")
+
+        return bytescontent
+
+
     def _snapshot(self):
-        snapmember = SnapBLOBMember(self.name, self.label, self.blobsize, self.blobformat, self._membervalue)
+        snapmember = SnapBLOBMember(self.name, self.label, self.blobsize, self.blobformat, self._membervalue, self.user_string)
         return snapmember

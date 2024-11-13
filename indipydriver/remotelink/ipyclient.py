@@ -79,6 +79,10 @@ class IPyClient(collections.UserDict):
         # The UserDict will create self.data which will become
         # a dictionary of devicename to device object
 
+        # the user_string is available to be any string a user of
+        # this client may wish to set
+        self.user_string = ""
+
         self.indihost = indihost
         self.indiport = indiport
 
@@ -181,8 +185,8 @@ class IPyClient(collections.UserDict):
 
 
     async def report(self, message):
-        """If self.enable_reports is True, the given string message will
-           be logged at level INFO and injected into
+        """The given string message will be logged at level INFO,
+           and if self.enable_reports is True will be injected into
            the received data, which will be picked up by the rxevent method.
            It is a way to set a message on to your client display, in the
            same way messages come from the INDI service."""
@@ -200,8 +204,8 @@ class IPyClient(collections.UserDict):
 
 
     async def warning(self, message):
-        """If self.enable_reports is True, the given string message will
-           be logged at level WARNING and injected into
+        """The given string message will be logged at level WARNING,
+           and if self.enable_reports is True will be injected into
            the received data, which will be picked up by the rxevent method.
            It is a way to set a message on to your client display, in the
            same way messages come from the INDI service."""
@@ -511,6 +515,7 @@ class IPyClient(collections.UserDict):
                 data = await reader.read(n=32000)
             except asyncio.IncompleteReadError:
                 binarydata = b""
+                await asyncio.sleep(0.1)
                 continue
             if not data:
                 await asyncio.sleep(0.01)
@@ -588,7 +593,7 @@ class IPyClient(collections.UserDict):
            These copies will not be updated by events. This is provided so that you can
            handle the client data, without fear of their values changing."""
 
-        snap = Snap(self.indihost, self.indiport, self.connected, self.messages)
+        snap = Snap(self.indihost, self.indiport, self.connected, self.messages, self.user_string)
         if self.data:
             for devicename, device in self.data.items():
                 snap[devicename] = device.snapshot()
@@ -599,7 +604,8 @@ class IPyClient(collections.UserDict):
     async def send_newVector(self, devicename, vectorname, timestamp=None, members={}):
         """Send a Vector with updated member values, members is a membername
            to value dictionary. Note, if this vector is a BLOB Vector, the members
-           dictionary should be {membername:(value, blobsize, blobformat)}"""
+           dictionary should be {membername:(value, blobsize, blobformat)}
+           where value could be a bytes object or a filepath"""
         device = self.data.get(devicename)
         if device is None:
             return
@@ -760,13 +766,13 @@ class Snap(collections.UserDict):
        Unlike IPyClient this has no send_newVector method, and the
        snap vectors do not have the send methods."""
 
-    def __init__(self, indihost, indiport, connected, messages):
+    def __init__(self, indihost, indiport, connected, messages, user_string):
         super().__init__()
         self.indihost = indihost
         self.indiport = indiport
         self.connected = connected
         self.messages = list(messages)
-
+        self.user_string = user_string
 
     def enabledlen(self):
         "Returns the number of enabled devices"
@@ -797,6 +803,7 @@ class Snap(collections.UserDict):
         return {"indihost":self.indihost,
                 "indiport":self.indiport,
                 "connected":self.connected,
+                "user_string":self.user_string,
                 "messages":messlist,
                 "devices":devdict}
 
@@ -843,9 +850,10 @@ class SnapDevice(_ParentDevice):
     """This object is used as a snapshot of this device
        It is a mapping of vector name to vector snapshots"""
 
-    def __init__(self, devicename, messages):
+    def __init__(self, devicename, messages, user_string):
         super().__init__(devicename)
         self.messages = list(messages)
+        self.user_string = user_string
 
     def dictdump(self):
         """Returns a dictionary of this device information
@@ -856,7 +864,11 @@ class SnapDevice(_ParentDevice):
         vecdict = {}
         for vectorname, vector in self.items():
             vecdict[vectorname] = vector.dictdump()
-        return {"devicename":self.devicename, "messages":messlist, "enable":self.enable, "vectors":vecdict}
+        return {"devicename":self.devicename,
+                "enable":self.enable,
+                "user_string":self.user_string,
+                "messages":messlist,
+                "vectors":vecdict}
 
     def dumps(self, indent=None, separators=None):
         "Returns a JSON string of the snapshot."
@@ -885,6 +897,10 @@ class Device(_ParentDevice):
 
         # self.messages is a deque of tuples (timestamp, message)
         self.messages = collections.deque(maxlen=8)
+
+        # the user_string is available to be any string a user of
+        # this device may wish to set
+        self.user_string = ""
 
 
     def __setitem__(self, propertyname, propertyvector):
@@ -937,7 +953,7 @@ class Device(_ParentDevice):
            Vector methods for sending data will not be available.
            This copy will not be updated by events. This is provided so that you can
            handle the device data, without fear of the value changing."""
-        snapdevice = SnapDevice(self.devicename, self.messages)
+        snapdevice = SnapDevice(self.devicename, self.messages, self.user_string)
         for vectorname, vector in self.data.items():
             snapdevice[vectorname] = vector.snapshot()
         return snapdevice

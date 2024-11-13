@@ -79,6 +79,10 @@ class Vector(collections.UserDict):
         "Returns a dictionary of member objects"
         return self.data
 
+    def member(self, membername):
+        "Returns the member object"
+        return self.data[membername]
+
     def memberlabel(self, membername):
         "Returns the member label, given a member name"
         return self.data[membername].label
@@ -94,11 +98,12 @@ class SnapVector(Vector):
 
 
     def __init__(self, name, label, group, state, timestamp, message,
-                       vectortype, devicename, enable, data):
+                       vectortype, devicename, enable, user_string, data):
         super().__init__(name, label, group, state, timestamp, message)
         self.vectortype = vectortype
         self.devicename = devicename
         self.enable = enable
+        self.user_string = user_string
         for membername, member in data.items():
             self.data[membername] = member._snapshot()
 
@@ -112,8 +117,9 @@ class SnapVector(Vector):
                    "name":self.name,
                    "devicename":self.devicename,
                    "label":self.label,
-                   "message":self.message,
                    "enable":self.enable,
+                   "user_string":self.user_string,
+                   "message":self.message,
                    "group":self.group,
                    "state":self.state,
                    "timeout":self.timeout,
@@ -152,6 +158,10 @@ class PropertyVector(Vector):
         self._timer = False   # Set true when a timer is going after a newvector is sent
                               # set False when a setvector is received
         self._newtimer = 0    # Set to time.time() when a new vector is sent
+
+        # the user_string is available to be any string a user of
+        # this vector may wish to set
+        self.user_string = ""
 
 
     def checktimedout(self, nowtime):
@@ -226,7 +236,7 @@ class PropertyVector(Vector):
            handle the vector data, without fear of the value changing."""
 
         snapvector = SnapVector(self.name, self.label, self.group, self.state, self.timestamp, self.message,
-                                self.vectortype, self.devicename, self.enable, self.data)
+                                self.vectortype, self.devicename, self.enable, self.user_string, self.data)
         snapvector.timeout = self.timeout
         snapvector._rule = self._rule
         snapvector._perm = self._perm
@@ -424,7 +434,7 @@ class LightVector(PropertyVector):
            handle the vector data, without fear of the value changing."""
 
         snapvector = SnapVector(self.name, self.label, self.group, self.state, self.timestamp, self.message,
-                                self.vectortype, self.devicename, self.enable, self.data)
+                                self.vectortype, self.devicename, self.enable, self.user_string, self.data)
         snapvector._perm = "ro"
         return snapvector
 
@@ -680,7 +690,7 @@ class NumberVector(PropertyVector):
            handle the vector data, without fear of the value changing."""
 
         snapvector = SnapNumberVector(self.name, self.label, self.group, self.state, self.timestamp, self.message,
-                                self.vectortype, self.devicename, self.enable, self.data)
+                                self.vectortype, self.devicename, self.enable, self.user_string, self.data)
         snapvector.timeout = self.timeout
         snapvector._perm = self._perm
         return snapvector
@@ -778,8 +788,6 @@ class BLOBVector(PropertyVector):
 
     def _newBLOBVector(self, timestamp=None, members={}):
         "Creates the xmldata for sending a newBLOBVector"
-        if not self.enable:
-            return
         if timestamp is None:
             timestamp = datetime.now(tz=timezone.utc)
         if not isinstance(timestamp, datetime):
@@ -813,8 +821,28 @@ class BLOBVector(PropertyVector):
            in the BLOB. The INDI standard specifies the size should be that of the BLOB
            before any compression, therefore if you are sending a compressed file, you
            should set the blobsize prior to compression.
-           blobformat should be a file extension, such as '.png'"""
-        xmldata = self._newBLOBVector(timestamp, members)
+           blobformat should be a file extension, such as '.png'. If it is an empty string
+           and value is a filename, the extension will be taken from the filename."""
+        if not self.enable:
+            return
+        # set members as bytes
+        newmembers = {}
+        loop = asyncio.get_running_loop()
+        for membername, blobmember in self.data.items():
+            if membername in members:
+                value, blobsize, blobformat = members[membername]
+                bytescontent = await loop.run_in_executor(None, blobmember.getbytes, value)
+                if not blobsize:
+                    blobsize = len(bytescontent)
+                if not blobformat:
+                    if isinstance(value, pathlib.Path):
+                        blobformat = "".join(value.suffixes)
+                    elif isinstance(value, str):
+                        blobformat = "".join(pathlib.Path(value).suffixes)
+                    else:
+                        blobformat = ""
+                newmembers[membername] = (bytescontent, blobsize, blobformat)
+        xmldata = self._newBLOBVector(timestamp, newmembers)
         if xmldata is None:
             return
         self._timer = True
