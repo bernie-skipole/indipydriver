@@ -68,6 +68,9 @@ class Member():
         else:
             self.label = name
         self._membervalue = membervalue
+        # the user_string is available to be any string a user of
+        # this member may wish to set
+        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -102,9 +105,7 @@ class SwitchMember(Member):
         super().__init__(name, label, membervalue)
         if membervalue not in ('On', 'Off'):
             raise ParseException(f"Invalid value {membervalue}, should be On or Off")
-        # the user_string is available to be any string a user of
-        # this member may wish to set
-        self.user_string = ""
+
 
     @property
     def membervalue(self):
@@ -143,9 +144,6 @@ class LightMember(Member):
         super().__init__(name, label, membervalue)
         if membervalue not in ('Idle','Ok','Busy','Alert'):
             raise ParseException(f"Invalid light value {membervalue}")
-        # the user_string is available to be any string a user of
-        # this member may wish to set
-        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -177,9 +175,7 @@ class TextMember(Member):
         super().__init__(name, label, membervalue)
         if not isinstance(membervalue, str):
             raise ParseException("The text value should be a string")
-        # the user_string is available to be any string a user of
-        # this member may wish to set
-        self.user_string = ""
+
 
     @property
     def membervalue(self):
@@ -385,9 +381,7 @@ class NumberMember(ParentNumberMember):
         except Exception:
             raise ParseException("Cannot parse number received.")
         self._membervalue = value
-        # the user_string is available to be any string a user of
-        # this member may wish to set
-        self.user_string = ""
+
 
     @property
     def membervalue(self):
@@ -438,10 +432,14 @@ class ParentBLOBMember(Member):
 
     def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=None):
         super().__init__(name, label, membervalue)
+        # membervalue can be a byte string, path, string path or file like object
         if not isinstance(blobsize, int):
             raise ParseException("Blobsize must be given as an integer")
         self.blobsize = blobsize
         self.blobformat = blobformat
+
+        # filename is only used if a BLOBfolder has been set, and a received file has been saved
+        self.filename = ""
 
 
 class SnapBLOBMember(ParentBLOBMember):
@@ -449,14 +447,16 @@ class SnapBLOBMember(ParentBLOBMember):
     """Should you use the ipyclient.snapshot method to create a snapshot,
        the snapshot members for BLOBs will be objects of this class."""
 
-    def __init__(self, name, label, blobsize, blobformat, membervalue, user_string):
+    def __init__(self, name, label, blobsize, blobformat, membervalue, user_string, filename):
         super().__init__(name, label, blobsize, blobformat, membervalue)
         self.user_string = user_string
+        self.filename = filename
 
     def dictdump(self):
         "Returns a dictionary of this member, value is always None"
         return {"label": self.label,
                 "user_string":self.user_string,
+                "filename":self.filename,
                 "blobsize": self.blobsize,
                 "blobformat": self.blobformat,
                 "value": None}
@@ -465,12 +465,6 @@ class SnapBLOBMember(ParentBLOBMember):
 class BLOBMember(ParentBLOBMember):
     """Contains a 'binary large object' such as an image."""
 
-    def __init__(self, name, label=None, blobsize=0, blobformat='', membervalue=None):
-        super().__init__(name, label, blobsize, blobformat, membervalue)
-        # membervalue can be a byte string, path, string path or file like object
-        # the user_string is available to be any string a user of
-        # this member may wish to set
-        self.user_string = ""
 
     @property
     def membervalue(self):
@@ -532,5 +526,5 @@ class BLOBMember(ParentBLOBMember):
 
 
     def _snapshot(self):
-        snapmember = SnapBLOBMember(self.name, self.label, self.blobsize, self.blobformat, self._membervalue, self.user_string)
+        snapmember = SnapBLOBMember(self.name, self.label, self.blobsize, self.blobformat, self._membervalue, self.user_string, self.filename)
         return snapmember

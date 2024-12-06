@@ -163,10 +163,11 @@ class IPyServer:
                                   remotes = self.remotes,
                                   serverwriterque = self.serverwriterque,
                                   connectionpool = self.connectionpool,
-                                  blob_enable = blob_enable,
                                   snoopall = snoopall,
                                   snoopdevices = snoopdevices,
                                   snoopvectors = snoopvectors )
+
+        remcon.enableBLOBdefault = blob_enable
 
         if debug_enable:
             remcon.debug_verbosity(2) # turn on xml logs

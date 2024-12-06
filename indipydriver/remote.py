@@ -22,12 +22,10 @@ class RemoteConnection(IPyClient):
         IPyClient.__init__(self, indihost, indiport, **clientdata)
         # do not add info to client messages
         self.enable_reports = False
-        # a list of devicenames that have blobenable sent
-        self.clientdata["blobenablesent"] = []
+
 
     async def hardware(self):
-        """If connection fails, clear blobenablesent list
-           and for each device learnt, disable it"""
+        """If connection fails, for each device learnt, disable it"""
         serverwriterque = self.clientdata['serverwriterque']
         connectionpool = self.clientdata['connectionpool']
         isconnected = False
@@ -53,7 +51,6 @@ class RemoteConnection(IPyClient):
                 continue
             # The connection has failed
             isconnected = False
-            self.clientdata["blobenablesent"].clear()
             if self.enabledlen():
                 # some devices are enabled, disable them
                 timestamp = datetime.now(tz=timezone.utc)
@@ -108,11 +105,7 @@ class RemoteConnection(IPyClient):
                     logger.error(f"A duplicate devicename {devicename} has been detected")
                     await self.queueput(self.clientdata['serverwriterque'], None)
                     return
-            # on receiving a define vector, send the blobenabled status for that device
-            # but record it, so it is not being sent repeatedly
-            if devicename and (not (devicename in self.clientdata["blobenablesent"])):
-                await self.send_enableBLOB(self.clientdata["blob_enable"], devicename)
-                self.clientdata["blobenablesent"].append(devicename)
+
 
         # check for a getProperties event, record what is being snooped
         if isinstance(event, getProperties):

@@ -1,6 +1,6 @@
 
 
-import os, sys, collections, asyncio, time, copy, json
+import os, sys, collections, asyncio, time, copy, json, pathlib
 
 from time import sleep
 
@@ -140,6 +140,141 @@ class IPyClient(collections.UserDict):
 
         # Enables reports, by adding INFO logs to client messages
         self.enable_reports = True
+
+        # holds dictionary of initial user strings
+        self.user_string_dict = {}
+
+        # set and unset BLOBfolder
+        self._BLOBfolder = None
+        self._blobfolderchanged = False
+        # This is the default enableBLOB value
+        self._enableBLOBdefault = "Never"
+
+
+    # The enableBLOBdefault default should typically be set before asyncrun is
+    # called, so if set to Also, this will ensure all BLOBs will be received without
+    # further action
+    @property
+    def enableBLOBdefault(self):
+        return self._enableBLOBdefault
+
+    @enableBLOBdefault.setter
+    def enableBLOBdefault(self, value):
+        if value in ("Never", "Also", "Only"):
+            self._enableBLOBdefault = value
+
+    # Setting a BLOBfolder forces all BLOBs will be received and saved as files to the given folder
+
+    def _get_BLOBfolder(self):
+        return self._BLOBfolder
+
+    def _set_BLOBfolder(self, value):
+        """Setting the BLOBfolder to a folder will automatically set all devices to Also
+           Setting it to None, will set all devices to self._enableBLOBdefault"""
+        if value:
+            if isinstance(value, pathlib.Path):
+                blobpath = value
+            else:
+                blobpath = pathlib.Path(value).expanduser().resolve()
+            if not blobpath.is_dir():
+                raise KeyError("If given, the BLOB's folder should be an existing directory")
+            for device in self.values():
+                device._enableBLOB = "Also"
+                for vector in device.values():
+                    if vector.vectortype == "BLOBVector":
+                        vector._enableBLOB = "Also"
+        else:
+            blobpath = None
+            if self._BLOBfolder is None:
+                # no change
+                return
+            for device in self.values():
+                device._enableBLOB = self._enableBLOBdefault
+                for vector in device.values():
+                    if vector.vectortype == "BLOBVector":
+                        vector._enableBLOB = self._enableBLOBdefault
+        self._BLOBfolder = blobpath
+        self._blobfolderchanged = True
+
+
+    BLOBfolder = property(
+        fget=_get_BLOBfolder,
+        fset=_set_BLOBfolder,
+        doc= """Setting the BLOBfolder to a folder will automatically transmit an enableBLOB
+for all devices set to Also, and will save incoming BLOBs to that folder.
+Setting it to None will transmit an enableBLOB for all devices set to the enableBLOBdefault value"""
+        )
+
+
+    def set_user_string(self, devicename, vectorname, membername, user_string = ""):
+        """Each device, vector and member has a user_string attribute, initially set to empty strings,
+           and can be changed to any string you may require. These strings may be used for any purpose,
+           such as setting associated id values for a database perhaps.
+           It is suggested they should be limited to strings, so if JSON snapshots
+           are taken, they are easily converted to JSON values.
+           This method can be called before asyncrun is called, and before the devices are learnt, which
+           would only be useful for those scripts which know in advance what devices they are connecting to.
+           As soon as the device, vector or member becomes learnt it will then be set with the user string.
+           If membername is None, the user_string is applied to the vector, if vectorname is None
+           it applies to the device.
+           """
+        if not devicename:
+            raise KeyError("A devicename must be given to set_user_string")
+        if membername and (not vectorname):
+            raise KeyError("If a membername is specified, a vectorname must also be given")
+
+        if not vectorname:
+            self.user_string_dict[devicename, None, None] = user_string
+            if devicename in self:
+                self[devicename].user_string = user_string
+
+        elif not membername:
+            self.user_string_dict[devicename, vectorname, None] = user_string
+            if devicename in self:
+                if vectorname in self[devicename]:
+                    self[devicename][vectorname].user_string = user_string
+
+        else:
+            self.user_string_dict[devicename, vectorname, membername] = user_string
+            if devicename in self:
+                if vectorname in self[devicename]:
+                    vector = self[devicename][vectorname]
+                    if membername in vector:
+                        member = vector.members(membername)
+                        member.user_string = user_string
+
+
+    def get_user_string(self, devicename, vectorname, membername):
+        """Each device, vector and member has a user_string attribute. If devicename,
+           vectorname and membername are given this method returns the user string of the member.
+           If membername is None, the user_string of the vector is returned, if vectorname is None
+           as well, the user_string of the device is returned. If no object can be found, and no
+           initial string has been set with the set_user_string method, None will be returned."""
+        if not devicename:
+            raise KeyError("A devicename must be given to set_user_string")
+        if membername and (not vectorname):
+            raise KeyError("If a membername is specified, a vectorname must also be given")
+
+        if vectorname and membername:
+            if devicename in self:
+                device = self[devicename]
+                if vectorname in device:
+                    vector = device[vectorname]
+                    if membername in vector:
+                        return vector.member(membername).user_string
+            return self.user_string_dict.get( (devicename, vectorname, membername) )
+
+        if vectorname:
+            if devicename in self:
+                device = self[devicename]
+                if vectorname in device:
+                    return device[vectorname].user_string
+            return self.user_string_dict.get( (devicename, vectorname, None) )
+
+        if devicename in self:
+            return self[devicename].user_string
+
+        return self.user_string_dict.get( (devicename, None, None) )
 
 
     def debug_verbosity(self, verbose):
@@ -576,7 +711,38 @@ class IPyClient(collections.UserDict):
                 finally:
                     self._readerque.task_done()
                 # and to get here, continue has not been called
-                # and an event has been created, call the user event handling function
+                # and an event has been created,
+
+                if event.eventtype == "DefineBLOB":
+                    # every time a defBLOBVector is received, send an enable BLOB instruction
+                    await self.resend_enableBLOB(event.devicename, event.vectorname)
+                elif self._BLOBfolder and (event.eventtype == "SetBLOB"):
+                    # If this event is a setblob, and if blobfolder has been defined, then save the blob to
+                    # a file in blobfolder, and set the member.filename to the filename saved
+                    loop = asyncio.get_running_loop()
+                    # save the BLOB to a file, make filename from timestamp
+                    timestampstring = event.timestamp.strftime('%Y%m%d_%H_%M_%S')
+                    for membername, membervalue in event.items():
+                        if not membervalue:
+                            continue
+                        sizeformat = event.sizeformat[membername]
+                        filename =  membername + "_" + timestampstring + sizeformat[1]
+                        counter = 0
+                        while True:
+                            filepath = self._BLOBfolder / filename
+                            if filepath.exists():
+                                # append a digit to the filename
+                                counter += 1
+                                filename = membername + "_" + timestampstring + "_" + str(counter) + sizeformat[1]
+                            else:
+                                # filepath does not exist, so a new file with this filepath can be created
+                                break
+                        await loop.run_in_executor(None, filepath.write_bytes, membervalue)
+                        # add filename to member
+                        memberobj = event.vector.member(membername)
+                        memberobj.filename = filename
+
+                # call the user event handling function
                 await self.rxevent(event)
 
         except Exception:
@@ -660,8 +826,28 @@ class IPyClient(collections.UserDict):
                     count = 0
                 else:
                     # so the connection is up, check enabled devices exist
-                    if self.enabledlen():
+                    devices = list(device for device in self.data.values() if device.enable)
+                    if devices:
                         # connection is up and devices exist
+                        if self._blobfolderchanged:
+                            # devices all have an _enableBLOB attribute set
+                            # when the BLOBfolder changed, this ensures an
+                            # enableBLOB is sent with that value
+                            self._blobfolderchanged = False
+                            for device in devices:
+                                if self._stop:
+                                    break
+                                await self.resend_enableBLOB(device.devicename)
+                                if self._stop:
+                                    break
+                                for vector in device.values():
+                                    if vector.enable and (vector.vectortype == "BLOBVector"):
+                                        await self.resend_enableBLOB(device.devicename, vector.name)
+                                        if self._stop:
+                                            break
+                            # as enableBLOBs have been sent, leave
+                            # checking timeouts for the next .5 second
+                            continue
                         if self.timeout_enable:
                             # If nothing has been sent or received
                             # for self.idle_timeout seconds, send a getProperties
@@ -670,7 +856,7 @@ class IPyClient(collections.UserDict):
                             if telapsed > self.idle_timeout:
                                 await self.send_getProperties()
                             # check if any vectors have timed out
-                            for device in self.data.values():
+                            for device in devices:
                                 for vector in device.values():
                                     if not vector.enable:
                                         continue
@@ -718,11 +904,64 @@ class IPyClient(collections.UserDict):
             if not devicename:
                 # a devicename is required
                 return
+            if devicename not in self:
+                return
+            device = self[devicename]
+            if not device.enable:
+                return
             xmldata.set("device", devicename)
             if vectorname:
+                if vectorname not in device:
+                    return
+                vector = device[vectorname]
+                if not vector.enable:
+                    return
+                if vector.vectortype != "BLOBVector":
+                    return
                 xmldata.set("name", vectorname)
+                vector._enableBLOB = value
+            else:
+                # no vectorname, so this applies to all BLOB vectors of this device
+                device._enableBLOB = value
+                for vector in device.values():
+                    if vector.vectortype == "BLOBVector":
+                        vector._enableBLOB = value
             xmldata.text = value
             await self.send(xmldata)
+
+
+    async def resend_enableBLOB(self, devicename, vectorname=None):
+        """Internal method used by the framework, which sends an enableBLOB instruction,
+           repeating the last value sent.
+           Used as an automatic reply to a def packet received, if no last value sent
+           the default is the enableBLOBdefault value."""
+        if self.connected:
+            xmldata = ET.Element('enableBLOB')
+            if not devicename:
+                # a devicename is required
+                return
+            if devicename not in self:
+                return
+            device = self[devicename]
+            if not device.enable:
+                return
+            xmldata.set("device", devicename)
+            if vectorname:
+                if vectorname not in device:
+                    return
+                vector = device[vectorname]
+                if not vector.enable:
+                    return
+                if vector.vectortype != "BLOBVector":
+                    return
+                xmldata.set("name", vectorname)
+                value = vector._enableBLOB
+            else:
+                # no vectorname, so this applies to the device
+                value = device._enableBLOB
+            xmldata.text = value
+            await self.send(xmldata)
+
 
     def get_vector_state(self, devicename, vectorname):
         """Gets the state string of the given vectorname, if this vector does not exist
@@ -892,15 +1131,21 @@ class Device(_ParentDevice):
     def __init__(self, devicename, client):
         super().__init__(devicename)
 
+        # the user_string is available to be any string a user of
+        # this device may wish to set
+        self.user_string = client.user_string_dict.get((devicename, None, None), "")
+
         # and the device has a reference to its client
         self._client = client
 
         # self.messages is a deque of tuples (timestamp, message)
         self.messages = collections.deque(maxlen=8)
 
-        # the user_string is available to be any string a user of
-        # this device may wish to set
-        self.user_string = ""
+        # only applicable to BLOB vectors
+        if client._BLOBfolder is None:
+            self._enableBLOB = client._enableBLOBdefault
+        else:
+            self._enableBLOB = "Also"
 
 
     def __setitem__(self, propertyname, propertyvector):
@@ -911,6 +1156,14 @@ class Device(_ParentDevice):
     def rxvector(self, root):
         """Handle received data, sets new propertyvector into self.data,
            or updates existing property vector and returns an event"""
+
+        if (root.tag in DEFTAGS) and (not self.enable):
+            # if this device is disabled, but about to become enabled
+            # this action will set its enableBLOB value
+            if self._client._BLOBfolder is None:
+                self._enableBLOB = self._client._enableBLOBdefault
+            else:
+                self._enableBLOB = "Also"
         try:
             if root.tag == "delProperty":
                 return events.delProperty(root, self, self._client)
