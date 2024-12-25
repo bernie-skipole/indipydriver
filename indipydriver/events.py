@@ -92,7 +92,11 @@ class newSwitchVector(newVector):
         for member in root:
             if member.tag == "oneSwitch":
                 membername = member.get("name")
+                if not membername:
+                    raise EventException("No member name set in oneSwitch")
                 if membername in self.vector:
+                    if not member.text:
+                        raise EventException("Missing value in oneSwitch")
                     value = member.text.strip()
                     if value == "On":
                         self.data[membername] = "On"
@@ -119,8 +123,13 @@ class newTextVector(newVector):
         for member in root:
             if member.tag == "oneText":
                 membername = member.get("name")
+                if not membername:
+                    raise EventException("No member name set in oneText")
                 if membername in self.vector:
-                    self.data[membername] = member.text
+                    if member.text is None:
+                        self.data[membername] = ""
+                    else:
+                        self.data[membername] = member.text
                 else:
                     raise EventException("Received membername not known for newTextVector")
             else:
@@ -141,7 +150,13 @@ class newNumberVector(newVector):
         for member in root:
             if member.tag == "oneNumber":
                 membername = member.get("name")
+                if not membername:
+                    raise EventException("No member name set in oneNumber")
                 if membername in self.vector:
+                    if not member.text:
+                        raise EventException("Missing value in oneNumber")
+                    if not member.text.strip():
+                        raise EventException("Missing value in oneNumber")
                     self.data[membername] = member.text.strip()
                 else:
                     raise EventException("Received membername not known for newNumberVector")
@@ -168,6 +183,8 @@ class newBLOBVector(newVector):
         for member in root:
             if member.tag == "oneBLOB":
                 membername = member.get("name")
+                if not membername:
+                    raise EventException("No member name set in oneBLOB")
                 if membername in self.vector:
                     try:
                         self.data[membername] = standard_b64decode(member.text.encode('ascii'))
@@ -464,6 +481,8 @@ class setSwitchVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException("No member name given in snooped setSwitchVector")
+                if not member.text:
+                    raise EventException("Missing value in snooped oneSwitch")
                 value = member.text.strip()
                 if value == "On":
                     self.data[membername] = "On"
@@ -491,7 +510,10 @@ class setTextVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException("No member name given in snooped setTextVector")
-                self.data[membername] = member.text
+                if member.text is None:
+                    self.data[membername] = ""
+                else:
+                    self.data[membername] = member.text
             else:
                 raise EventException("Invalid tag given in snooped setTextVector")
         if not self.data:
@@ -513,6 +535,10 @@ class setNumberVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException("No member name given in snooped setNumberVector")
+                if not member.text:
+                    raise EventException("Missing value in snooped oneNumber")
+                if not member.text.strip():
+                    raise EventException("Missing value in snooped oneNumber")
                 self.data[membername] = member.text.strip()
             else:
                 raise EventException("Invalid tag given in snooped setNumberVector")
@@ -532,9 +558,11 @@ class setLightVector(setVector):
                 membername = member.get("name")
                 if not membername:
                     raise EventException("No member name given in snooped setLightVector")
+                if not member.text:
+                    raise EventException("Missing value in snooped oneLight")
                 value = member.text.strip()
                 if not value in ('Idle','Ok','Busy','Alert'):
-                    raise EventException
+                    raise EventException("Invalid value in snooped oneLight")
                 self.data[membername] = value
             else:
                 raise EventException("Invalid tag given in snooped setLightVector")
