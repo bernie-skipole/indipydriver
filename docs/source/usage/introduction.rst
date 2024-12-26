@@ -47,7 +47,7 @@ This is only used if the device is monitoring (snooping) on other devices.
 
 The indipydriver package also includes an IPyServer class. Having created an instance of your IPyDriver subclass, you would serve this, and any other drivers with an IPyServer object::
 
-    server = IPyServer(driver, host="localhost", port=7624, maxconnections=5)
+    server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
     await server.asyncrun()
 
 A connected client, such as indipyclient, can then control all the drivers.
