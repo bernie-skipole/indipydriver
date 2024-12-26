@@ -11,8 +11,14 @@ This indipydriver package uses the Python standard library logging module, and e
 
 *DEBUG* Logs xml data transmitted and received. The logs of BLOB tags do not include contents.
 
+By default, the set level is WARNING, and therefore warning and error logs are sent to stdout. If you want no logs, and you want nothing to be sent to the console, then insert::
 
-To log to a file, at the top of your script add::
+    import logging
+    logger = logging.getLogger()
+    logger.addHandler(logging.NullHandler())
+
+
+If you would prefer to log to a file, at the top of your script include::
 
     import logging
     logger = logging.getLogger()
@@ -20,7 +26,7 @@ To log to a file, at the top of your script add::
     fh = logging.FileHandler("logfile.log")
     logger.addHandler(fh)
 
-The default level is WARNING, which means that only events of this level and above will be tracked, to log the xml traffic add the further line::
+To log the xml traffic add the further line::
 
     logger.setLevel(logging.DEBUG)
 
@@ -48,9 +54,3 @@ indipydriver.ipydriver - generates attached driver logs
 indipydriver.remotelink - generates remote connection logs.
 
 You could then add file handlers and set logging levels to each logger separately, giving you the capability to separately record driver and server traffic.
-
-If you want no logs, and you want nothing to be sent to the console, then insert::
-
-    import logging
-    logger = logging.getLogger()
-    logger.addHandler(logging.NullHandler())

@@ -131,13 +131,20 @@ class IPyDriver(collections.UserDict):
         # The coroutine _monitorsnoop Checks if current time is greater than
         # timeout+timestamp, and if it is, sends a getproperties
 
-        # If True, xmldata will be logged at DEBUG level
         self.debug_enable = False
+        # If True, xmldata will be logged at DEBUG level
 
-        # shutdown routine sets this to True to stop coroutines
+        self.auto_send_def = True
+        # If True, whenever a getProperties event is received, a
+        # vector send_defVector() will be called, automatically replying with
+        # the vector definition.
+        # If set to False, the driver developer will need to implement a send_defVector()
+        # in the rxevent method
+
         self._stop = False
-        # this is set when asyncrun is finished
+        # shutdown routine sets this to True to stop coroutines
         self.stopped = asyncio.Event()
+        # this is set when asyncrun is finished
 
     def devices(self):
         "Returns a list of device objects"
@@ -451,11 +458,16 @@ class IPyDriver(collections.UserDict):
 
 
     async def rxgetproperties(self, event):
-        """This is an internal method called wherever a getProperties
+        """This is an internal method called whenever a getProperties
            event is received from the client. It replies with a send_defVector
            to send a property vector definition back to the client.
-           It would normally never be called by users own code"""
-        await event.vector.send_defVector()
+           It would normally never be called by users own code.
+           If the auto_send_def attribute is False, this does not send anything,
+           and the getProperties event needs to be handled by rxevent."""
+        if self.auto_send_def:
+            await event.vector.send_defVector()
+        else
+            await self.rxevent(event)
 
     async def asyncrun(self):
         """await this to operate the driver, which will then communicate by

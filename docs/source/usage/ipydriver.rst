@@ -32,15 +32,26 @@ Similarly a Device object is a mapping to a vector, so to access a vector you co
 
 The ipydriver object has attributes:
 
-self.driverdata - The dictionary of named arguments you have optionally set in the constructor
+**driverdata** - The dictionary of named arguments you have optionally set in the constructor.
 
-self.stop - This is set to True when the driver.shutdown() method is called.
+This is particularly useful to pass in any object which controls your instrument, or device names
+if you do not want to hard code names into the driver.
 
-self.stopped - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
+**auto_send_def** - As default this is set to True.
 
-self.debug_enable - As default is set to False.
+With auto_send_def set to True, whenever a getProperties event is received from a client, a
+vector send_defVector() method will be called, automatically replying with the vector definition.
+If set to False, the driver developer will need to test for a getProperties event, and implement
+a send_defVector() in the rxevent method. Possibly one reason you may want to do this is to send
+a message with every vector definition.
 
-With self.debug_enable set to False, then xml traffic will not be logged at the driver level, but will still be logged at the server level which logs all traffic between server and attached clients. See the logging section of this documentation for further details.
+**stop** - Normally False, but set to True when the driver shutdown() method is called.
+
+**stopped** - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
+
+**debug_enable** - As default this is set to False.
+
+With debug_enable set to False, then xml traffic will not be logged at the driver level, but will still be logged at the server level which logs all traffic between server and attached clients. See the logging section of this documentation for further details.
 
 ----
 
@@ -54,7 +65,7 @@ Normally this will be awaited together with any other co-routines needed to run 
 
 Alternatively, use indipydriver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
 
-        server = IPyServer(driver, host="localhost", port=7624, maxconnections=5)
+        server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
         await server.asyncrun()
 
 And a further method which also listens on a host and port, but with a single connection only is shown here. It may be useful in some circumstances as it avoids the code associated with IPyServer::
