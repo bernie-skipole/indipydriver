@@ -466,7 +466,7 @@ class IPyDriver(collections.UserDict):
            and the getProperties event needs to be handled by rxevent."""
         if self.auto_send_def:
             await event.vector.send_defVector()
-        else
+        else:
             await self.rxevent(event)
 
     async def asyncrun(self):
