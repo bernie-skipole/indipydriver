@@ -7,6 +7,9 @@ from base64 import standard_b64decode
 
 from collections import UserDict
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def _parse_timestamp(timestamp_string):
     """Parse a timestamp string and return either None on failure, or a datetime object
@@ -193,7 +196,8 @@ class newBLOBVector(newVector):
                         raise EventException("Unable to decode BLOB")
                     memberformat = member.get("format")
                     if not memberformat:
-                        raise EventException("No format received in oneBLOB")
+                        logger.warning("No format received in oneBLOB member of newBLOBVector")
+                        memberformat = ""
                     self.sizeformat[membername] = (membersize, memberformat)
                 else:
                     raise EventException("Received tag not known for newBLOBVector")
