@@ -34,15 +34,14 @@ The ipydriver object has attributes:
 
 **driverdata** - The dictionary of named arguments you have optionally set in the constructor.
 
-This is particularly useful to pass in any object which controls your instrument, or device names
-if you do not want to hard code names into the driver.
+This is particularly useful to pass in any object which controls your instrument, and which is then accessable in your rxevent and hardware methods.
 
 **auto_send_def** - As default this is set to True.
 
 With auto_send_def set to True, whenever a getProperties event is received from a client, a
 vector send_defVector() method will be called, automatically replying with the vector definition.
-If set to False, the driver developer will need to test for a getProperties event, and implement
-a send_defVector() in the rxevent method. Possibly one reason you may want to do this is to send
+If set to False, the driver developer will need to test for a getProperties event in the rxevent
+method, and implement a send_defVector() . Possibly one reason you may want to do this is to send
 a message with every vector definition.
 
 **stop** - Normally False, but set to True when the driver shutdown() method is called.
