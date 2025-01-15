@@ -244,9 +244,6 @@ class IPyServer:
                                  self._copyfromserver(),
                                  self._sendtoclient()
                                  )
-        except asyncio.CancelledError:
-            self._stop = True
-            raise
         finally:
             self.stopped.set()
             self._stop = True

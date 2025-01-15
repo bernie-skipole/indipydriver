@@ -69,10 +69,7 @@ async def main():
     await asyncio.sleep(10)
     print("Stopping")
     t.cancel()
-    try:
-        await t
-    except asyncio.CancelledError:
-        pass
+    await t
     print("Stopped")
 
 
@@ -83,4 +80,3 @@ if __name__ == "__main__":
 
     # serve the driver on localhost, port 7624
     asyncio.run(main())
-

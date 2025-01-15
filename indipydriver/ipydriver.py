@@ -501,9 +501,6 @@ class IPyDriver(collections.UserDict):
                 pv.driver = self
         try:
             await asyncio.gather( *tasks )
-        except asyncio.CancelledError:
-            self._stop = True
-            raise
         finally:
             self.stopped.set()
             self._stop = True
