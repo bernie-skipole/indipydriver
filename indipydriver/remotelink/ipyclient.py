@@ -132,8 +132,6 @@ class IPyClient(collections.UserDict):
 
         # and shutdown routine sets this to True to stop coroutines
         self._stop = False
-        # this is set when asyncrun is finished
-        self.stopped = asyncio.Event()
 
         # Indicates how verbose the debug xml logs will be when created.
         self._verbose = 1
@@ -240,7 +238,7 @@ Setting it to None will transmit an enableBLOB for all devices set to the enable
                 if vectorname in self[devicename]:
                     vector = self[devicename][vectorname]
                     if membername in vector:
-                        member = vector.members(membername)
+                        member = vector.member(membername)
                         member.user_string = user_string
 
 
@@ -769,9 +767,18 @@ Setting it to None will transmit an enableBLOB for all devices set to the enable
 
     async def send_newVector(self, devicename, vectorname, timestamp=None, members={}):
         """Send a Vector with updated member values, members is a membername
-           to value dictionary. Note, if this vector is a BLOB Vector, the members
-           dictionary should be {membername:(value, blobsize, blobformat)}
-           where value could be a bytes object or a filepath"""
+           to value dictionary.
+
+           Note, if this vector is a BLOB Vector, the members dictionary should be
+           {membername:(value, blobsize, blobformat)}
+           where value could be a bytes object, a pathlib.Path, or a string filepath.
+           If blobsize of zero is used, the size value sent will be set to the number of bytes
+           in the BLOB. The INDI standard specifies the size should be that of the BLOB
+           before any compression, therefore if you are sending a compressed file, you
+           should set the blobsize prior to compression.
+           blobformat should be a file extension, such as '.png'. If it is an empty string
+           and value is a filename, the extension will be taken from the filename."""
+
         device = self.data.get(devicename)
         if device is None:
             return
@@ -988,8 +995,10 @@ Setting it to None will transmit an enableBLOB for all devices set to the enable
         self._stop = False
         try:
             await asyncio.gather(self._comms(), self._rxhandler(), self._timeout_monitor(), self.hardware())
+        except asyncio.CancelledError:
+            self._stop = True
+            raise
         finally:
-            self.stopped.set()
             self._stop = True
 
 

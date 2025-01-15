@@ -123,10 +123,18 @@ class delProperty(Event):
             if self.vectorname in properties:
                 vector = properties[self.vectorname]
                 vector.enable = False
+                # add the message to the device
+                if self.message:
+                    device.messages.appendleft( (self.timestamp, self.message) )
         else:
             # No vectorname given, disable all properties
             for vector in properties.values():
                 vector.enable = False
+            # add the message to the device and to the client
+            if self.message:
+                device.messages.appendleft( (self.timestamp, self.message) )
+                client.messages.appendleft( (self.timestamp, self.message) )
+
 
 
 class defVector(Event, UserDict):

@@ -483,7 +483,7 @@ class BLOBMember(ParentBLOBMember):
         xmldata.set("name", self.name)
         if newformat:
             xmldata.set("format", newformat)
-        else:
+        elif self.blobformat:
             xmldata.set("format", self.blobformat)
         # the value set in the xmldata object should be a bytes object
         bytescontent = self.getbytes(newvalue)

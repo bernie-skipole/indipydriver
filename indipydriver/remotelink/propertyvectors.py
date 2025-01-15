@@ -1,5 +1,5 @@
 
-import collections, sys, time, json
+import collections, sys, time, json, pathlib
 
 from datetime import datetime, timezone
 
@@ -30,6 +30,7 @@ class Vector(collections.UserDict):
         self._state = state
         self.timestamp = timestamp
         self.message = message
+        self.message_timestamp = timestamp
         self.vectortype = self.__class__.__name__
         self.devicename = None
         self._rule = None
@@ -119,6 +120,7 @@ class SnapVector(Vector):
                    "enable":self.enable,
                    "user_string":self.user_string,
                    "message":self.message,
+                   "message_timestamp":self.message_timestamp.isoformat(sep='T'),
                    "group":self.group,
                    "state":self.state,
                    "timeout":self.timeout,
@@ -215,6 +217,7 @@ class PropertyVector(Vector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         if hasattr(event, 'timeout'):
             if not self.timeout is None:
                 self.timeout = event.timeout
@@ -238,6 +241,7 @@ class PropertyVector(Vector):
         snapvector.timeout = self.timeout
         snapvector._rule = self._rule
         snapvector._perm = self._perm
+        snapvector.message_timestamp = self.message_timestamp
         return snapvector
 
 
@@ -302,6 +306,7 @@ class SwitchVector(PropertyVector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         self.timeout = event.timeout
         # create  members
         for membername, membervalue in event.items():
@@ -420,6 +425,7 @@ class LightVector(PropertyVector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         # create  members
         for membername, membervalue in event.items():
             if membername in self.data:
@@ -444,6 +450,7 @@ class LightVector(PropertyVector):
         snapvector = SnapVector(self.name, self.label, self.group, self.state, self.timestamp, self.message,
                                 self.vectortype, self.devicename, self.enable, self.user_string, self.data)
         snapvector._perm = "ro"
+        snapvector.message_timestamp = self.message_timestamp
         return snapvector
 
 
@@ -488,6 +495,7 @@ class TextVector(PropertyVector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         self.timeout = event.timeout
         # create  members
         for membername, membervalue in event.items():
@@ -629,6 +637,7 @@ class NumberVector(PropertyVector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         self.timeout = event.timeout
         # create  members
         for membername, membervalue in event.items():
@@ -712,6 +721,7 @@ class NumberVector(PropertyVector):
                                 self.vectortype, self.devicename, self.enable, self.user_string, self.data)
         snapvector.timeout = self.timeout
         snapvector._perm = self._perm
+        snapvector.message_timestamp = self.message_timestamp
         return snapvector
 
 
@@ -781,6 +791,7 @@ class BLOBVector(PropertyVector):
             self.timestamp = event.timestamp
         if event.message:
             self.message = event.message
+            self.message_timestamp = event.timestamp
         self.timeout = event.timeout
         # create  members
         for membername, label in event.memberlabels.items():
