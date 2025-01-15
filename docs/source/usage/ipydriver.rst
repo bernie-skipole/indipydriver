@@ -46,8 +46,6 @@ a message with every vector definition.
 
 **stop** - Normally False, but set to True when the driver shutdown() method is called.
 
-**stopped** - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
-
 **debug_enable** - As default this is set to False.
 
 With debug_enable set to False, then xml traffic will not be logged at the driver level, but will still be logged at the server level which logs all traffic between server and attached clients. See the logging section of this documentation for further details.
