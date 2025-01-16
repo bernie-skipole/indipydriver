@@ -6,4 +6,4 @@ from .propertymembers import SwitchMember, LightMember, TextMember, BLOBMember, 
 from .events import getProperties, enableBLOB, newSwitchVector, newTextVector, newNumberVector, newBLOBVector, Message, delProperty, defSwitchVector, defTextVector, defNumberVector, defLightVector, defBLOBVector, setSwitchVector, setTextVector, setNumberVector, setLightVector, setBLOBVector
 from .ipyserver import IPyServer
 
-version = "2.0.2"
+version = "2.1.0"

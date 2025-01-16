@@ -107,6 +107,8 @@ class IPyServer:
                                         self.remotes)
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
+        # this is set when asyncrun is finished
+        self.stopped = asyncio.Event()
         self.server = None
 
     @property
@@ -243,6 +245,7 @@ class IPyServer:
                                  self._sendtoclient()
                                  )
         finally:
+            self.stopped.set()
             self._stop = True
 
 

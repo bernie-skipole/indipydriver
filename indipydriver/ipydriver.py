@@ -144,6 +144,9 @@ class IPyDriver(collections.UserDict):
         self._stop = False
         # shutdown routine sets this to True to stop coroutines
 
+        self.stopped = asyncio.Event()
+        # this is set when asyncrun is finished
+
 
     def devices(self):
         "Returns a list of device objects"
@@ -501,7 +504,9 @@ class IPyDriver(collections.UserDict):
         try:
             await asyncio.gather( *tasks )
         finally:
+            self.stopped.set()
             self._stop = True
+
 
 class Device(collections.UserDict):
 
