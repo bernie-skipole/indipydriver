@@ -7,8 +7,6 @@ indipydriver
 
 If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
 
-Indipydriver is a pure python package and has no dependencies.
-
 The package creates and serves the INDI protocol.
 
 For further information on INDI, see :ref:`references`.
@@ -17,7 +15,7 @@ Typically you would use this package to create drivers to control an instrument,
 
 The INDI protocol is defined so that drivers should operate with any INDI client.
 
-An associated terminal client indipyclient is available, which connects to the port, so the instrument can be viewed and controlled from a terminal session.
+An associated terminal client indipyclient is included as the only dependency, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
 
 Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 

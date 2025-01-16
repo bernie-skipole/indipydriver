@@ -25,7 +25,7 @@ There are further facilities available; in which one driver can monitor (snoop) 
 indipyclient
 ^^^^^^^^^^^^
 
-The associated package indipyclient can be installed from Pypi.
+The associated package indipyclient will be installed automatically with indipydriver, and can be installed separately from Pypi.
 
 https://pypi.org/project/indipyclient
 
