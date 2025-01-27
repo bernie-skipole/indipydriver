@@ -15,11 +15,11 @@ Typically you would use this package to create drivers to control an instrument,
 
 The INDI protocol is defined so that drivers should operate with any INDI client.
 
-An associated terminal client indipyclient is included as the only dependency, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
+An associated terminal client indipyterm is available, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
 
-Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
+Indipyterm can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 
-Both indipydriver and indipyclient are available on Pypi, and should interwork with other services that follow the INDI specification.
+Both indipydriver and indipyterm are available on Pypi, and should interwork with other services that follow the INDI specification.
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control if appropriate drivers are written.
 
@@ -48,6 +48,6 @@ The indipydriver package also includes an IPyServer class. Having created an ins
     server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
     await server.asyncrun()
 
-A connected client, such as indipyclient, can then control all the drivers.
+A connected client, such as indipyterm, can then control all the drivers.
 
 The IPyServer can also run third party INDI drivers created with other languages or tools, using an add_exdriver method. It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.

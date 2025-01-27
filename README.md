@@ -10,18 +10,18 @@ See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
 The INDI protocol is defined so that drivers should operate with any INDI client.
 
-An associated terminal client indipyclient is included as the only dependency, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
+An associated terminal client indipyterm is available, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
 
-Indipyclient can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
+Indipyterm can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 
-Both indipydriver and indipyclient are available on Pypi, and should interwork with other services that follow the INDI specification.
+Both indipydriver and indipyterm are available on Pypi, and should interwork with other services that follow the INDI specification.
 
-The image below shows the indipyclient terminal connected to a server running an example driver (switching on or off an LED on a RaspberryyPi). The example is described at:
+The image below shows the indipyterm terminal connected to a server running an example driver (switching on or off an LED on a RaspberryyPi). The example is described at:
 
 https://indipydriver.readthedocs.io/en/latest/usage/summary.html
 
 
-![Terminal screenshot](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/led.png)
+![Terminal screenshot](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/image3.png)
 
 
 The protocol defines the format of the data sent, such as light, number, text, switch or BLOB (Binary Large Object) and the client can send commands to control the instrument.  The client takes the display format of switches, numbers etc., from the protocol.
@@ -65,4 +65,4 @@ Documentation at https://indipydriver.readthedocs.io
 
 Installation from https://pypi.org/project/indipydriver
 
-indipyclient available from https://pypi.org/project/indipyclient
+indipyterm available from https://pypi.org/project/indipyterm
