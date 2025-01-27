@@ -51,6 +51,8 @@ indipydriver.ipyserver - generates server logs
 
 indipydriver.ipydriver - generates attached driver logs
 
-indipydriver.remotelink - generates remote connection logs.
+indipyclient - generates remote connection logs.
+
+This last uses 'indipyclient' as this package is used to run the remote connections.
 
 You could then add file handlers and set logging levels to each logger separately, giving you the capability to separately record driver and server traffic.

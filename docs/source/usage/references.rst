@@ -19,6 +19,12 @@ https://indipyclient.readthedocs.io
 
 https://pypi.org/project/indipyclient
 
+The associated indipyterm sites:
+
+https://github.com/bernie-skipole/indipyterm
+
+https://pypi.org/project/indipyterm
+
 Examples of clients and drivers are collected at:
 
 https://github.com/bernie-skipole/inditest
