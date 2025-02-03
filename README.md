@@ -1,20 +1,25 @@
 # indipydriver
 
-If you are developing a Python project to operate some form of instrument, with switches, indicators or measurement data, this package can be used to send and receive data on a port to control your instrument.
+If you are developing a Python project to operate some form of control, with switches, indicators or measurement data, this package can be used to send and receive data on a port to control your instrument.
 
-The package creates and serves the INDI protocol.
+The package creates and serves the INDI protocol which is defined so that drivers should operate with any INDI client.
 
 INDI - Instrument Neutral Distributed Interface.
 
 See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
-The INDI protocol is defined so that drivers should operate with any INDI client.
+This is one of three associated packages.
 
-An associated terminal client indipyterm is available, this can connect to the port, so the instrument can be viewed and controlled from a terminal session.
+Indipydriver provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
+
+Indipyclient provides classes which you can use to connect to the port, to create your own client, or to script control of your instrument.
+
+Indipyterm is a terminal client, which can be run to view the instrument controls.
+
 
 Indipyterm can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 
-Both indipydriver and indipyterm are available on Pypi, and should interwork with other services that follow the INDI specification.
+These packages are available on Pypi, and should interwork with other services that follow the INDI specification.
 
 The image below shows the indipyterm terminal connected to a server running an example driver (switching on or off an LED on a RaspberryyPi). The example is described at:
 
@@ -64,5 +69,7 @@ With such a layout, the client can control all the instruments.
 Documentation at https://indipydriver.readthedocs.io
 
 Installation from https://pypi.org/project/indipydriver
+
+indipyclient available from https://pypi.org/project/indipyclient
 
 indipyterm available from https://pypi.org/project/indipyterm
