@@ -23,7 +23,7 @@ These packages are available on Pypi, and should interwork with other services t
 
 The image below shows the indipyterm terminal connected to a server running an example driver (switching on or off an LED on a RaspberryyPi). The example is described at:
 
-https://indipydriver.readthedocs.io/en/latest/usage/summary.html
+https://indipydriver.readthedocs.io/en/latest/usage/concept.html#first-example
 
 
 ![Terminal screenshot](https://github.com/bernie-skipole/indipydriver/raw/main/docs/source/usage/images/image3.png)
