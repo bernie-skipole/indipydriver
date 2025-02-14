@@ -306,5 +306,9 @@ Connecting using the indipyclient terminal client gives:
 
 .. image:: ./images/led.png
 
+And using indipyterm gives:
+
+.. image:: ./images/image3.png
+
 
 The next few pages of this documentation list the classes describing property vectors and members, if you wish to skip to further examples, see :ref:`example1`.
