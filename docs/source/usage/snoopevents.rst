@@ -56,6 +56,7 @@ def Vector events also all have attributes vectorname, label, group, state and m
 .. autoclass:: indipydriver.defTextVector
 
 .. autoclass:: indipydriver.defNumberVector
+   :members: getfloatvalue
 
 .. autoclass:: indipydriver.defLightVector
 
@@ -70,6 +71,7 @@ set Vector events all have attributes vectorname, message and state (which could
 .. autoclass:: indipydriver.setTextVector
 
 .. autoclass:: indipydriver.setNumberVector
+   :members: getfloatvalue
 
 .. autoclass:: indipydriver.setLightVector
 

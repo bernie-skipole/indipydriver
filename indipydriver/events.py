@@ -10,6 +10,8 @@ from collections import UserDict
 import logging
 logger = logging.getLogger(__name__)
 
+from .propertymembers import getfloat
+
 
 def _parse_timestamp(timestamp_string):
     """Parse a timestamp string and return either None on failure, or a datetime object
@@ -144,8 +146,7 @@ class newTextVector(newVector):
 class newNumberVector(newVector):
     """An event indicating a newNumberVector has been received, this is a mapping
        of membername:value, where each value is a string number, which may be in
-       sexagesimal format, and may have newlines appended or prepended. If desired,
-       the driver method indi_number_to_float() can be used to convert this to a float."""
+       sexagesimal format, and may have newlines appended or prepended."""
 
     def __init__(self, devicename, vectorname, vector, root):
         newVector.__init__(self, devicename, vectorname, vector, root)
@@ -167,6 +168,26 @@ class newNumberVector(newVector):
                 raise EventException("Received tag not known for newNumberVector")
         if not self.data:
             raise EventException("No contents received for newNumberVector")
+
+    def getfloatvalue(self, membername):
+        "Given a received membername in this event, returns the number as a float"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        membervalue = self.data[membername]
+        return getfloat(membervalue)
+
+    def getformattedvalue(self, membername):
+        "Given a received membername in this event, returns the number as a formatted string"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        if membername not in self.vector:
+            raise KeyError("Received membername not known for newNumberVector")
+        membervalue = self.data[membername]
+        floatval = getfloat(membervalue)
+        member = self.vector.data[membername]
+        return member.format_number(floatval)
+
+
 
 
 class newBLOBVector(newVector):
@@ -377,6 +398,14 @@ class defNumberVector(defVector):
         if not self.data:
             raise EventException("No contents given in snooped defNumberVector")
 
+    def getfloatvalue(self, membername):
+        "Given a received membername in this event, returns the number as a float"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        membervalue = self.data[membername]
+        return getfloat(membervalue)
+
+
 
 class defLightVector(defVector):
 
@@ -548,6 +577,13 @@ class setNumberVector(setVector):
                 raise EventException("Invalid tag given in snooped setNumberVector")
         if not self.data:
             raise EventException("No contents given in snooped setNumberVector")
+
+    def getfloatvalue(self, membername):
+        "Given a received membername in this event, returns the number as a float"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        membervalue = self.data[membername]
+        return getfloat(membervalue)
 
 
 class setLightVector(setVector):

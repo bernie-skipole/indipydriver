@@ -32,6 +32,7 @@ If you accept the new values, you should also set the vector with the new value,
 .. autoclass:: indipydriver.newTextVector
 
 .. autoclass:: indipydriver.newNumberVector
+   :members: getfloatvalue, getformattedvalue
 
 .. autoclass:: indipydriver.newBLOBVector
 
