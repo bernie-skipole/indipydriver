@@ -98,6 +98,7 @@ Numbers
 ^^^^^^^
 
 .. autoclass:: indipydriver.NumberMember
+   :members: getfloatvalue, getformattedvalue, format_number
 
 .. autoclass:: indipydriver.NumberVector
    :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers

@@ -753,6 +753,22 @@ class NumberVector(PropertyVector):
         except ValueError as ex:
             logger.exception("Invalid permission value")
 
+    def getfloatvalue(self, membername):
+        "Given a membername of this vector, returns the number as a float"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        member = self.data[membername]
+        return member.getfloatvalue()
+
+    def getformattedvalue(self, membername):
+        "Given a membername of this vector, returns the number as a formatted string"
+        if membername not in self:
+            raise KeyError(f"Unrecognised member: {membername}")
+        member = self.data[membername]
+        return member.getformattedvalue()
+
+
+
     async def _handler(self):
         """Check received data and take action"""
         while not self._stop:
