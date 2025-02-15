@@ -101,7 +101,7 @@ Numbers
    :members: getfloatvalue, getformattedvalue, format_number
 
 .. autoclass:: indipydriver.NumberVector
-   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers
+   :members: send_delProperty, send_defVector, send_setVector, send_setVectorMembers, getfloatvalue, getformattedvalue
 
 
 The number format also accepts an INDI style "m" to specify sexagesimal in the form "%<w>.<f>m".
