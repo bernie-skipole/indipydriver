@@ -5,7 +5,7 @@ Introduction
 indipydriver
 ^^^^^^^^^^^^
 
-If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port.
+If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port. A terminal client can then view the instrument, enabling easy headless control.
 
 The package creates and serves the INDI protocol which is defined so that drivers should operate with any INDI client.
 
@@ -17,9 +17,11 @@ This is one of three associated packages.
 
 Indipydriver provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
 
-Indipyclient provides classes which you can use to connect to the port, to create your own client, or to script control of your instrument.
-
 Indipyterm is a terminal client, which can be run to view the instrument controls.
+
+Optionally - if you wanted to create dedicated client programs:
+
+Indipyclient provides classes which you can use to connect to the port, to create your own client, or to script control of your instrument.
 
 Indipyterm can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 
@@ -31,6 +33,10 @@ The package can be installed from:
 
 https://pypi.org/project/indipydriver
 
+Indipydriver provides classes of 'members', 'vectors' and 'devices', where members hold instrument values, such as switch and number values. Vectors group members together, with labels and group strings, which inform the client how to display the values. 'Devices' hold a number of vectors, so a single driver can display several 'devices'.
+
+The 'IPyDriver' class holds one or more devices, and provides methods you can use to send and receive data to interface with your own code which does the actual work.
+
 Typically you would create a subclass of IPyDriver.
 
 The driver has methods which can be overwritten.
@@ -41,7 +47,7 @@ This is called whenever data is received from the client, typically to set an in
 
 **async def hardware(self)**
 
-This can be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
+This is called when the driver starts, and as default does nothing, typically it could be a contuously running coroutine which you can use to operate your instruments, and if required send updates to the client.
 
 **async def snoopevent(self, event)**
 
