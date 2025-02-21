@@ -33,9 +33,9 @@ The package can be installed from:
 
 https://pypi.org/project/indipydriver
 
-Indipydriver provides classes of 'members', 'vectors' and 'devices', where members hold instrument values, such as switch and number values. Vectors group members together, with labels and group strings, which inform the client how to display the values. 'Devices' hold a number of vectors, so a single driver can display several 'devices'.
+Indipydriver provides classes of 'members', 'vectors' and 'devices', where members hold instrument values, such as switch and number values. Vectors group members together, with labels and group strings, which inform the client how to display the values. 'Devices' hold a number of vectors, so a single device can display several groups of controls.
 
-The 'IPyDriver' class holds one or more devices, and provides methods you can use to send and receive data to interface with your own code which does the actual work.
+The 'IPyDriver' class holds one or more devices, and provides methods you can use to send and receive data, which you would use to interface with your own code.
 
 Typically you would create a subclass of IPyDriver.
 
