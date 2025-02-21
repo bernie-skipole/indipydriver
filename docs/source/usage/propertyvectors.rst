@@ -50,18 +50,11 @@ If in the initial state of the device, it is required that a particular property
 
 Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the LEDDriver example, the value of the vector member is set by::
 
-    event.vector["ledswitchmember"] = newvalue
+    event.vector["ledmember"] = newvalue
 
 Numeric values are preferably set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol. If given as floats or integers they will be converted to strings. The only exception is blobsize, where the number should be an integer.
 
 When transmitting a vector, using the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
-
-One possible way you may want to create your own timestamp is::
-
-    from datetime import datetime, timezone
-
-    timestamp = datetime.now(tz=timezone.utc)
-
 
 The Text, Light, Switch, Number and BLOB members and vectors are described below. When creating a driver you would typically first make the members that hold the values associated with your instrument, these members would then be inserted into vectors, and the vectors into a Device.
 
