@@ -250,7 +250,7 @@ class Message(SnoopEvent):
 class delProperty(SnoopEvent):
     """The remote driver is instructing the client to delete either a device or a vector property.
        This contains attribute vectorname, if it is None, then the whole device is to be deleted.
-       A 'message' attribute contains any message sent by the client with this instruction."""
+       A 'message' attribute contains any message sent by the remote driver with this instruction."""
 
     def __init__(self, root):
         super().__init__(root)

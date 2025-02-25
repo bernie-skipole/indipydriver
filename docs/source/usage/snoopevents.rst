@@ -21,7 +21,7 @@ A driver can be set to snoop on another drivers device and vector traffic with t
 
     snoop(devicename, vectorname, timeout=30)
 
-This will cause the driver to transmit a 'getProperties' request, which will instruct servers to copy traffic originating from the specified device/vector to this driver, as well as to any connected client. Since intermediate servers may get switched off and on and lose the copy instruction, if no traffic is received after the timeout value, then another getProperties will be sent.
+This will cause the driver to transmit a 'getProperties' request, which will instruct servers to copy traffic originating from the specified device/vector to this driver, as if it was a connected client. Since intermediate servers may get switched off and on and lose the copy instruction, if no traffic is received after the timeout value, then another getProperties will be sent.
 
 It is also possible for a driver to await a send_getProperties command directly using coroutine method::
 
