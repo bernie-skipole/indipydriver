@@ -25,7 +25,7 @@ Typically you would have something like::
 
 The client event objects are described below, you never need to create these objects - they are automatically created by the received data, however you should test the event matches an object, and act accordingly.
 
-All event objects have attributes devicename, vectorname, vector, root
+All event objects have attributes devicename, vectorname, vector, root, timestamp.
 
 Where vector is the vector object being changed, and root is the received xml parsed as an xml.etree.ElementTree element.
 
@@ -42,7 +42,7 @@ The following event objects indicate the client is trying to set new member valu
 .. autoclass:: indipydriver.newBLOBVector
 
 
-The event also has a self.timestamp attribute which is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, a current utc time is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
+The event.timestamp attribute is a datetime object, or None if unable to parse the timestamp given in the protocol. In the attempt to parse, fractional minutes or seconds may be lost, and if no received timestamp is given, a current utc time is used. If the exact received timestamp is required it can be obtained from event.root.get("timestamp") which will return either the string from the received xml, or None if not present.
 
 Typically, if you accept a new member value, you would have code that controls your instrument, and you would then set the new value into the vector and transmit the updated vector back to the client. The vector which these values apply to is made conveniently available as the event.vector attribute.
 
@@ -66,6 +66,13 @@ The INDI specification describes enableBLOB when sent from a client::
 
 
 Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
+
+The client will also send a getProperties request to obtain property definitions. As default this is handled automatically, and rxevent is not called. However if the attribute driver.auto_send_def is set to False, then the automatic function is disabled, and rxevent will be called with 'getProperties' events.
+
+In this case the driver developer will need to respond with a vector.send_defVector() to send the definition to the client.
+
+.. autoclass:: indipydriver.getProperties
+
 
 
 devrxevent

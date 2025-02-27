@@ -10,13 +10,13 @@ See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
 This is one of three associated packages.
 
-Indipydriver provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
+**Indipydriver** provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
 
-Indipyterm is a terminal client, which can be run to view the instrument controls.
+**Indipyterm** is a terminal client, which can be run to view the instrument controls.
 
 Optionally - if you wanted to create dedicated client programs:
 
-Indipyclient provides classes which you can use to connect to the port, to create your own client, or to script control of your instrument.
+**Indipyclient** provides classes which you can use to connect to the port, to create your own client, or to script control of your instrument.
 
 Indipyterm can be remote, or could work on the same machine. As it is a terminal client, it could be run from an SSH connection, conveniently allowing headless operation.
 

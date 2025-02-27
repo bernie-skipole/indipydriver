@@ -156,7 +156,7 @@ This switch vector will have a single member, with name "ledmember"
 The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutine method::
 
 
-    class _LEDDriver(ipd.IPyDriver):
+    class LEDDriver(ipd.IPyDriver):
 
         """IPyDriver is subclassed here to create an LED driver."""
 
@@ -266,7 +266,7 @@ The driver, device, vectors etc,. have to be instantiated, it is suggested this 
 
         # Create the Driver containing this device, and as named argument
         # add the LED object used for instrument control
-        driver = _LEDDriver(leddevice, ledobj=ledobject )
+        driver = LEDDriver(leddevice, ledobj=ledobject )
 
         # and return the driver
         return driver

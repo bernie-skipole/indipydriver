@@ -57,6 +57,7 @@ class getProperties(Event):
     "defines an event that a getProperties has been received"
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
+        self.timestamp = datetime.now(tz=timezone.utc)
 
 
 
@@ -67,6 +68,7 @@ class enableBLOB(Event):
 
     def __init__(self, devicename, vectorname, vector, root):
         super().__init__(devicename, vectorname, vector, root)
+        self.timestamp = datetime.now(tz=timezone.utc)
         value = root.text.strip()
         if value in ("Never", "Also", "Only"):
             self.value = value
