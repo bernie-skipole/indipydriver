@@ -163,6 +163,11 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
         async def rxevent(self, event):
             "On receiving data from the client, this is called"
 
+            if event.devicename != "led":
+                # No other device data is expected, ignore anything
+                # without the correct devicename
+                return
+
             # get the LED object controlling the instrument, which is
             # available in the named arguments dictionary 'self.driverdata'
 
@@ -170,9 +175,6 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
 
             # event.vector is the vector being requested or altered
             # event[membername] is the new value.
-
-            # There is only one device in this driver,
-            # so no need to check devicename
 
             if isinstance(event, ipd.newSwitchVector):
                 if event.vectorname == "ledvector" and 'ledmember' in event:
