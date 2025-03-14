@@ -117,6 +117,11 @@ This example simulates a driver which snoops on the thermostat of the previous e
         print(f"Running {__file__}")
         asyncio.run( server.asyncrun() )
 
+
+And using indipyterm you can see that both the Thermostat and Window devices have been discovered.
+
+.. image:: ./images/image6.png
+
 Alternatively if the thermostat of example2 was running on a remote machine (with name 'raspberrypi'), then this script could be altered to remotely connect to it.
 
 .. image:: ./images/rem3.png
