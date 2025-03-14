@@ -35,13 +35,11 @@ Indipydriver provides classes of 'members', 'vectors' and 'devices', where membe
 
 The 'IPyDriver' class holds one or more devices, and provides methods you can use to send and receive data, which you would use to interface with your own code.
 
-Typically you would create a subclass of IPyDriver.
-
-The driver has methods which can be overwritten.
+You would create a subclass of IPyDriver and override the following methods.
 
 **async def rxevent(self, event)**
 
-This is called whenever data is received from the client, typically to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
+This is automatically called whenever data is received from the client to set an instrument parameter. The event object describes the received data, and you provide the code which then controls your instrument.
 
 **async def hardware(self)**
 

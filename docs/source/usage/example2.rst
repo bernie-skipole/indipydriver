@@ -2,7 +2,10 @@ Example2
 ========
 
 This example shows how the client can set a target temperature by sending
-a 'newNumberVector', which causes the rxevent method to be called::
+a 'newNumberVector', which causes the rxevent method to be called.
+
+It expands on example1 by adding a further NumberVector and NumberMember, and
+using the rxevent(self, event) method to accept the new target value::
 
 
     import asyncio
@@ -169,3 +172,9 @@ a 'newNumberVector', which causes the rxevent method to be called::
         server = ipd.IPyServer(thermodriver)
         print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
+
+
+And the result, when connecting using indipyterm is:
+
+
+.. image:: ./images/image5.png

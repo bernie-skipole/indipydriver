@@ -133,6 +133,11 @@ In this example a NumberVector and NumberMember contain the temperature which is
         print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
 
+And the result, when connecting using indipyterm is:
+
+
+.. image:: ./images/image4.png
+
 
 In summary. You create any objects needed to operate your hardware,
 and these can be inserted into the IPyDriver constructor and will be available
