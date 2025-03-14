@@ -17,7 +17,6 @@ indipydriver = Enabling remote instrument control
    usage/ipyserver
    usage/logging
    usage/example1
-   usage/clientwithdriver
    usage/example2
    usage/example3
    usage/references

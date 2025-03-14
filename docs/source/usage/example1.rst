@@ -55,7 +55,7 @@ In this example a NumberVector and NumberMember contain the temperature which is
                     self.heater = "On"
 
 
-    class _ThermoDriver(ipd.IPyDriver):
+    class ThermoDriver(ipd.IPyDriver):
 
         """IPyDriver is subclassed here, with a method
            to run the thermalcontrol.run_thermostat() method
@@ -73,7 +73,7 @@ In this example a NumberVector and NumberMember contain the temperature which is
             controltask = asyncio.create_task(thermalcontrol.run_thermostat())
 
             vector = self[devicename]['temperaturevector']
-            while not self._stop:
+            while not self.stop:
                 await asyncio.sleep(10)
                 # Send the temperature every 10 seconds
                 vector['temperature'] = thermalcontrol.temperature
@@ -93,16 +93,16 @@ In this example a NumberVector and NumberMember contain the temperature which is
         thermalcontrol = ThermalControl(devicename, target)
 
         # Make a NumberMember holding the temperature value
-        temperaturemember = ipd.NumberMember( name="temperature",
-                                              format='%3.1f', min=-50, max=99,
-                                              membervalue=thermalcontrol.temperature )
+        temperature = ipd.NumberMember( name="temperature",
+                                        format='%3.1f', min=-50, max=99,
+                                        membervalue=thermalcontrol.temperature )
         # Make a NumberVector instance, containing the member.
         temperaturevector = ipd.NumberVector( name="temperaturevector",
                                               label="Temperature",
                                               group="Values",
                                               perm="ro",
                                               state="Ok",
-                                              numbermembers=[temperaturemember] )
+                                              numbermembers=[temperature] )
         # Make a Device with temperaturevector as its only property
         # and with the given devicename
         thermostat = ipd.Device( devicename=devicename,
@@ -110,8 +110,8 @@ In this example a NumberVector and NumberMember contain the temperature which is
 
         # Create the Driver which will contain this Device,
         # and the instrument controlling object
-        driver = _ThermoDriver( thermostat,
-                                thermalcontrol=thermalcontrol )
+        driver = ThermoDriver( thermostat,
+                               thermalcontrol=thermalcontrol )
 
         # and return the driver
         return driver
@@ -161,7 +161,7 @@ used to run a continuous long running task to send data to the client. Like
 all async tasks, this should be non blocking, so generally should include a call
 to await asyncio.sleep() in its loop.
 
-Testing self._stop is also useful, as this stop flag is set to True when shutdown() is
+Testing self.stop is also useful, as this stop flag is set to True when shutdown() is
 called on the driver, and would therefore stop this hardware while loop.
 
 You would then create the IPyServer object to serve the driver, and run the server.asyncrun()
