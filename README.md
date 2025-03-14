@@ -1,6 +1,6 @@
 # indipydriver
 
-If you are developing a Python project to operate some form of control, with switches, indicators or measurement data, this package can be used to send and receive data on a port to control your instrument. A terminal client can then view the instrument, enabling easy headless control.
+If you are developing a Python project to control some form of instrument, with switches, indicators or measurement data, this package provides classes which can be used to send and receive data on a port. A terminal client can then view the instrument, enabling easy headless control.
 
 The package creates and serves the INDI protocol which is defined so that drivers should operate with any INDI client.
 
