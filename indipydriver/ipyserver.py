@@ -154,18 +154,11 @@ class IPyServer:
            used to prevent multiple such connections all logging xml traffic together."""
 
 
-        snoopall = False           # gets set to True if it is snooping everything
-        snoopdevices = set()       # gets set to a set of device names
-        snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
-
         remcon = RemoteConnection(indihost=host, indiport=port,
                                   alldrivers = self.alldrivers,
                                   remotes = self.remotes,
                                   serverwriterque = self.serverwriterque,
-                                  connectionpool = self.connectionpool,
-                                  snoopall = snoopall,
-                                  snoopdevices = snoopdevices,
-                                  snoopvectors = snoopvectors )
+                                  connectionpool = self.connectionpool)
 
         remcon.enableBLOBdefault = blob_enable
 
