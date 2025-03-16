@@ -154,20 +154,14 @@ class IPyServer:
            used to prevent multiple such connections all logging xml traffic together."""
 
 
-        remcon = RemoteConnection(indihost=host, indiport=port,
-                                  alldrivers = self.alldrivers,
-                                  remotes = self.remotes,
-                                  serverwriterque = self.serverwriterque,
-                                  connectionpool = self.connectionpool)
+        remcon = RemoteConnection( indihost=host, indiport=port,
+                                   blob_enable = blob_enable,
+                                   debug_enable = debug_enable,
+                                   alldrivers = self.alldrivers,
+                                   remotes = self.remotes,
+                                   serverwriterque = self.serverwriterque,
+                                   connectionpool = self.connectionpool )
 
-        remcon.enableBLOBdefault = blob_enable
-
-        if debug_enable:
-            remcon.debug_verbosity(2) # turn on xml logs
-        else:
-            remcon.debug_verbosity(0) # turn off xml logs
-        # turn off timers, these are more appropriate to a client
-        remcon.set_vector_timeouts(timeout_enable=False)
         # store this object
         self.remotes.append(remcon)
 
