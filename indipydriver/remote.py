@@ -8,9 +8,53 @@ from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
 
-from indipyclient import IPyClient
+#from indipyclient import IPyClient
 
-from indipyclient.events import getProperties
+#from indipyclient.events import getProperties
+
+
+# All xml data received from the remote connection should be contained in one of the following tags
+TAGS = (b'message',
+        b'delProperty',
+        b'defSwitchVector',
+        b'setSwitchVector',
+        b'defLightVector',
+        b'setLightVector',
+        b'defTextVector',
+        b'setTextVector',
+        b'defNumberVector',
+        b'setNumberVector',
+        b'defBLOBVector',
+        b'setBLOBVector',
+        b'getProperties'
+       )
+
+DEFTAGS = ( 'defSwitchVector',
+            'defLightVector',
+            'defTextVector',
+            'defNumberVector',
+            'defBLOBVector'
+          )
+
+
+
+
+# _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
+_STARTTAGS = tuple(b'<' + tag for tag in TAGS)
+
+# _ENDTAGS is a tuple of ( b'</defTextVector>', ...  ) data received will be tested to end with such an endtag
+_ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
+
+
+
+
+
+
+
+
+
+
+
 
 
 class RemoteConnection(IPyClient):
