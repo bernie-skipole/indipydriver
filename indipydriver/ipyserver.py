@@ -154,27 +154,14 @@ class IPyServer:
            used to prevent multiple such connections all logging xml traffic together."""
 
 
-        snoopall = False           # gets set to True if it is snooping everything
-        snoopdevices = set()       # gets set to a set of device names
-        snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
+        remcon = RemoteConnection( host=host, port=port,
+                                   blob_enable = blob_enable,
+                                   debug_enable = debug_enable,
+                                   alldrivers = self.alldrivers,
+                                   remotes = self.remotes,
+                                   serverwriterque = self.serverwriterque,
+                                   connectionpool = self.connectionpool )
 
-        remcon = RemoteConnection(indihost=host, indiport=port,
-                                  alldrivers = self.alldrivers,
-                                  remotes = self.remotes,
-                                  serverwriterque = self.serverwriterque,
-                                  connectionpool = self.connectionpool,
-                                  snoopall = snoopall,
-                                  snoopdevices = snoopdevices,
-                                  snoopvectors = snoopvectors )
-
-        remcon.enableBLOBdefault = blob_enable
-
-        if debug_enable:
-            remcon.debug_verbosity(2) # turn on xml logs
-        else:
-            remcon.debug_verbosity(0) # turn off xml logs
-        # turn off timers, these are more appropriate to a client
-        remcon.set_vector_timeouts(timeout_enable=False)
         # store this object
         self.remotes.append(remcon)
 
@@ -285,7 +272,7 @@ class IPyServer:
                         self.serverreaderque.task_done()
                         continue
                     for remcon in self.remotes:
-                        if devicename in remcon:
+                        if devicename in remcon.devices:
                             # this getProperties request is meant for a remote connection
                             await remcon.send(xmldata)
                             remconfound = True
@@ -315,7 +302,7 @@ class IPyServer:
                 for remcon in self.remotes:
                     if not remcon.connected:
                         continue
-                    if devicename and (devicename in remcon):
+                    if devicename and (devicename in remcon.devices):
                         # this devicename has been found on this remote,
                         # so it must be a 'new' intended for this connection and
                         # it is not snoopable, since it is data to a device, not from it.
@@ -332,11 +319,11 @@ class IPyServer:
                         # So check if this remcon is snooping on this device/vector
                         # only forward def's and set's, not 'new' vectors which
                         # do not come from a device, but only from a client to the target device.
-                        if remcon.clientdata["snoopall"]:
+                        if remcon.snoopall:
                             await remcon.send(xmldata)
-                        elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                        elif devicename and (devicename in remcon.snoopdevices):
                             await remcon.send(xmldata)
-                        elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                        elif devicename and propertyname and ((devicename, propertyname) in remcon.snoopvectors):
                             await remcon.send(xmldata)
 
             if remconfound:
@@ -551,7 +538,7 @@ class _DriverComms:
                     for remcon in self.remotes:
                         if not remcon.connected:
                             continue
-                        if devicename in remcon:
+                        if devicename in remcon.devices:
                             # this getProperties request is meant for a remote connection
                             await remcon.send(xmldata)
                             foundflag = True
@@ -570,11 +557,11 @@ class _DriverComms:
                     await remcon.send(xmldata)
                 else:
                     # Check if this remcon is snooping on this device/vector
-                    if remcon.clientdata["snoopall"]:
+                    if remcon.snoopall:
                         await remcon.send(xmldata)
-                    elif devicename and (devicename in remcon.clientdata["snoopdevices"]):
+                    elif devicename and (devicename in remcon.snoopdevices):
                         await remcon.send(xmldata)
-                    elif devicename and propertyname and ((devicename, propertyname) in remcon.clientdata["snoopvectors"]):
+                    elif devicename and propertyname and ((devicename, propertyname) in remcon.snoopvectors):
                         await remcon.send(xmldata)
 
             # transmit xmldata out to other drivers

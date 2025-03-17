@@ -5,7 +5,7 @@ The INDI protocol (Instrument Neutral Distributed Interface) specifies a limited
 
 As the protocol contains the format of the data, a client learns and presents the controls when it connects.
 
-This 'indipydriver' package provides classes which take values from your own code and serves the protocol, handling connections from clients.
+This 'indipydriver' package provides classes which take values from your own code and serves the protocol, handling connections from clients. The package is pure Python and has no dependencies other than the standard library.
 
 In general, a client transmits a 'getProperties' request, and this indipydriver responds to this with definition packets (defSwitchVector, defLightVector, .. ) that define the format of the instrument data.
 
@@ -25,7 +25,7 @@ There are further facilities available; in which one driver can monitor (snoop) 
 indipyclient
 ^^^^^^^^^^^^
 
-The associated package indipyclient will be installed automatically with indipydriver, and can be installed separately from Pypi.
+The associated package indipyclient can be installed from Pypi.
 
 https://pypi.org/project/indipyclient
 
@@ -49,7 +49,7 @@ https://indipyclient.readthedocs.io
 indipyterm
 ^^^^^^^^^^
 
-The associated package indipyterm provides a more useful terminal client, using the 'textual' library, and is available from
+The associated package indipyterm provides a more useful terminal client, using the 'textual' library, and is also available from Pypi.
 
 https://pypi.org/project/indipyterm
 

@@ -579,7 +579,7 @@ class SendChecker:
                         break
             if not devicefound:
                 for remcon in self.remotes:
-                    if devicename in remcon:
+                    if devicename in remcon.devices:
                         devicefound = True
                         break
             if devicefound:
@@ -630,12 +630,10 @@ class SendChecker:
 
         if propertyobject is None:
             for remcon in self.remotes:
-                if devicename in remcon:
-                    if name in remcon[devicename]:
-                        propertyobject = remcon[devicename][name]
-                        break
-                    else:
-                        # devicename in remcon, but name not in remcon[devicename]
+                if devicename in remcon.blobvectors:
+                    if name in remcon.blobvectors[devicename]:
+                        # this name exists in remcon and is a BLOBVector
+                        devicedict["Properties"][name] = status
                         return
 
         if propertyobject is None:
