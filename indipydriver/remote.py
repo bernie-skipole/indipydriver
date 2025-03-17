@@ -8,10 +8,6 @@ from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
 
-
-#from indipyclient.events import getProperties
-
-
 # All xml data received from the remote connection should be contained in one of the following tags
 TAGS = (b'message',
         b'delProperty',
@@ -51,10 +47,6 @@ def _makestart(element):
     attriblist.append(">")
     return "".join(attriblist)
 
-
-class ParseException(Exception):
-    "Raised if an error occurs when parsing received data"
-    pass
 
 class RemoteConnection:
 
@@ -99,6 +91,9 @@ class RemoteConnection:
         # self.devices is a set of devicenames, received by def packets
         self.devices = set()
 
+        # self.blobvectors is a dictionary of devicename:set of blob vectornames received
+        self.blobvectors = {}
+
         # create queue where client will put xml data to be transmitted
         self._writerque = asyncio.Queue(4)
 
@@ -122,8 +117,9 @@ class RemoteConnection:
 
 
 
-    async def hardware(self):
-        """If connection fails, for each device learnt, disable it"""
+    async def _hardware(self):
+        """Flag connection made or failed messages into serverwriterque"""
+        # create a flag so 'remote connection made' message is only set once
         isconnected = False
         while not self._stop:
             await asyncio.sleep(0.1)
@@ -144,37 +140,21 @@ class RemoteConnection:
                         messagedata.set("message", f"Remote connection made to {self.indihost}:{self.indiport}")
                         await self.queueput(self.serverwriterque, messagedata)
                         break
-                continue
-            # The connection has failed
-            isconnected = False
-            if self.enabledlen():
-                # some devices are enabled, disable them
-                timestamp = datetime.now(tz=timezone.utc)
-                timestamp = timestamp.replace(tzinfo = None)
-                tstring = timestamp.isoformat(sep='T')
-                # If no clients are connected, do not send data into
-                # the serverwriterque
-                clientconnected = False
-                for clientconnection in self.connectionpool:
-                    if clientconnection.connected:
-                        clientconnected = True
-                        break
-                # send a message
-                if clientconnected:
-                    messagedata = ET.Element('message')
-                    messagedata.set("timestamp", tstring)
-                    messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
-                    await self.queueput(self.serverwriterque, messagedata)
-                for devicename, device in self.items():
-                    if device.enable:
-                        device.disable()
-                        if clientconnected:
-                            xmldata = ET.Element('delProperty')
-                            xmldata.set("device", devicename)
-                            xmldata.set("timestamp", tstring)
-                            xmldata.set("message", f"Remote Connection lost, {devicename} disabled")
-                            await self.queueput(self.serverwriterque, xmldata)
-
+            else:
+                # The connection has failed
+                if isconnected:
+                    isconnected = False
+                    for clientconnection in self.connectionpool:
+                        if clientconnection.connected:
+                            # a client is connected, send a message
+                            timestamp = datetime.now(tz=timezone.utc)
+                            timestamp = timestamp.replace(tzinfo = None)
+                            tstring = timestamp.isoformat(sep='T')
+                            messagedata = ET.Element('message')
+                            messagedata.set("timestamp", tstring)
+                            messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
+                            await self.queueput(self.serverwriterque, messagedata)
+                            break
 
 
     def shutdown(self):
@@ -220,11 +200,6 @@ class RemoteConnection:
             logger.exception("Exception report from RemoteConnection.warning method")
 
 
-    def enabledlen(self):
-        "Returns the number of enabled devices"
-        return sum(map(lambda x:1 if x.enable else 0, self.data.values()))
-
-
     async def _comms(self):
         "Create a connection to an INDI port"
         try:
@@ -240,6 +215,7 @@ class RemoteConnection:
                     self.messages.clear()
                     # clear devices
                     self.devices.clear()
+                    self.blobvectors.clear()
                     await self.warning(f"Connected to {self.indihost}:{self.indiport}")
                     t1 = asyncio.create_task(self._run_tx(writer))
                     t2 = asyncio.create_task(self._run_rx(reader))
@@ -269,6 +245,9 @@ class RemoteConnection:
                     break
                 else:
                     await self.warning(f"Connection failed, re-trying...")
+                # clear devices
+                self.devices.clear()
+                self.blobvectors.clear()
                 # wait five seconds before re-trying, but keep checking
                 # that self._stop has not been set
                 count = 0
@@ -521,9 +500,9 @@ class RemoteConnection:
                             else:
                                 # device not known, not a def or getProperties, so ignore it
                                 continue
-                except ParseException as pe:
-                    # if a ParseException is raised, it is because received data is malformed
-                    await self.warning(str(pe))
+                except Exception:
+                    # Received data is malformed
+                    await self.warning("Received data malformed")
                     continue
                 finally:
                     self._readerque.task_done()
@@ -532,6 +511,12 @@ class RemoteConnection:
 
                 if root.tag == "defBLOBVector":
                     # every time a defBLOBVector is received, send an enable BLOB instruction
+                    # and record the vectorname
+                    vectorname = root.get("name")
+                    if devicename not in self.blobvectors:
+                        self.blobvectors[devicename] = set()
+                    if vectorname not in self.blobvectors[devicename]:
+                        self.blobvectors[devicename].add(vectorname)
                     xmldata = ET.Element('enableBLOB')
                     xmldata.set("device", devicename)
                     xmldata.set("name", vectorname)
@@ -577,7 +562,7 @@ class RemoteConnection:
                 for remcon in self.remotes:
                     if remcon is self:
                         continue
-                    if devicename in remcon:
+                    if devicename in remcon.devices:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self.queueput(self.serverwriterque, None)
                         return
@@ -603,7 +588,7 @@ class RemoteConnection:
                 for remcon in self.remotes:
                     if remcon is self:
                         continue
-                    if devicename in remcon:
+                    if devicename in remcon.devices:
                         # this getProperties request is meant for a remote connection
                         await remcon.send(rxdata)
                         # no need to transmit this anywhere else
@@ -658,7 +643,7 @@ class RemoteConnection:
         "Await this method to run the connectiont."
         self._stop = False
         try:
-            await asyncio.gather(self._comms(), self._rxhandler(), self.hardware())
+            await asyncio.gather(self._comms(), self._rxhandler(), self._hardware())
         except asyncio.CancelledError:
             self._stop = True
             raise
