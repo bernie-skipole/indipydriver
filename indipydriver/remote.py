@@ -1,5 +1,5 @@
 
-import asyncio
+import collections, asyncio, copy
 
 import xml.etree.ElementTree as ET
 
@@ -57,7 +57,7 @@ class RemoteConnection:
                        remotes,         # list of RemoteConnection(s) connected to the server
                        serverwriterque, # queue of items for the server to transmit
                        connectionpool   # pool of connections calling this server
-                 )
+                 ):
 
         self.indihost = host
         self.indiport = port

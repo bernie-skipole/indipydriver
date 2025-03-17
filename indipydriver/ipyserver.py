@@ -154,7 +154,7 @@ class IPyServer:
            used to prevent multiple such connections all logging xml traffic together."""
 
 
-        remcon = RemoteConnection( indihost=host, indiport=port,
+        remcon = RemoteConnection( host=host, port=port,
                                    blob_enable = blob_enable,
                                    debug_enable = debug_enable,
                                    alldrivers = self.alldrivers,
