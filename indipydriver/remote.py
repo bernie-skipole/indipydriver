@@ -35,6 +35,12 @@ DEFTAGS = ( 'defSwitchVector',
             'defBLOBVector'
           )
 
+NEWTAGS = (b'newTextVector',
+           b'newNumberVector',
+           b'newSwitchVector',
+           b'newBLOBVector'
+          )
+
 
 # _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
 _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
@@ -504,21 +510,7 @@ class RemoteConnection:
                 # and to get here, continue has not been called
                 # and a root received xml packet has been created,
 
-                if root.tag == "defBLOBVector":
-                    # every time a defBLOBVector is received, send an enable BLOB instruction
-                    # and record the vectorname
-                    vectorname = root.get("name")
-                    if devicename not in self.blobvectors:
-                        self.blobvectors[devicename] = set()
-                    if vectorname not in self.blobvectors[devicename]:
-                        self.blobvectors[devicename].add(vectorname)
-                    xmldata = ET.Element('enableBLOB')
-                    xmldata.set("device", devicename)
-                    xmldata.set("name", vectorname)
-                    xmldata.text = self.enableBLOBdefault
-                    await self.send(xmldata)
-
-                # call the user event handling function
+                # call the event handling function
                 await self.rxevent(root)
 
         except Exception:
@@ -541,10 +533,15 @@ class RemoteConnection:
         if rxdata is None:
             return
 
+        # rxdata is the xml data received
+
         devicename = rxdata.get("device")
         vectorname = rxdata.get("name")
 
-        # rxdata is the xml data received
+        if (rxdata.tag == "setBLOBVector") and (self.enableBLOBdefault == "Never"):
+            return
+
+        ######### what about "Only", just allow getProperties and BLOBs ????
 
         if devicename:
             if rxdata.tag in DEFTAGS:
@@ -554,13 +551,44 @@ class RemoteConnection:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self.queueput(self.serverwriterque, None)
                         return
-                for remcon in self.remotes:
-                    if remcon is self:
-                        continue
-                    if devicename in remcon.devices:
-                        logger.error(f"A duplicate devicename {devicename} has been detected")
-                        await self.queueput(self.serverwriterque, None)
+                if rxdata.tag == "defBLOBVector":
+                    # every time a defBLOBVector is received, send an enable BLOB instruction
+                    # and record the vectorname
+                    if devicename not in self.blobvectors:
+                        self.blobvectors[devicename] = set()
+                    if vectorname not in self.blobvectors[devicename]:
+                        self.blobvectors[devicename].add(vectorname)
+                    xmldata = ET.Element('enableBLOB')
+                    xmldata.set("device", devicename)
+                    xmldata.set("name", vectorname)
+                    xmldata.text = self.enableBLOBdefault
+                    await self.send(xmldata)
+
+            # if a new vector or a getProperties has been received, and is targetted at a
+            # driver, send it to the driver and nowhere else
+            if (rxdata.tag in NEWTAGS) or (rxdata.tag == "getProperties"):
+                for driver in self.alldrivers:
+                    if devicename in driver:
+                        await self.queueput(driver.readerque, rxdata)
+                        # no need to transmit this anywhere else
                         return
+
+        # so not targetted at a local known devicename
+        # transmit to drivers if rxdata is either a getProperties or because the driver is snooping on it
+        if (rxdata.tag != "message") and (rxdata.tag not in NEWTAGS):
+            for driver in self.alldrivers:
+                if rxdata.tag == "getProperties":
+                    # either no devicename, or an unknown device, so send to all drivers
+                    await self.queueput(driver.readerque, rxdata)
+                else:
+                    # Check if this driver is snooping on this device/vector
+                    if driver.snoopall:
+                        await self.queueput(driver.readerque, rxdata)
+                    elif devicename and (devicename in driver.snoopdevices):
+                        await self.queueput(driver.readerque, rxdata)
+                    elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
+                        await self.queueput(driver.readerque, rxdata)
+
 
         # transmit rxdata out to clients
 
@@ -578,33 +606,6 @@ class RemoteConnection:
             if remcon is self:
                 continue
             await remcon.send(rxdata)
-
-
-        # check for a getProperties event, (add new vectors to this) ################!!!!!!!!!!!!!!!!
-        if rxdata.tag == "getProperties":
-            # if getproperties is targetted at a known device, send it to that device
-            if devicename:
-                for driver in self.alldrivers:
-                    if devicename in driver:
-                        # this getProperties request is meant for an attached device
-                        await self.queueput(driver.readerque, rxdata)
-                        # no need to transmit this anywhere else
-                        return
-
-
-        # transmit rxdata out to drivers
-        for driver in self.alldrivers:
-            if rxdata.tag == "getProperties":
-                # either no devicename, or an unknown device
-                await self.queueput(driver.readerque, rxdata)
-            else:
-                # Check if this driver is snooping on this device/vector
-                if driver.snoopall:
-                    await self.queueput(driver.readerque, rxdata)
-                elif devicename and (devicename in driver.snoopdevices):
-                    await self.queueput(driver.readerque, rxdata)
-                elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
-                    await self.queueput(driver.readerque, rxdata)
 
 
 
