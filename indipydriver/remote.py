@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 # All xml data received from the remote connection should be contained in one of the following tags
 TAGS = (b'message',
+        b'newTextVector',
+        b'newNumberVector',
+        b'newSwitchVector',
+        b'newBLOBVector',
         b'delProperty',
         b'defSwitchVector',
         b'setSwitchVector',
@@ -492,14 +496,9 @@ class RemoteConnection:
                             # if no devicename and not message or getProperties, do nothing
                             continue
                     elif devicename not in self.devices:
-                        # device is not known about
-                        if root.tag != "getProperties":
-                            if root.tag in DEFTAGS:
-                                # device not known, but a def is received
-                                self.devices.add(devicename)
-                            else:
-                                # device not known, not a def or getProperties, so ignore it
-                                continue
+                        if root.tag in DEFTAGS:
+                            # device not known, but a def is received
+                            self.devices.add(devicename)
                 except Exception:
                     # Received data is malformed
                     await self.warning("Received data malformed")
@@ -567,6 +566,23 @@ class RemoteConnection:
                         await self.queueput(self.serverwriterque, None)
                         return
 
+        # transmit rxdata out to clients
+
+        # If no clients are connected, do not put this data into
+        # the serverwriterque
+        for clientconnection in self.connectionpool:
+            if clientconnection.connected:
+                # at least one is connected, so this data is put into
+                # serverwriterque
+                await self.queueput(self.serverwriterque, rxdata)
+                break
+
+        # transmit rxdata out to other remote connections
+        for remcon in self.remotes:
+            if remcon is self:
+                continue
+            await remcon.send(rxdata)
+
 
         # check for a getProperties event, record what is being snooped
         if rxdata.tag == "getProperties":
@@ -585,33 +601,7 @@ class RemoteConnection:
                         await self.queueput(driver.readerque, rxdata)
                         # no need to transmit this anywhere else
                         return
-                for remcon in self.remotes:
-                    if remcon is self:
-                        continue
-                    if devicename in remcon.devices:
-                        # this getProperties request is meant for a remote connection
-                        await remcon.send(rxdata)
-                        # no need to transmit this anywhere else
-                        return
 
-        # transmit rxdata out to other remote connections
-        # which occurs if they are snooping on devices on this link.
-        for remcon in self.remotes:
-            if remcon is self:
-                continue
-            if rxdata.tag == "getProperties":
-                # either no devicename, or an unknown device
-                # if it were a known devicename the previous block would have handled it.
-                # so send it on all connections
-                await remcon.send(rxdata)
-            else:
-                # Check if this remcon is snooping on this device/vector
-                if remcon.snoopall:
-                    await remcon.send(rxdata)
-                elif devicename and (devicename in remcon.snoopdevices):
-                    await remcon.send(rxdata)
-                elif devicename and vectorname and ((devicename, vectorname) in remcon.snoopvectors):
-                    await remcon.send(rxdata)
 
         # transmit rxdata out to drivers
         for driver in self.alldrivers:
@@ -627,16 +617,6 @@ class RemoteConnection:
                 elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
                     await self.queueput(driver.readerque, rxdata)
 
-        # transmit rxdata out to clients
-
-        # If no clients are connected, do not put this data into
-        # the serverwriterque
-        for clientconnection in self.connectionpool:
-            if clientconnection.connected:
-                # at least one is connected, so this data is put into
-                # serverwriterque
-                await self.queueput(self.serverwriterque, rxdata)
-                break
 
 
     async def asyncrun(self):

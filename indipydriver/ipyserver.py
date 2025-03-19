@@ -13,11 +13,44 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import Port_RX, Port_TX, cleanque, SendChecker, queueget
+from .comms import cleanque, SendChecker, queueget
 
 from .remote import RemoteConnection
 
 from .exdriver import ExDriver
+
+# All xml data should be contained in one of the following tags
+TAGS = (b'getProperties',
+        b'newTextVector',
+        b'newNumberVector',
+        b'newSwitchVector',
+        b'newBLOBVector',
+        b'enableBLOB',
+        b'message',
+        b'delProperty',
+        b'defSwitchVector',
+        b'setSwitchVector',
+        b'defLightVector',
+        b'setLightVector',
+        b'defTextVector',
+        b'setTextVector',
+        b'defNumberVector',
+        b'setNumberVector',
+        b'defBLOBVector',
+        b'setBLOBVector'
+       )
+
+
+# _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
+_STARTTAGS = tuple(b'<' + tag for tag in TAGS)
+
+
+# _ENDTAGS is a tuple of ( b'</defTextVector>', ...  ) data received will be tested to end with such an endtag
+_ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
+
+
+
+
 
 class IPyServer:
 
@@ -88,8 +121,8 @@ class IPyServer:
             self.devices.update(driver.data)
 
         self.connectionpool = []
-        for clientconnection in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(self.devices, self.exdrivers, self.remotes, self.serverreaderque))
+        for connection_id in range(0, maxconnections):
+            self.connectionpool.append(_ClientConnection(connection_id, self.devices, self.exdrivers, self.remotes, self.serverreaderque))
 
         # This alldrivers list will have exdrivers added to it, so the list
         # here is initially a copy of self.drivers
@@ -241,9 +274,10 @@ class IPyServer:
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, to its send method"""
         while not self._stop:
-            quexit, xmldata = await queueget(self.serverreaderque)
+            quexit, quedata = await queueget(self.serverreaderque)
             if quexit:
                 continue
+            connection_id, xmldata = quedata
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
@@ -258,7 +292,19 @@ class IPyServer:
                     binarydata = ET.tostring(xmldata)
                     logger.debug(f"RX:: {binarydata.decode('utf-8')}")
 
-            remconfound = False
+            # copy to all server connections, apart from the one it came in on
+            for clientconnection in self.connectionpool:
+                if clientconnection.connected and clientconnection.connection_id != connection_id:
+                    await self._queueput(clientconnection.txque, xmldata)
+
+            # copy to all remote connections
+            if xmldata.tag != "enableBLOB":
+                for remcon in self.remotes:
+                    if not remcon.connected:
+                        continue
+                    await remcon.send(xmldata)
+
+
             exdriverfound = False
 
             # check for a getProperties
@@ -271,65 +317,19 @@ class IPyServer:
                         # no need to transmit this anywhere else, continue the while loop
                         self.serverreaderque.task_done()
                         continue
-                    for remcon in self.remotes:
-                        if devicename in remcon.devices:
-                            # this getProperties request is meant for a remote connection
-                            await remcon.send(xmldata)
-                            remconfound = True
+                    for exd in self.exdrivers:
+                        if devicename in exd:
+                            # this getProperties request is meant for an external driver
+                            await self._queueput(exd.readerque, xmldata)
+                            exdriverfound = True
                             break
-                    if not remconfound:
-                        for exd in self.exdrivers:
-                            if devicename in exd:
-                                # this getProperties request is meant for an external driver
-                                await self._queueput(exd.readerque, xmldata)
-                                exdriverfound = True
-                                break
 
-            if remconfound:
-                # no need to transmit this anywhere else, continue the while loop
-                self.serverreaderque.task_done()
-                continue
 
             if exdriverfound:
                 # no need to transmit this anywhere else, continue the while loop
                 self.serverreaderque.task_done()
                 continue
 
-
-            # transmit xmldata out to remote connections
-            if xmldata.tag != "enableBLOB":
-                # enableBLOB instructions are not forwarded to remcon's
-                for remcon in self.remotes:
-                    if not remcon.connected:
-                        continue
-                    if devicename and (devicename in remcon.devices):
-                        # this devicename has been found on this remote,
-                        # so it must be a 'new' intended for this connection and
-                        # it is not snoopable, since it is data to a device, not from it.
-                        await remcon.send(xmldata)
-                        remconfound = True
-                        break
-                    elif xmldata.tag == "getProperties":
-                        # either no devicename, or an unknown device
-                        # if it were a known devicename the previous block would have handled it.
-                        # so send it on all connections
-                        await remcon.send(xmldata)
-                    elif not xmldata.tag.startswith("new"):
-                        # either devicename is unknown, or this data is to/from another driver.
-                        # So check if this remcon is snooping on this device/vector
-                        # only forward def's and set's, not 'new' vectors which
-                        # do not come from a device, but only from a client to the target device.
-                        if remcon.snoopall:
-                            await remcon.send(xmldata)
-                        elif devicename and (devicename in remcon.snoopdevices):
-                            await remcon.send(xmldata)
-                        elif devicename and propertyname and ((devicename, propertyname) in remcon.snoopvectors):
-                            await remcon.send(xmldata)
-
-            if remconfound:
-                # no need to transmit this anywhere else, continue the while loop
-                self.serverreaderque.task_done()
-                continue
 
             # transmit xmldata out to exdrivers
             if xmldata.tag != "enableBLOB":
@@ -600,7 +600,11 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, devices, exdrivers, remotes, serverreaderque):
+    def __init__(self, connection_id, devices, exdrivers, remotes, serverreaderque):
+
+        # number identifying this connection
+        self.connection_id = connection_id
+
         # self.txque will have data to be transmitted
         # inserted into it from the IPyServer._sendtoclient()
         # method
@@ -638,8 +642,8 @@ class _ClientConnection:
         self.connected = True
         sendchecker = SendChecker(self.devices, self.exdrivers, self.remotes)
         addr = writer.get_extra_info('peername')
-        self.rx = Port_RX(sendchecker, reader)
-        self.tx = Port_TX(sendchecker, writer)
+        self.rx = Conn_RX(self.connection_id, sendchecker, reader)
+        self.tx = Conn_TX(sendchecker, writer)
         logger.info(f"Connection received from {addr}")
         try:
             txtask = asyncio.create_task(self.tx.run_tx(self.txque))
@@ -657,3 +661,184 @@ class _ClientConnection:
             if txtask.done() and rxtask.done():
                 break
             await asyncio.sleep(1)
+
+
+
+class Conn_TX():
+    "An object that transmits data on a port"
+
+    def __init__(self, sendchecker, writer):
+        self.sendchecker = sendchecker
+        self.writer = writer
+        self._stop = False       # Gets set to True to stop communications
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop"
+        return self._stop
+
+    def shutdown(self):
+        self._stop = True
+
+    async def run_tx(self, writerque):
+        """Gets data from writerque, and transmits it out on the port writer"""
+        while not self._stop:
+            await asyncio.sleep(0)
+            # get block of data from writerque and transmit
+            quexit, txdata = await queueget(writerque)
+            if quexit:
+                continue
+            writerque.task_done()
+            if txdata is None:
+                continue
+            if not self.sendchecker.allowed(txdata):
+                # this data should not be transmitted, discard it
+                continue
+            # this data can be transmitted
+            binarydata = ET.tostring(txdata)
+            # Send to the port
+            self.writer.write(binarydata)
+            await self.writer.drain()
+        self.writer.close()
+        await self.writer.wait_closed()
+
+
+
+
+class Conn_RX():
+    """Produces xml.etree.ElementTree data from data received on the port"""
+
+    def __init__(self, connection_id, sendchecker, reader):
+        self._remainder = b""    # Used to store intermediate data
+        self._stop = False       # Gets set to True to stop communications
+        self.sendchecker = sendchecker
+        self.reader = reader
+        self.connection_id = connection_id
+
+    def shutdown(self):
+        self._stop = True
+
+    @property
+    def stop(self):
+        "returns self._stop, being the instruction to stop"
+        return self._stop
+
+    async def run_rx(self, serverreaderque):
+        "pass xml.etree.ElementTree data to serverreaderque"
+        try:
+            # get block of xml.etree.ElementTree data
+            # from self._xmlinput and append it to  serverreaderque together with connection_id
+            while not self._stop:
+                rxdata = await self._xmlinput()
+                if rxdata is None:
+                    return
+                if rxdata.tag == "enableBLOB":
+                    # set permission flags in the sendchecker object
+                    self.sendchecker.setpermissions(rxdata)
+                # and place rxdata into serverreaderque
+                while not self._stop:
+                    try:
+                        await asyncio.wait_for(serverreaderque.put((self.connection_id, rxdata)), timeout=0.5)
+                    except asyncio.TimeoutError:
+                        # queue is full, continue while loop, checking stop flag
+                        continue
+                    # rxdata is now in serverreaderque, break the inner while loop
+                    break
+        except ConnectionError:
+            # re-raise this without creating a report, as it probably indicates
+            # a normal connection drop
+            raise
+        except Exception:
+            # possibly some other error, so report it
+            logger.exception("Exception report from Conn_RX.run_rx")
+            raise
+
+
+    async def _xmlinput(self):
+        """get data from  _datainput, parse it, and return it as xml.etree.ElementTree object
+           Returns None if stop flags arises"""
+        message = b''
+        messagetagnumber = None
+        while not self._stop:
+            await asyncio.sleep(0)
+            data = await self._datainput()
+            # data is either None, or binary data ending in b">"
+            if data is None:
+                return
+            if self._stop:
+                return
+            if not message:
+                # data is expected to start with <tag, first strip any newlines
+                data = data.strip()
+                for index, st in enumerate(_STARTTAGS):
+                    if data.startswith(st):
+                        messagetagnumber = index
+                        break
+                    elif st in data:
+                        # remove any data prior to a starttag
+                        positionofst = data.index(st)
+                        data = data[positionofst:]
+                        messagetagnumber = index
+                        break
+                else:
+                    # data does not start with a recognised tag, so ignore it
+                    # and continue waiting for a valid message start
+                    continue
+                # set this data into the received message
+                message = data
+                # either further children of this tag are coming, or maybe its a single tag ending in "/>"
+                if message.endswith(b'/>'):
+                    # the message is complete, handle message here
+                    try:
+                        root = ET.fromstring(message.decode("us-ascii"))
+                    except Exception as e:
+                        # failed to parse the message, continue at beginning
+                        message = b''
+                        messagetagnumber = None
+                        continue
+                    # xml datablock done, return it
+                    return root
+                # and read either the next message, or the children of this tag
+                continue
+            # To reach this point, the message is in progress, with a messagetagnumber set
+            # keep adding the received data to message, until an endtag is reached
+            message += data
+            if message.endswith(_ENDTAGS[messagetagnumber]):
+                # the message is complete, handle message here
+                try:
+                    root = ET.fromstring(message.decode("us-ascii"))
+                except Exception as e:
+                    # failed to parse the message, continue at beginning
+                    message = b''
+                    messagetagnumber = None
+                    continue
+                # xml datablock done, return it
+                return root
+            # so message is in progress, with a messagetagnumber set
+            # but no valid endtag received yet, so continue the loop
+
+
+    async def _datainput(self):
+        """Waits for binary string of data ending in > from the port
+           Returns None if stop flags arises"""
+        binarydata = b""
+        while not self._stop:
+            await asyncio.sleep(0)
+            try:
+                data = await self.reader.readuntil(separator=b'>')
+            except asyncio.LimitOverrunError:
+                data = await self.reader.read(n=32000)
+            except asyncio.IncompleteReadError:
+                binarydata = b""
+                await asyncio.sleep(0.1)
+                continue
+            if not data:
+                await asyncio.sleep(0.1)
+                continue
+            # data received
+            if b">" in data:
+                binarydata = binarydata + data
+                return binarydata
+            # data has content but no > found
+            binarydata += data
+            # could put a max value here to stop this increasing indefinetly
