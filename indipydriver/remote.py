@@ -88,10 +88,6 @@ class RemoteConnection:
         self.serverwriterque = serverwriterque
         self.connectionpool = connectionpool
 
-        self.snoopall = False           # gets set to True if it is snooping everything
-        self.snoopdevices = set()       # gets set to a set of device names
-        self.snoopvectors = set()       # gets set to a set of (devicename,vectorname) tuples
-
         # self.devices is a set of devicenames, received by def packets
         self.devices = set()
 
@@ -584,15 +580,8 @@ class RemoteConnection:
             await remcon.send(rxdata)
 
 
-        # check for a getProperties event, record what is being snooped
+        # check for a getProperties event, (add new vectors to this) ################!!!!!!!!!!!!!!!!
         if rxdata.tag == "getProperties":
-            if devicename is None:
-                self.snoopall = True
-            elif vectorname is None:
-                self.snoopdevices.add(devicename)
-            else:
-                self.snoopvectors.add((devicename,vectorname))
-
             # if getproperties is targetted at a known device, send it to that device
             if devicename:
                 for driver in self.alldrivers:

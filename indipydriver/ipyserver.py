@@ -307,7 +307,7 @@ class IPyServer:
 
             exdriverfound = False
 
-            # check for a getProperties
+            # check for a getProperties  ( add newvector to this ) ############## !!!!!!!!
             if xmldata.tag == "getProperties":
                 # if getproperties is targetted at a known device, send it to that device
                 if devicename:
@@ -443,6 +443,7 @@ class IPyServer:
                 await self._queueput(self.serverwriterque, xmldata)
                 break
 
+       ######### should also send to remcons ############################
 
 
 class _DriverComms:
@@ -517,6 +518,7 @@ class _DriverComms:
                         writerque.task_done()
                         return
 
+
             # check for a getProperties
             if xmldata.tag == "getProperties":
                 foundflag = False
@@ -535,34 +537,7 @@ class _DriverComms:
                         # no need to transmit this anywhere else, continue the while loop
                         writerque.task_done()
                         continue
-                    for remcon in self.remotes:
-                        if not remcon.connected:
-                            continue
-                        if devicename in remcon.devices:
-                            # this getProperties request is meant for a remote connection
-                            await remcon.send(xmldata)
-                            foundflag = True
-                            break
-                    if foundflag:
-                        # no need to transmit this anywhere else, continue the while loop
-                        writerque.task_done()
-                        continue
 
-            # transmit xmldata out to remote connections
-            for remcon in self.remotes:
-                if xmldata.tag == "getProperties":
-                    # either no devicename, or an unknown device
-                    # if it were a known devicename the previous block would have handled it.
-                    # so send it on all connections
-                    await remcon.send(xmldata)
-                else:
-                    # Check if this remcon is snooping on this device/vector
-                    if remcon.snoopall:
-                        await remcon.send(xmldata)
-                    elif devicename and (devicename in remcon.snoopdevices):
-                        await remcon.send(xmldata)
-                    elif devicename and propertyname and ((devicename, propertyname) in remcon.snoopvectors):
-                        await remcon.send(xmldata)
 
             # transmit xmldata out to other drivers
             for driver in self.alldrivers:
@@ -581,19 +556,27 @@ class _DriverComms:
                         await self._queueput(driver.readerque, xmldata)
 
 
-            # traffic from this driver writerque has been sent to other drivers/remotes if they want to snoop.
-            # The traffic must also now be sent to the clients.
-            # If no clients are connected, do not put this data into
-            # the serverwriterque
+            for remcon in self.remotes:
+                if not remcon.connected:
+                    continue
+                # send to all remotes
+                await remcon.send(xmldata)
+
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     # at least one is connected, so this data is put into
-                    # serverwriterque, and is then sent to each client by
-                    # the _sendtoclient method.
+                    # serverwriterque, and is then sent to each client
                     await self._queueput(self.serverwriterque, xmldata)
                     break
             # task completed
             writerque.task_done()
+
+
+
+
+
+
+######### to do - remove sendchecker #############
 
 
 class _ClientConnection:
