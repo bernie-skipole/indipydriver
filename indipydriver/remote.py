@@ -81,9 +81,6 @@ class RemoteConnection:
         self.serverwriterque = serverwriterque
         self.connectionpool = connectionpool
 
-        # self.blobvectors is a dictionary of devicename:set of blob vectornames received
-        self.blobvectors = {}
-
         # create queue where client will put xml data to be transmitted
         self._writerque = asyncio.Queue(4)
 
@@ -194,8 +191,6 @@ class RemoteConnection:
                     await self.warning(f"Attempting to connect to {self.indihost}:{self.indiport}")
                     reader, writer = await asyncio.open_connection(self.indihost, self.indiport)
                     self.connected = True
-                     # clear devices
-                    self.blobvectors.clear()
                     await self.warning(f"Connected to {self.indihost}:{self.indiport}")
                     t1 = asyncio.create_task(self._run_tx(writer))
                     t2 = asyncio.create_task(self._run_rx(reader))
@@ -221,8 +216,6 @@ class RemoteConnection:
                     break
                 else:
                     await self.warning(f"Connection failed, re-trying...")
-                # clear devices
-                self.blobvectors.clear()
                 # wait five seconds before re-trying, but keep checking
                 # that self._stop has not been set
                 count = 0
@@ -471,11 +464,6 @@ class RemoteConnection:
                         return
                 if rxdata.tag == "defBLOBVector":
                     # every time a defBLOBVector is received, send an enable BLOB instruction
-                    # and record the vectorname
-                    if devicename not in self.blobvectors:
-                        self.blobvectors[devicename] = set()
-                    if vectorname not in self.blobvectors[devicename]:
-                        self.blobvectors[devicename].add(vectorname)
                     xmldata = ET.Element('enableBLOB')
                     xmldata.set("device", devicename)
                     xmldata.set("name", vectorname)

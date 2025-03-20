@@ -1,12 +1,10 @@
 
 
-import collections, asyncio, sys, copy
+import asyncio, copy
 
 from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
-
-from functools import partialmethod
 
 import logging
 logger = logging.getLogger(__name__)
@@ -39,6 +37,12 @@ TAGS = (b'getProperties',
         b'defBLOBVector',
         b'setBLOBVector'
        )
+
+NEWTAGS = (b'newTextVector',
+           b'newNumberVector',
+           b'newSwitchVector',
+           b'newBLOBVector'
+          )
 
 
 # _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
@@ -281,15 +285,8 @@ class IPyServer:
             propertyname = xmldata.get("name")
 
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if ((xmldata.tag == "setBLOBVector") or (xmldata.tag == "newBLOBVector")) and len(xmldata):
-                    data = copy.deepcopy(xmldata)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(data)
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(xmldata)
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+                binarydata = ET.tostring(xmldata)
+                logger.debug(f"RX:: {binarydata.decode('utf-8')}")
 
             # copy to all server connections, apart from the one it came in on
             for clientconnection in self.connectionpool:
@@ -306,8 +303,7 @@ class IPyServer:
 
             exdriverfound = False
 
-            # check for a getProperties  ( add newvector to this ) ############## !!!!!!!!
-            if xmldata.tag == "getProperties":
+            if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
                 # if getproperties is targetted at a known device, send it to that device
                 if devicename:
                     if devicename in self.devices:
@@ -336,14 +332,13 @@ class IPyServer:
                 for driver in self.exdrivers:
                     if devicename and (devicename in driver):
                         # data is intended for this driver
-                        # it is not snoopable, since it is data to a device, not from it.
                         await self._queueput(driver.readerque, xmldata)
                         exdriverfound = True
                         break
                     elif xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
                         await self._queueput(driver.readerque, xmldata)
-                    elif not xmldata.tag.startswith("new"):
+                    elif xmldata.tag not in NEWTAGS:
                         # either devicename is unknown, or this data is to/from another driver.
                         # So check if this driver is snooping on this device/vector
                         # only forward def's and set's, not 'new' vectors which
@@ -364,13 +359,12 @@ class IPyServer:
             for driver in self.drivers:
                 if devicename and (devicename in driver):
                     # data is intended for this driver
-                    # it is not snoopable, since it is data to a device, not from it.
                     await self._queueput(driver.readerque, xmldata)
                     break
                 elif xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
                     await self._queueput(driver.readerque, xmldata)
-                elif not xmldata.tag.startswith("new"):
+                elif xmldata.tag not in NEWTAGS:
                     # either devicename is unknown, or this data is to/from another driver.
                     # So check if this driver is snooping on this device/vector
                     # only forward def's and set's, not 'new' vectors which
@@ -399,15 +393,8 @@ class IPyServer:
                 self.shutdown("A duplicate devicename has caused a server shutdown")
                 return
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                    data = copy.deepcopy(xmldata)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(data)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(xmldata)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                binarydata = ET.tostring(xmldata)
+                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     await self._queueput(clientconnection.txque, xmldata)
@@ -415,7 +402,7 @@ class IPyServer:
             self.serverwriterque.task_done()
 
     async def send_message(self, message, timestamp=None):
-        """Send system wide message, timestamp should normlly not be set, if
+        """Send system wide message, timestamp should normally not be set, if
            given, it should be a datetime.datetime object with tz set to timezone.utc"""
         if self._stop:
             return
@@ -442,7 +429,10 @@ class IPyServer:
                 await self._queueput(self.serverwriterque, xmldata)
                 break
 
-       ######### should also send to remcons ############################
+        for remcon in self.remotes:
+            if not remcon.connected:
+                continue
+            await remcon.send(xmldata)
 
 
 class _DriverComms:
@@ -499,7 +489,7 @@ class _DriverComms:
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
 
-            if xmldata.tag.startswith("new"):
+            if xmldata.tag in NEWTAGS:
                 # drivers should never transmit a new
                 # but just in case
                 writerque.task_done()
@@ -570,12 +560,6 @@ class _DriverComms:
             # task completed
             writerque.task_done()
 
-
-
-
-
-
-######### to do - remove sendchecker #############
 
 
 class _ClientConnection:
