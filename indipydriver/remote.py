@@ -189,7 +189,6 @@ class RemoteConnection:
             while not self._stop:
                 t1 = None
                 t2 = None
-                t3 = None
                 try:
                     # start by openning a connection
                     await self.warning(f"Attempting to connect to {self.indihost}:{self.indiport}")
@@ -497,19 +496,20 @@ class RemoteConnection:
 
         # so not targetted at a local known devicename
         # transmit to drivers if rxdata is either a getProperties or because the driver is snooping on it
-        if (rxdata.tag != "message") and (rxdata.tag not in NEWTAGS):
+
+        if rxdata.tag == "getProperties":
             for driver in self.alldrivers:
-                if rxdata.tag == "getProperties":
-                    # either no devicename, or an unknown device, so send to all drivers
+                # either no devicename, or an unknown device, so send to all drivers
+                await self.queueput(driver.readerque, rxdata)
+        elif (rxdata.tag != "message") and (rxdata.tag not in NEWTAGS):
+            for driver in self.alldrivers:
+                # Check if this driver is snooping on this device/vector
+                if driver.snoopall:
                     await self.queueput(driver.readerque, rxdata)
-                else:
-                    # Check if this driver is snooping on this device/vector
-                    if driver.snoopall:
-                        await self.queueput(driver.readerque, rxdata)
-                    elif devicename and (devicename in driver.snoopdevices):
-                        await self.queueput(driver.readerque, rxdata)
-                    elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
-                        await self.queueput(driver.readerque, rxdata)
+                elif devicename and (devicename in driver.snoopdevices):
+                    await self.queueput(driver.readerque, rxdata)
+                elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
+                    await self.queueput(driver.readerque, rxdata)
 
 
         # transmit rxdata out to clients
