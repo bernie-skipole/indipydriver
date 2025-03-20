@@ -175,12 +175,11 @@ class IPyServer:
                 continue
             break
 
-    def add_remote(self, host, port, blob_enable="Never", debug_enable=False):
+    def add_remote(self, host, port, blob_enable="False", debug_enable=False):
         """Adds a connection to a remote server.
-           blob_enable can be Never, Also or Only.
-           If Never BLOBs will not be sent from the remote server to this one.
-           If Also BLOBs and other vectors can all be sent.
-           If Only, then only BLOB traffic will be sent.
+           blob_enable can be True or False.
+           If True BLOBs and other vectors can all be sent.
+           If False, then BLOB traffic will not pass over ths link.
 
            If debug_enable is True, then DEBUG level logging will record xml
            traffic, if False, the xml traffic will not be logged. This can be
