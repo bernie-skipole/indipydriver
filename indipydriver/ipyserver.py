@@ -11,8 +11,6 @@ logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
-from .comms import cleanque, SendChecker, queueget
-
 from .remote import RemoteConnection
 
 from .exdriver import ExDriver
@@ -53,7 +51,26 @@ _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
 _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
+async def queueget(queue, timeout=0.5):
+    """"Returns True, True if timed out
+                True, False is reserved for future
+                False, Value if a value is taken from the queue"""
+    try:
+        value = await asyncio.wait_for(queue.get(), timeout)
+    except asyncio.TimeoutError:
+        return True, True
+    return False, value
 
+
+def cleanque(que):
+    "Clears out a que"
+    try:
+        while True:
+            xmldata = que.get_nowait()
+            que.task_done()
+    except asyncio.QueueEmpty:
+        # que is now empty, nothing further to do
+        pass
 
 
 class IPyServer:
@@ -808,3 +825,113 @@ class Conn_RX():
             # data has content but no > found
             binarydata += data
             # could put a max value here to stop this increasing indefinetly
+
+
+
+# Command to control whether setBLOBs should be sent to this channel from a given Device. They can
+# be turned off completely by setting Never (the default), allowed to be intermixed with other INDI
+# commands by setting Also or made the only command by setting Only.
+
+# <!ELEMENT enableBLOB %BLOBenable >
+# <!ATTLIST enableBLOB
+# device %nameValue; #REQUIRED  name of Device
+# name %nameValue; #IMPLIED name of BLOB Property, or all if absent
+# >
+
+
+
+class SendChecker:
+    """Carries the enableBLOB status on a connection, and does checks
+       to ensure valid data is being transmitted"""
+
+    def __init__(self):
+        "For every device create a dictionary"
+        self.devicestatus = {}
+        # create a dictionary of devicenames : to devicedict
+        # where the devicedict will be {"Default":"Never", "Properties":{}}
+        # The Properties value is a dictionary of propertyname:status
+
+
+    def allowed(self, xmldata):
+        "Return True if this xmldata can be transmitted, False otherwise"
+        # allow anything with zero contents, such as getProperties
+        if not len(xmldata):
+            return True
+        devicename = xmldata.get("device")
+        if devicename is None:
+            # enableBLOB only applies to a specified device, not applicable here
+            return True
+        if not (devicename in self.devicestatus):
+            # devicename not recognised, add it
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+
+        devicedict = self.devicestatus[devicename]
+
+        # so we have a devicename, get propertyname
+        name = xmldata.get("name")
+        # if name missing, could be a message, cannot be a setBLOBVector
+        if name is None:
+            if self.rxonly():
+                # Only blobs allowed
+                return False
+            return True
+
+        # so we have a devicename, property name, is this xml a setBLOBVector or a newBLOBVector
+        if xmldata.tag == "setBLOBVector" or xmldata.tag == "newBLOBVector":
+            if name in devicedict["Properties"]:
+                if devicedict["Properties"][name] == "Never":
+                    return False
+                else:
+                    return True
+            elif devicedict["Default"] == "Never":
+                return False
+            else:
+                return True
+        elif xmldata.tag == "defBLOBVector":
+            # allow def packets
+            return True
+
+        # so not a BLOBVector
+        if self.rxonly():
+            return False
+        # and if no 'Only' set, allow all other packets
+        return True
+
+
+    def setpermissions(self, rxdata):
+        "Read the received enableBLOB xml and set permission in self.devicestatus"
+        devicename = rxdata.get("device")
+        if devicename is None:
+            # invalid
+            return
+        if devicename not in self.devicestatus:
+            # devicename not recognised, add it
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+
+        # get the status of Never, Also, Only
+        status = rxdata.text.strip()
+        if status not in ("Never", "Also", "Only"):
+            # invalid
+            return
+
+        devicedict = self.devicestatus[devicename]
+
+        # property name
+        name = rxdata.get("name")
+        if name is None:
+            # This applies to the device rather than to a particular property
+            devicedict["Default"] = status
+        else:
+            # add it to devicedict, and hence to self.devicestatus
+            devicedict["Properties"][name] = status
+
+    def rxonly(self):
+        "Returns True if any device or property has been set to BLOBs only"
+        for devicedict in self.devicestatus.values():
+            if devicedict["Default"] == "Only":
+                return True
+            properties = devicedict["Properties"]
+            for status in properties.values():
+                if status == "Only":
+                    return True
+        return False

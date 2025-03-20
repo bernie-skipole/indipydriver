@@ -492,16 +492,8 @@ class SendChecker:
     """Carries the enableBLOB status on a device, and does checks
        to ensure valid data is being transmitted"""
 
-    def __init__(self, devices, exdrivers=None, remotes=None):
+    def __init__(self, devices):
         "For every device create a dictionary"
-        if remotes is None:
-            self.remotes = []
-        else:
-            self.remotes = remotes
-        if exdrivers is None:
-            self.exdrivers = []
-        else:
-            self.exdrivers = exdrivers
         self.devices = devices
         self.devicestatus = {}
         # create a dictionary of devicenames :
@@ -531,13 +523,11 @@ class SendChecker:
         name = xmldata.get("name")
         # if name missing, could be a message, cannot be a setBLOBVector
         if name is None:
-            # If any property of this device has 'Only' set, then do not transmit
-            if devicedict["Default"] == "Only":
+            if self.rxonly():
+                # Only blobs allowed
                 return False
-            for value in devicedict["Properties"].values():  # gets status of each property
-                if value == "Only":
-                    return False
             return True
+
 
         # so we have a devicename, property name, is this xml a setBLOBVector
         if xmldata.tag == "setBLOBVector":
@@ -550,14 +540,14 @@ class SendChecker:
                 return False
             else:
                 return True
+        elif xmldata.tag == "defBLOBVector":
+            # allow def packets
+            return True
 
-        # so not a setBLOBVector
-        # If any property of this device has 'Only' set, then do not transmit
-        if devicedict["Default"] == "Only":
+        # so not a BLOBVector
+        if self.rxonly():
             return False
-        for value in devicedict["Properties"].values():  # gets status of each property
-            if value == "Only":
-                return False
+        # and if no 'Only' set, allow all other packets
         return True
 
 
@@ -569,25 +559,11 @@ class SendChecker:
             return
         if devicename not in self.devicestatus:
             # devicename not recognised, add it
-            devicefound = False
             if (devicename in self.devices):
-                devicefound = True
-            if not devicefound:
-                for exd in self.exdrivers:
-                    if devicename in exd:
-                        devicefound = True
-                        break
-            if not devicefound:
-                for remcon in self.remotes:
-                    if devicename in remcon.devices:
-                        devicefound = True
-                        break
-            if devicefound:
                 self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
             else:
                 # unknown device
                 return
-
 
         # get the status of Never, Also, Only
         status = rxdata.text.strip()
@@ -610,7 +586,6 @@ class SendChecker:
 
         # So this applies to a property that is not in self.devicestatus
         # check property is known, and add it
-        propertyobject = None
         if devicename in self.devices:
             if name in self.devices[devicename]:
                 propertyobject = self.devices[devicename][name]
@@ -618,27 +593,6 @@ class SendChecker:
                 # devicename is in self.devices, but property not found
                 return
 
-        if propertyobject is None:
-            for exd in self.exdrivers:
-                if devicename in exd:
-                    if name in exd.devicenames[devicename]:
-                        propertyobject = exd.devicenames[devicename][name]
-                        break
-                    else:
-                        # devicename in exd, but name not in exd.devicenames[devicename]
-                        return
-
-        if propertyobject is None:
-            for remcon in self.remotes:
-                if devicename in remcon.blobvectors:
-                    if name in remcon.blobvectors[devicename]:
-                        # this name exists in remcon and is a BLOBVector
-                        devicedict["Properties"][name] = status
-                        return
-
-        if propertyobject is None:
-            # property not known about, reject this
-            return
 
         # confirm propertyobject is a BLOBVector
         if propertyobject.vectortype != "BLOBVector":
@@ -646,3 +600,15 @@ class SendChecker:
 
         # add it to devicedict, and hence to self.devicestatus
         devicedict["Properties"][name] = status
+
+
+    def rxonly(self):
+        "Returns True if any device or property has been set to BLOBs only"
+        for devicedict in self.devicestatus.values():
+            if devicedict["Default"] == "Only":
+                return True
+            properties = devicedict["Properties"]
+            for status in properties.values():
+                if status == "Only":
+                    return True
+        return False
