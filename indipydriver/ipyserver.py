@@ -143,7 +143,7 @@ class IPyServer:
 
         self.connectionpool = []
         for connection_id in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(connection_id, self.devices, self.exdrivers, self.remotes, self.serverreaderque))
+            self.connectionpool.append(_ClientConnection(connection_id, self.serverreaderque))
 
         # This alldrivers list will have exdrivers added to it, so the list
         # here is initially a copy of self.drivers
@@ -297,6 +297,7 @@ class IPyServer:
             quexit, quedata = await queueget(self.serverreaderque)
             if quexit:
                 continue
+            self.serverreaderque.task_done()
             connection_id, xmldata = quedata
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
@@ -304,6 +305,26 @@ class IPyServer:
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 binarydata = ET.tostring(xmldata)
                 logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+
+            exdriverfound = False
+            if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
+                # if getproperties is targetted at a known device, send it to that device
+                if devicename:
+                    if devicename in self.devices:
+                        # this getProperties request is meant for an attached device
+                        await self._queueput(self.devices[devicename].driver.readerque, xmldata)
+                        # no need to transmit this anywhere else, continue the while loop
+                        continue
+                    for exd in self.exdrivers:
+                        if devicename in exd:
+                            # this getProperties request is meant for an external driver
+                            await self._queueput(exd.readerque, xmldata)
+                            exdriverfound = True
+                            break
+
+            if exdriverfound:
+                # no need to transmit this anywhere else, continue the while loop
+                continue
 
             # copy to all server connections, apart from the one it came in on
             for clientconnection in self.connectionpool:
@@ -318,41 +339,11 @@ class IPyServer:
                     await remcon.send(xmldata)
 
 
-            exdriverfound = False
-
-            if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
-                # if getproperties is targetted at a known device, send it to that device
-                if devicename:
-                    if devicename in self.devices:
-                        # this getProperties request is meant for an attached device
-                        await self._queueput(self.devices[devicename].driver.readerque, xmldata)
-                        # no need to transmit this anywhere else, continue the while loop
-                        self.serverreaderque.task_done()
-                        continue
-                    for exd in self.exdrivers:
-                        if devicename in exd:
-                            # this getProperties request is meant for an external driver
-                            await self._queueput(exd.readerque, xmldata)
-                            exdriverfound = True
-                            break
-
-
-            if exdriverfound:
-                # no need to transmit this anywhere else, continue the while loop
-                self.serverreaderque.task_done()
-                continue
-
-
-            # transmit xmldata out to exdrivers
+            # transmit xmldata out to exdrivers,
             if xmldata.tag != "enableBLOB":
                 # enableBLOB instructions are not forwarded to external drivers
                 for driver in self.exdrivers:
-                    if devicename and (devicename in driver):
-                        # data is intended for this driver
-                        await self._queueput(driver.readerque, xmldata)
-                        exdriverfound = True
-                        break
-                    elif xmldata.tag == "getProperties":
+                    if xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
                         await self._queueput(driver.readerque, xmldata)
                     elif xmldata.tag not in NEWTAGS:
@@ -367,18 +358,10 @@ class IPyServer:
                         elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
                             await self._queueput(driver.readerque, xmldata)
 
-            if exdriverfound:
-                # no need to transmit this anywhere else, continue the while loop
-                self.serverreaderque.task_done()
-                continue
 
             # transmit xmldata out to drivers
             for driver in self.drivers:
-                if devicename and (devicename in driver):
-                    # data is intended for this driver
-                    await self._queueput(driver.readerque, xmldata)
-                    break
-                elif xmldata.tag == "getProperties":
+                if xmldata.tag == "getProperties":
                     # either no devicename, or an unknown device
                     await self._queueput(driver.readerque, xmldata)
                 elif xmldata.tag not in NEWTAGS:
@@ -393,7 +376,6 @@ class IPyServer:
                     elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
                         await self._queueput(driver.readerque, xmldata)
 
-            self.serverreaderque.task_done()
             # now every driver/remcon which needs it has this xmldata
 
     async def _sendtoclient(self):
@@ -583,7 +565,7 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, connection_id, devices, exdrivers, remotes, serverreaderque):
+    def __init__(self, connection_id, serverreaderque):
 
         # number identifying this connection
         self.connection_id = connection_id
@@ -593,10 +575,6 @@ class _ClientConnection:
         # method
         self.txque = asyncio.Queue(6)
 
-        # devices is a dictionary of device name to device
-        self.devices = devices
-        self.remotes = remotes
-        self.exdrivers = exdrivers
         self.serverreaderque = serverreaderque
         # self.connected is True if this pool object is running a connection
         self.connected = False
@@ -623,7 +601,7 @@ class _ClientConnection:
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
-        sendchecker = SendChecker(self.devices, self.exdrivers, self.remotes)
+        sendchecker = SendChecker()
         addr = writer.get_extra_info('peername')
         self.rx = Conn_RX(self.connection_id, sendchecker, reader)
         self.tx = Conn_TX(sendchecker, writer)
@@ -854,49 +832,44 @@ class SendChecker:
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
-        # allow anything with zero contents, such as getProperties
-        if not len(xmldata):
-            return True
-        devicename = xmldata.get("device")
-        if devicename is None:
-            # enableBLOB only applies to a specified device, not applicable here
-            return True
-        if not (devicename in self.devicestatus):
-            # devicename not recognised, add it
-            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
-        devicedict = self.devicestatus[devicename]
+        if xmldata.tag == "getProperties":
+            return True
 
-        # so we have a devicename, get propertyname
-        name = xmldata.get("name")
-        # if name missing, could be a message, cannot be a setBLOBVector
-        if name is None:
+        if xmldata.tag not in ("defBLOBVector", "setBLOBVector", 'newBLOBVector'):
+            # so anything other than a BLOB
             if self.rxonly():
                 # Only blobs allowed
                 return False
             return True
 
-        # so we have a devicename, property name, is this xml a setBLOBVector or a newBLOBVector
-        if xmldata.tag == "setBLOBVector" or xmldata.tag == "newBLOBVector":
-            if name in devicedict["Properties"]:
-                if devicedict["Properties"][name] == "Never":
-                    return False
-                else:
-                    return True
-            elif devicedict["Default"] == "Never":
+        # so following checks only apply to BLOB vectors
+
+        devicename = xmldata.get("device")
+
+        if not (devicename in self.devicestatus):
+            # devicename not recognised, add it
+            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
+
+        # always allow a defBLOBVector
+        if xmldata.tag == "defBLOBVector":
+            return True
+
+        devicedict = self.devicestatus[devicename]
+
+        # so we have a devicename, get propertyname
+        name = xmldata.get("name")
+
+        # so we have a devicename, property name,
+        if name in devicedict["Properties"]:
+            if devicedict["Properties"][name] == "Never":
                 return False
             else:
                 return True
-        elif xmldata.tag == "defBLOBVector":
-            # allow def packets
-            return True
-
-        # so not a BLOBVector
-        if self.rxonly():
+        elif devicedict["Default"] == "Never":
             return False
-        # and if no 'Only' set, allow all other packets
-        return True
-
+        else:
+            return True
 
     def setpermissions(self, rxdata):
         "Read the received enableBLOB xml and set permission in self.devicestatus"

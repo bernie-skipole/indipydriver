@@ -503,52 +503,38 @@ class SendChecker:
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
-        if xmldata.tag.startswith("new"):
-            # new tags are sent from client to server, not from server back to client
-            return False
-        # allow anything with zero contents, such as getProperties
-        if not len(xmldata):
+        if xmldata.tag == "getProperties":
             return True
-        devicename = xmldata.get("device")
-        if devicename is None:
-            # enableBLOB only appliesto a specified device, not applicable here
-            return True
-        if not (devicename in self.devicestatus):
-            # devicename not recognised, add it
-            self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
-        devicedict = self.devicestatus[devicename]
-
-        # so we have a devicename, get propertyname
-        name = xmldata.get("name")
-        # if name missing, could be a message, cannot be a setBLOBVector
-        if name is None:
+        if xmldata.tag not in ("defBLOBVector", "setBLOBVector", 'newBLOBVector'):
+            # so anything other than a BLOB
             if self.rxonly():
                 # Only blobs allowed
                 return False
             return True
 
+        # so following checks only apply to BLOB vectors
 
-        # so we have a devicename, property name, is this xml a setBLOBVector
-        if xmldata.tag == "setBLOBVector":
-            if name in devicedict["Properties"]:
-                if devicedict["Properties"][name] == "Never":
-                    return False
-                else:
-                    return True
-            elif devicedict["Default"] == "Never":
+        # always allow a defBLOBVector
+        if xmldata.tag == "defBLOBVector":
+            return True
+
+        devicename = xmldata.get("device")
+        devicedict = self.devicestatus[devicename]
+
+        # so we have a devicename, get propertyname
+        name = xmldata.get("name")
+
+        # so we have a devicename, property name,
+        if name in devicedict["Properties"]:
+            if devicedict["Properties"][name] == "Never":
                 return False
             else:
                 return True
-        elif xmldata.tag == "defBLOBVector":
-            # allow def packets
-            return True
-
-        # so not a BLOBVector
-        if self.rxonly():
+        elif devicedict["Default"] == "Never":
             return False
-        # and if no 'Only' set, allow all other packets
-        return True
+        else:
+            return True
 
 
     def setpermissions(self, rxdata):
@@ -558,12 +544,8 @@ class SendChecker:
             # invalid
             return
         if devicename not in self.devicestatus:
-            # devicename not recognised, add it
-            if (devicename in self.devices):
-                self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
-            else:
-                # unknown device
-                return
+            # devicename not recognised
+            return
 
         # get the status of Never, Also, Only
         status = rxdata.text.strip()
@@ -592,7 +574,6 @@ class SendChecker:
             else:
                 # devicename is in self.devices, but property not found
                 return
-
 
         # confirm propertyobject is a BLOBVector
         if propertyobject.vectortype != "BLOBVector":

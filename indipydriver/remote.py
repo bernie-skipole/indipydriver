@@ -489,7 +489,7 @@ class RemoteConnection:
             for driver in self.alldrivers:
                 # either no devicename, or an unknown device, so send to all drivers
                 await self.queueput(driver.readerque, rxdata)
-        elif (rxdata.tag != "message") and (rxdata.tag not in NEWTAGS):
+        elif rxdata.tag not in NEWTAGS:
             for driver in self.alldrivers:
                 # Check if this driver is snooping on this device/vector
                 if driver.snoopall:
