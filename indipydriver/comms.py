@@ -503,10 +503,11 @@ class SendChecker:
 
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
-        if xmldata.tag == "getProperties":
+
+        if xmldata.tag in ("getProperties", "defBLOBVector"):
             return True
 
-        if xmldata.tag not in ("defBLOBVector", "setBLOBVector", 'newBLOBVector'):
+        if xmldata.tag not in ("setBLOBVector", 'newBLOBVector'):
             # so anything other than a BLOB
             if self.rxonly():
                 # Only blobs allowed
@@ -515,10 +516,6 @@ class SendChecker:
 
         # so following checks only apply to BLOB vectors
 
-        # always allow a defBLOBVector
-        if xmldata.tag == "defBLOBVector":
-            return True
-
         devicename = xmldata.get("device")
         devicedict = self.devicestatus[devicename]
 
@@ -526,7 +523,7 @@ class SendChecker:
         name = xmldata.get("name")
 
         # so we have a devicename, property name,
-        if name in devicedict["Properties"]:
+        if name and (name in devicedict["Properties"]):
             if devicedict["Properties"][name] == "Never":
                 return False
             else:

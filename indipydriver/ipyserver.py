@@ -308,10 +308,10 @@ class IPyServer:
 
             exdriverfound = False
             if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
-                # if getproperties is targetted at a known device, send it to that device
+                # if targetted at a known device, send it to that device
                 if devicename:
                     if devicename in self.devices:
-                        # this getProperties request is meant for an attached device
+                        # this new or getProperties request is meant for an attached device
                         await self._queueput(self.devices[devicename].driver.readerque, xmldata)
                         # no need to transmit this anywhere else, continue the while loop
                         continue
@@ -384,11 +384,11 @@ class IPyServer:
             quexit, xmldata = await queueget(self.serverwriterque)
             if quexit:
                 continue
+            self.serverwriterque.task_done()
             #  This xmldata of None is an indication to shut the server down
             #  It is set to None when a duplicate devicename is discovered
             if xmldata is None:
                 logger.error("A duplicate devicename has caused a server shutdown")
-                self.serverwriterque.task_done()
                 self.shutdown("A duplicate devicename has caused a server shutdown")
                 return
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
@@ -397,8 +397,8 @@ class IPyServer:
             for clientconnection in self.connectionpool:
                 if clientconnection.connected:
                     await self._queueput(clientconnection.txque, xmldata)
-            # task completed
-            self.serverwriterque.task_done()
+
+
 
     async def send_message(self, message, timestamp=None):
         """Send system wide message, timestamp should normally not be set, if
@@ -484,6 +484,7 @@ class _DriverComms:
             quexit, xmldata = await queueget(writerque)
             if quexit:
                 continue
+            writerque.task_done()
             # Check if other drivers/remotes wants to snoop this traffic
             devicename = xmldata.get("device")
             propertyname = xmldata.get("name")
@@ -491,7 +492,6 @@ class _DriverComms:
             if xmldata.tag in NEWTAGS:
                 # drivers should never transmit a new
                 # but just in case
-                writerque.task_done()
                 logger.error(f"Driver transmitted invalid tag {xmldata.tag}")
                 continue
 
@@ -503,7 +503,6 @@ class _DriverComms:
                     if devicename in driver:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self._queueput(self.serverwriterque, None)
-                        writerque.task_done()
                         return
 
 
@@ -523,7 +522,6 @@ class _DriverComms:
                             break
                     if foundflag:
                         # no need to transmit this anywhere else, continue the while loop
-                        writerque.task_done()
                         continue
 
 
@@ -556,8 +554,7 @@ class _DriverComms:
                     # serverwriterque, and is then sent to each client
                     await self._queueput(self.serverwriterque, xmldata)
                     break
-            # task completed
-            writerque.task_done()
+
 
 
 
@@ -833,7 +830,7 @@ class SendChecker:
     def allowed(self, xmldata):
         "Return True if this xmldata can be transmitted, False otherwise"
 
-        if xmldata.tag == "getProperties":
+        if xmldata.tag in ("getProperties", "delProperty"):
             return True
 
         if xmldata.tag not in ("defBLOBVector", "setBLOBVector", 'newBLOBVector'):
@@ -851,7 +848,6 @@ class SendChecker:
             # devicename not recognised, add it
             self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
-        # always allow a defBLOBVector
         if xmldata.tag == "defBLOBVector":
             return True
 
@@ -861,7 +857,7 @@ class SendChecker:
         name = xmldata.get("name")
 
         # so we have a devicename, property name,
-        if name in devicedict["Properties"]:
+        if name and (name in devicedict["Properties"]):
             if devicedict["Properties"][name] == "Never":
                 return False
             else:
