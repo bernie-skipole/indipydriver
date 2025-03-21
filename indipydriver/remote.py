@@ -28,6 +28,9 @@ TAGS = (b'message',
         b'getProperties'
        )
 
+
+# Note these are strings, as they are used for checking xmldata.tag values
+
 DEFTAGS = ( 'defSwitchVector',
             'defLightVector',
             'defTextVector',
@@ -35,10 +38,10 @@ DEFTAGS = ( 'defSwitchVector',
             'defBLOBVector'
           )
 
-NEWTAGS = (b'newTextVector',
-           b'newNumberVector',
-           b'newSwitchVector',
-           b'newBLOBVector'
+NEWTAGS = ('newTextVector',
+           'newNumberVector',
+           'newSwitchVector',
+           'newBLOBVector'
           )
 
 

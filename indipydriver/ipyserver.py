@@ -36,10 +36,13 @@ TAGS = (b'getProperties',
         b'setBLOBVector'
        )
 
-NEWTAGS = (b'newTextVector',
-           b'newNumberVector',
-           b'newSwitchVector',
-           b'newBLOBVector'
+
+# Note these are strings, as they are used for checking xmldata.tag values
+
+NEWTAGS = ('newTextVector',
+           'newNumberVector',
+           'newSwitchVector',
+           'newBLOBVector'
           )
 
 
