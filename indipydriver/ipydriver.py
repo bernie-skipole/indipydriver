@@ -418,8 +418,7 @@ class IPyDriver(collections.UserDict):
 
     async def asyncrun(self):
         """await this to operate the driver, which will then communicate by
-           stdin and stdout, unless the listen method is called first, in
-           which case it will listen via the specified port.
+           stdin and stdout.
 
            Do not await this if the driver is being set into IPyServer, in
            that situation the IPyServer will control communications."""

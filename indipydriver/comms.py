@@ -60,6 +60,17 @@ async def queueget(queue, timeout=0.5):
     return False, value
 
 
+def cleanque(que):
+    "Clears out a que"
+    try:
+        while True:
+            xmldata = que.get_nowait()
+            que.task_done()
+    except asyncio.QueueEmpty:
+        # que is now empty, nothing further to do
+        pass
+
+
 class STDOUT_TX:
     "An object that transmits data on stdout, used by STDINOUT as one half of the communications path"
 
@@ -279,14 +290,3 @@ class STDINOUT():
         await asyncio.gather(self.rx.run_rx(readerque),
                              self.tx.run_tx(writerque)
                              )
-
-
-def cleanque(que):
-    "Clears out a que"
-    try:
-        while True:
-            xmldata = que.get_nowait()
-            que.task_done()
-    except asyncio.QueueEmpty:
-        # que is now empty, nothing further to do
-        pass
