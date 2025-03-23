@@ -25,7 +25,7 @@ copyright = '2023,2024 Bernard Czenkusz'
 author = 'Bernard Czenkusz'
 
 # The full version, including alpha/beta/rc tags
-release = '2.2.0'
+release = '2.3.0'
 
 # ---------------------- Added to get readthedocs to build, by BC
 master_doc = 'index'

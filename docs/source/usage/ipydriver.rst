@@ -54,22 +54,17 @@ With debug_enable set to False, then xml traffic will not be logged at the drive
 
 ----
 
-There are three ways a driver can be run, assuming 'driver' is an instance of this class.
+There are two ways a driver can be run, assuming 'driver' is an instance of this class.
 
 This coroutine outputs the xml data on stdout, and reads it on stdin::
 
         await driver.asyncrun()
 
-Normally this will be awaited together with any other co-routines needed to run your instrument. Making your script executable, and using the above method should allow your driver to work with other parties INDI server software that expect stdin and stdout streams from drivers.
+This could be awaited together with any other co-routines needed to run your instrument. Making your script executable, and using the above method should allow your driver to work with other parties INDI server software that expect stdin and stdout streams from drivers.
 
 Alternatively, use indipydriver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
 
         server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
         await server.asyncrun()
 
-And a further method which also listens on a host and port, but with a single connection only is shown here. It may be useful in some circumstances as it avoids the code associated with IPyServer::
-
-        driver.listen(host="localhost", port=7624)
-        await driver.asyncrun()
-
-In both of the above cases you would use indipyclient, or other INDI client, to connect to this port, however note that if your client is running remotely, and you are connecting over a network, then in the above commands "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.
+You would use then use indipyterm, or other INDI client, to connect to this port, however note that if your client is running remotely, and you are connecting over a network, then in the above command "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.

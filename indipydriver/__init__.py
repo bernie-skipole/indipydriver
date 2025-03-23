@@ -10,4 +10,4 @@ from .ipyserver import IPyServer
 if sys.version_info < (3, 10):
     raise ImportError('indipyterm requires Python >= 3.10')
 
-version = "2.2.0"
+version = "2.3.0"

@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import STDINOUT, Portcomms, queueget
+from .comms import STDINOUT, queueget
 from . import events
 from .propertyvectors import timestamp_string
 from .propertymembers import getfloat
@@ -129,16 +129,6 @@ class IPyDriver(collections.UserDict):
                 # queue is full, continue while loop, checking stop flag
                 continue
             break
-
-    def listen(self, host="localhost", port=7624):
-        """If called, sets up listening on the given host and port.
-           Only one connection will accepted, further connection attempts
-           while a client is already connected will be refused.
-           This method also checks for enableBLOB instructions, and implements them.
-           In general, using IPyServer is preferred."""
-        if not self.comms is None:
-             raise RuntimeError("A communications method has already been set, there can only be one")
-        self.comms = Portcomms(self.data, host, port)
 
 
     async def send(self, xmldata):
@@ -428,8 +418,7 @@ class IPyDriver(collections.UserDict):
 
     async def asyncrun(self):
         """await this to operate the driver, which will then communicate by
-           stdin and stdout, unless the listen method is called first, in
-           which case it will listen via the specified port.
+           stdin and stdout.
 
            Do not await this if the driver is being set into IPyServer, in
            that situation the IPyServer will control communications."""

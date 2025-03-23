@@ -39,8 +39,6 @@ Another layout might be:
 
 .. image:: ./images/rem2.png
 
-In this case Driver E is 'Listening' on a port, rather than using IPyServer, this reduces the code involved in running the driver.
-
 add_exdriver
 ^^^^^^^^^^^^
 
