@@ -175,9 +175,9 @@ class IPyServer:
 
     def shutdown(self, shutdownmessage=""):
         """Shuts down the server, sets the flag self._stop to True
-           and prints shutdownmessage if given"""
+           and sends shutdownmessage to logger.error if given"""
         if shutdownmessage:
-            print(shutdownmessage)
+            logger.error(shutdownmessage)
         self._stop = True
         for driver in self.drivers:
             driver.shutdown()
@@ -252,11 +252,8 @@ class IPyServer:
         try:
             async with self.server:
                 await self.server.serve_forever()
-        except asyncio.CancelledError:
-            # self._stop raises an unwanted CancelledError
-            # propogate this only if it is not due to self._stop
-            if not self._stop:
-                raise
+        finally:
+            self.shutdown()
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
@@ -275,77 +272,112 @@ class IPyServer:
     async def asyncrun(self):
         """await this to operate the server together with its
            drivers and any remote connections."""
+
+        # Note this gather has return_exceptions=True, so exceptions do not stop or cancel
+        # other tasks from running, or stop the running loop.
+        # This requires each coroutine in this gather to call shutdown on the server if any exception
+        # occurs in the coroutine
+
         self._stop = False
-        driverruns = [ driver.asyncrun() for driver in self.drivers ]
-        remoteruns = [ remoteconnection.asyncrun() for remoteconnection in self.remotes ]
-        externalruns = [ exd.asyncrun() for exd in self.exdrivers ]
+        driverruns = [ self._runners(driver) for driver in self.drivers ]
+        remoteruns = [ self._runners(remoteconnection) for remoteconnection in self.remotes ]
+        externalruns = [ self._runners(exd) for exd in self.exdrivers ]
         try:
             await asyncio.gather(*driverruns,
                                  *remoteruns,
                                  *externalruns,
                                  self._runserver(),
                                  self._copyfromserver(),
-                                 self._sendtoclient()
+                                 self._sendtoclient(),
+                                 return_exceptions=True
                                  )
         finally:
             self.stopped.set()
             self._stop = True
 
 
+    async def _runners(self, itemtorun):
+        """Used by above to run drivers, remotes and externals
+           If any shuts down, then calls shutdown the server"""
+        try:
+            await itemtorun.asyncrun()
+        finally:
+            self.shutdown()
+
+
     async def _copyfromserver(self):
         """Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, to its send method"""
-        while not self._stop:
-            quexit, quedata = await queueget(self.serverreaderque)
-            if quexit:
-                continue
-            self.serverreaderque.task_done()
-            connection_id, xmldata = quedata
-            devicename = xmldata.get("device")
-            propertyname = xmldata.get("name")
+        try:
+            while not self._stop:
+                quexit, quedata = await queueget(self.serverreaderque)
+                if quexit:
+                    continue
+                self.serverreaderque.task_done()
+                connection_id, xmldata = quedata
+                devicename = xmldata.get("device")
+                propertyname = xmldata.get("name")
 
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                binarydata = ET.tostring(xmldata)
-                logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+                if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
 
-            exdriverfound = False
-            if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
-                # if targetted at a known device, send it to that device
-                if devicename:
-                    if devicename in self.devices:
-                        # this new or getProperties request is meant for an attached device
-                        await self._queueput(self.devices[devicename].driver.readerque, xmldata)
-                        # no need to transmit this anywhere else, continue the while loop
-                        continue
-                    for exd in self.exdrivers:
-                        if devicename in exd:
-                            # this getProperties request is meant for an external driver
-                            await self._queueput(exd.readerque, xmldata)
-                            exdriverfound = True
-                            break
+                exdriverfound = False
+                if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
+                    # if targetted at a known device, send it to that device
+                    if devicename:
+                        if devicename in self.devices:
+                            # this new or getProperties request is meant for an attached device
+                            await self._queueput(self.devices[devicename].driver.readerque, xmldata)
+                            # no need to transmit this anywhere else, continue the while loop
+                            continue
+                        for exd in self.exdrivers:
+                            if devicename in exd:
+                                # this getProperties request is meant for an external driver
+                                await self._queueput(exd.readerque, xmldata)
+                                exdriverfound = True
+                                break
 
-            if exdriverfound:
-                # no need to transmit this anywhere else, continue the while loop
-                continue
+                if exdriverfound:
+                    # no need to transmit this anywhere else, continue the while loop
+                    continue
 
-            # copy to all server connections, apart from the one it came in on
-            for clientconnection in self.connectionpool:
-                if clientconnection.connected and clientconnection.connection_id != connection_id:
-                    await self._queueput(clientconnection.txque, xmldata)
+                # copy to all server connections, apart from the one it came in on
+                for clientconnection in self.connectionpool:
+                    if clientconnection.connected and clientconnection.connection_id != connection_id:
+                        await self._queueput(clientconnection.txque, xmldata)
 
-            # copy to all remote connections
-            if xmldata.tag != "enableBLOB":
-                for remcon in self.remotes:
-                    if not remcon.connected:
-                        continue
-                    await remcon.send(xmldata)
+                # copy to all remote connections
+                if xmldata.tag != "enableBLOB":
+                    for remcon in self.remotes:
+                        if not remcon.connected:
+                            continue
+                        await remcon.send(xmldata)
 
 
-            # transmit xmldata out to exdrivers,
-            if xmldata.tag != "enableBLOB":
-                # enableBLOB instructions are not forwarded to external drivers
-                for driver in self.exdrivers:
+                # transmit xmldata out to exdrivers,
+                if xmldata.tag != "enableBLOB":
+                    # enableBLOB instructions are not forwarded to external drivers
+                    for driver in self.exdrivers:
+                        if xmldata.tag == "getProperties":
+                            # either no devicename, or an unknown device
+                            await self._queueput(driver.readerque, xmldata)
+                        elif xmldata.tag not in NEWTAGS:
+                            # either devicename is unknown, or this data is to/from another driver.
+                            # So check if this driver is snooping on this device/vector
+                            # only forward def's and set's, not 'new' vectors which
+                            # do not come from a device, but only from a client to the target device.
+                            if driver.snoopall:
+                                await self._queueput(driver.readerque, xmldata)
+                            elif devicename and (devicename in driver.snoopdevices):
+                                await self._queueput(driver.readerque, xmldata)
+                            elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
+                                await self._queueput(driver.readerque, xmldata)
+
+
+                # transmit xmldata out to drivers
+                for driver in self.drivers:
                     if xmldata.tag == "getProperties":
                         # either no devicename, or an unknown device
                         await self._queueput(driver.readerque, xmldata)
@@ -361,45 +393,34 @@ class IPyServer:
                         elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
                             await self._queueput(driver.readerque, xmldata)
 
+                # now every driver/remcon which needs it has this xmldata
+                # and the while loop now continues
 
-            # transmit xmldata out to drivers
-            for driver in self.drivers:
-                if xmldata.tag == "getProperties":
-                    # either no devicename, or an unknown device
-                    await self._queueput(driver.readerque, xmldata)
-                elif xmldata.tag not in NEWTAGS:
-                    # either devicename is unknown, or this data is to/from another driver.
-                    # So check if this driver is snooping on this device/vector
-                    # only forward def's and set's, not 'new' vectors which
-                    # do not come from a device, but only from a client to the target device.
-                    if driver.snoopall:
-                        await self._queueput(driver.readerque, xmldata)
-                    elif devicename and (devicename in driver.snoopdevices):
-                        await self._queueput(driver.readerque, xmldata)
-                    elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                        await self._queueput(driver.readerque, xmldata)
-
-            # now every driver/remcon which needs it has this xmldata
+        finally:
+            self.shutdown()
 
     async def _sendtoclient(self):
         "For every clientconnection, get txque and copy data into it from serverwriterque"
-        while not self._stop:
-            quexit, xmldata = await queueget(self.serverwriterque)
-            if quexit:
-                continue
-            self.serverwriterque.task_done()
-            #  This xmldata of None is an indication to shut the server down
-            #  It is set to None when a duplicate devicename is discovered
-            if xmldata is None:
-                logger.error("A duplicate devicename has caused a server shutdown")
-                self.shutdown("A duplicate devicename has caused a server shutdown")
-                return
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                binarydata = ET.tostring(xmldata)
-                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-            for clientconnection in self.connectionpool:
-                if clientconnection.connected:
-                    await self._queueput(clientconnection.txque, xmldata)
+        try:
+            while not self._stop:
+                quexit, xmldata = await queueget(self.serverwriterque)
+                if quexit:
+                    continue
+                self.serverwriterque.task_done()
+                #  This xmldata of None is an indication to shut the server down
+                #  It is set to None when a duplicate devicename is discovered
+                if xmldata is None:
+                    logger.error("A duplicate devicename has caused a server shutdown")
+                    return
+                if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+                    binarydata = ET.tostring(xmldata)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                for clientconnection in self.connectionpool:
+                    if clientconnection.connected:
+                        await self._queueput(clientconnection.txque, xmldata)
+                # The while loop continues
+        finally:
+            self.shutdown()
 
 
 
@@ -504,6 +525,11 @@ class _DriverComms:
                     if driver is self.driver:
                         continue
                     if devicename in driver:
+                        logger.error(f"A duplicate devicename {devicename} has been detected")
+                        await self._queueput(self.serverwriterque, None)
+                        return
+                for remote in self.remotes:
+                    if devicename in remote.devicenames:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self._queueput(self.serverwriterque, None)
                         return

@@ -79,6 +79,10 @@ class RemoteConnection:
         self.blob_enable = blob_enable
         self.debug_enable = debug_enable
 
+        # This is a set of devicenames learnt on this remote connection
+        # populated as devices are learnt, and used to check for duplicate names
+        self.devicenames = set()
+
         self.alldrivers = alldrivers
         self.remotes= remotes
         self.serverwriterque = serverwriterque
@@ -97,7 +101,6 @@ class RemoteConnection:
         self._stop = False
         # this is set when asyncrun is finished
         self.stopped = asyncio.Event()
-
 
 
     async def _hardware(self):
@@ -434,6 +437,15 @@ class RemoteConnection:
                                 logger.error(f"A duplicate devicename {devicename} has been detected")
                                 await self.queueput(self.serverwriterque, None)
                                 return
+                        for remote in self.remotes:
+                            if remote is self:
+                                continue
+                            if devicename in remote.devicenames:
+                                logger.error(f"A duplicate devicename {devicename} has been detected")
+                                await self.queueput(self.serverwriterque, None)
+                                return
+                        if devicename not in self.devicenames:
+                            self.devicenames.add(devicename)
                         if rxdata.tag == "defBLOBVector":
                             # every time a defBLOBVector is received, send an enable BLOB instruction
                             xmldata = ET.Element('enableBLOB')

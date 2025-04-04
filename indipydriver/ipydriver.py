@@ -1,6 +1,6 @@
 
 
-import collections, asyncio, sys, copy, time
+import collections, asyncio, sys, time
 
 from datetime import datetime, timezone
 
@@ -13,8 +13,6 @@ from .comms import STDINOUT, queueget
 from . import events
 from .propertyvectors import timestamp_string
 from .propertymembers import getfloat
-
-
 
 
 class IPyDriver(collections.UserDict):
@@ -145,15 +143,8 @@ class IPyDriver(collections.UserDict):
                 continue
             break
         if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-            if (xmldata.tag == "setBLOBVector") and len(xmldata):
-                data = copy.deepcopy(xmldata)
-                for element in data:
-                    element.text = "NOT LOGGED"
-                binarydata = ET.tostring(data)
-                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-            else:
-                binarydata = ET.tostring(xmldata)
-                logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+            binarydata = ET.tostring(xmldata)
+            logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
     def __setitem__(self, devicename):
@@ -171,15 +162,8 @@ class IPyDriver(collections.UserDict):
                 continue
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if ((root.tag == "setBLOBVector") or (root.tag == "newBLOBVector")) and len(root):
-                    data = copy.deepcopy(root)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binarydata = ET.tostring(data)
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
-                else:
-                    binarydata = ET.tostring(root)
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+                binarydata = ET.tostring(root)
+                logger.debug(f"RX:: {binarydata.decode('utf-8')}")
             if root.tag == "getProperties":
                 version = root.get("version")
                 if version != "1.7":
