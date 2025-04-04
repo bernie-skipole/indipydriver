@@ -130,6 +130,7 @@ class RemoteConnection:
                 # The connection has failed
                 if isconnected:
                     isconnected = False
+                    self.devicenames.clear()
                     for clientconnection in self.connectionpool:
                         if clientconnection.connected:
                             # a client is connected, send a message
