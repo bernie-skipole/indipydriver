@@ -175,9 +175,9 @@ class IPyServer:
 
     def shutdown(self, shutdownmessage=""):
         """Shuts down the server, sets the flag self._stop to True
-           and prints shutdownmessage if given"""
+           and sends shutdownmessage to logger.error if given"""
         if shutdownmessage:
-            print(shutdownmessage)
+            logger.error(shutdownmessage)
         self._stop = True
         for driver in self.drivers:
             driver.shutdown()
@@ -525,6 +525,11 @@ class _DriverComms:
                     if driver is self.driver:
                         continue
                     if devicename in driver:
+                        logger.error(f"A duplicate devicename {devicename} has been detected")
+                        await self._queueput(self.serverwriterque, None)
+                        return
+                for remote in self.remotes:
+                    if devicename in remote.devicenames:
                         logger.error(f"A duplicate devicename {devicename} has been detected")
                         await self._queueput(self.serverwriterque, None)
                         return
