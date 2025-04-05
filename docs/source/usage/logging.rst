@@ -9,7 +9,7 @@ This indipydriver package uses the Python standard library logging module, and e
 
 *INFO* Logs informational messages.
 
-*DEBUG* Logs xml data transmitted and received. The logs of BLOB tags do not include contents.
+*DEBUG* Logs xml data transmitted and received.
 
 By default, the set level is WARNING, and therefore warning and error logs are sent to stdout. If you want no logs, and you want nothing to be sent to the console, then insert::
 
