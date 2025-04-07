@@ -49,17 +49,6 @@ def _makestart(element):
     return "".join(attriblist)
 
 
-async def queueget(queue, timeout=0.5):
-    """"Returns True, True if timed out
-                True, False is reserved for future
-                False, Value if a value is taken from the queue"""
-    try:
-        value = await asyncio.wait_for(queue.get(), timeout)
-    except asyncio.TimeoutError:
-        return True, True
-    return False, value
-
-
 def cleanque(que):
     "Clears out a que"
     try:
@@ -91,8 +80,10 @@ class STDOUT_TX:
         while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit down stdout
-            quexit, txdata = await queueget(writerque)
-            if quexit:
+            try:
+                txdata = await asyncio.wait_for(writerque.get(), 0.5)
+            except asyncio.TimeoutError:
+                # test self._stop again
                 continue
             writerque.task_done()
             if txdata is None:

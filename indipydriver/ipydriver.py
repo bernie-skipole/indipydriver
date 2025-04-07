@@ -9,10 +9,11 @@ import xml.etree.ElementTree as ET
 import logging
 logger = logging.getLogger(__name__)
 
-from .comms import STDINOUT, queueget
+from .comms import STDINOUT
 from . import events
 from .propertyvectors import timestamp_string
 from .propertymembers import getfloat
+
 
 
 class IPyDriver(collections.UserDict):
@@ -157,9 +158,11 @@ class IPyDriver(collections.UserDict):
                       'defBLOBVector', 'setBLOBVector')
         while not self._stop:
             # reads readerque, and sends xml data to the device via its dataque
-            quexit, root = await queueget(self.readerque)
-            if quexit:
+            try:
+                root = await asyncio.wait_for(self.readerque.get(), 0.5)
+            except asyncio.TimeoutError:
                 continue
+            self.readerque.task_done()
             # log the received data
             if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
                 binarydata = ET.tostring(root)
@@ -167,7 +170,6 @@ class IPyDriver(collections.UserDict):
             if root.tag == "getProperties":
                 version = root.get("version")
                 if version != "1.7":
-                    self.readerque.task_done()
                     continue
                 # getProperties received with correct version
                 devicename = root.get("device")
@@ -185,7 +187,6 @@ class IPyDriver(collections.UserDict):
                 devicename = root.get("device")
                 if devicename is None:
                     # device not given, ignore this
-                    self.readerque.task_done()
                     continue
                 elif devicename in self.data:
                     if self.data[devicename].enable:
@@ -194,7 +195,7 @@ class IPyDriver(collections.UserDict):
             elif root.tag in snoop_tags:
                 # xml received from other devices
                 await self._queueput(self.snoopque, root)
-            self.readerque.task_done()
+
 
     async def _call_snoopevent(self, event):
         "Update timestamp when snoop data received and call self.snoopevent"
@@ -210,16 +211,17 @@ class IPyDriver(collections.UserDict):
         """Creates events using data from self.snoopque"""
         while not self._stop:
             # get block of data from the self.snoopque
-            quexit, root = await queueget(self.snoopque)
-            if quexit:
+            try:
+                root = await asyncio.wait_for(self.snoopque.get(), 0.5)
+            except asyncio.TimeoutError:
                 continue
+            self.snoopque.task_done()
             devicename = root.get("device")
             if devicename is not None:
                 # if a device name is given, check
                 # it is not in this drivers devices
                 if devicename in self.data:
                     logger.error("Cannot snoop on a device already controlled by this driver")
-                    self.snoopque.task_done()
                     continue
             try:
                 if root.tag == "message":
@@ -274,7 +276,7 @@ class IPyDriver(collections.UserDict):
                 # if an EventException is raised, it is because received data is malformed
                 # so log it
                 logger.exception("An exception occurred creating a snoop event")
-            self.snoopque.task_done()
+
 
     async def send_message(self, message="", timestamp=None):
         "Send system wide message - without device name"
@@ -577,11 +579,12 @@ class Device(collections.UserDict):
         """Handles data read from dataque"""
         while not self._stop:
             # get block of data from the self.dataque
-            quexit, root = await queueget(self.dataque)
-            if quexit:
+            try:
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
                 continue
+            self.dataque.task_done()
             if not self.enable:
-                self.dataque.task_done()
                 continue
             if root.tag == "getProperties":
                 name = root.get("name")
@@ -595,7 +598,6 @@ class Device(collections.UserDict):
                         await self._queueput(self.data[name].dataque, root)
                 else:
                     # property name not recognised
-                    self.dataque.task_done()
                     continue
             elif root.tag == "enableBLOB":
                 name = root.get("name")
@@ -609,7 +611,6 @@ class Device(collections.UserDict):
                         await self._queueput(self.data[name].dataque, root)
                 else:
                     # property name not recognised
-                    self.dataque.task_done()
                     continue
             else:
                 # root.tag will be one of
@@ -617,12 +618,9 @@ class Device(collections.UserDict):
                 name = root.get("name")
                 if name is None:
                     # name not given, ignore this
-                    self.dataque.task_done()
                     continue
                 elif name in self.data:
                     pvector = self.data[name]
                     if pvector.perm != "ro" and pvector.enable:
                         # all ok, add to the vector dataque
                         await self._queueput(pvector.dataque, root)
-            # task completed
-            self.dataque.task_done()

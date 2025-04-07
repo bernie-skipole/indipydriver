@@ -54,16 +54,6 @@ _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
 _ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
 
 
-async def queueget(queue, timeout=0.5):
-    """"Returns True, True if timed out
-                True, False is reserved for future
-                False, Value if a value is taken from the queue"""
-    try:
-        value = await asyncio.wait_for(queue.get(), timeout)
-    except asyncio.TimeoutError:
-        return True, True
-    return False, value
-
 
 def cleanque(que):
     "Clears out a que"
@@ -311,8 +301,9 @@ class IPyServer:
            And for every remote connection if applicable, to its send method"""
         try:
             while not self._stop:
-                quexit, quedata = await queueget(self.serverreaderque)
-                if quexit:
+                try:
+                    quedata = await asyncio.wait_for(self.serverreaderque.get(), 0.5)
+                except asyncio.TimeoutError:
                     continue
                 self.serverreaderque.task_done()
                 connection_id, xmldata = quedata
@@ -403,8 +394,9 @@ class IPyServer:
         "For every clientconnection, get txque and copy data into it from serverwriterque"
         try:
             while not self._stop:
-                quexit, xmldata = await queueget(self.serverwriterque)
-                if quexit:
+                try:
+                    xmldata = await asyncio.wait_for(self.serverwriterque.get(), 0.5)
+                except asyncio.TimeoutError:
                     continue
                 self.serverwriterque.task_done()
                 #  This xmldata of None is an indication to shut the server down
@@ -505,8 +497,9 @@ class _DriverComms:
         """Called by the driver, should run continuously.
            reads writerque from the driver, and sends xml data to the network"""
         while not self._stop:
-            quexit, xmldata = await queueget(writerque)
-            if quexit:
+            try:
+                xmldata = await asyncio.wait_for(writerque.get(), 0.5)
+            except asyncio.TimeoutError:
                 continue
             writerque.task_done()
             # Check if other drivers/remotes wants to snoop this traffic
@@ -672,8 +665,9 @@ class Conn_TX():
         while not self._stop:
             await asyncio.sleep(0)
             # get block of data from writerque and transmit
-            quexit, txdata = await queueget(writerque)
-            if quexit:
+            try:
+                txdata = await asyncio.wait_for(writerque.get(), 0.5)
+            except asyncio.TimeoutError:
                 continue
             writerque.task_done()
             if txdata is None:

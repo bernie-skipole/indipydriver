@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
-from .comms import queueget
-
 
 def timestamp_string(timestamp = None):
     "Return a string timestamp or None if invalid"
@@ -214,9 +212,11 @@ class SwitchVector(PropertyVector):
         """Check received data and take action"""
         while not self._stop:
             try:
-                quexit, root = await queueget(self.dataque)
-                if quexit:
-                    continue
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
+                continue
+            self.dataque.task_done()
+            try:
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -228,7 +228,7 @@ class SwitchVector(PropertyVector):
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
-            self.dataque.task_done()
+
 
 
     def _make_defVector(self, message='', timestamp=None):
@@ -406,9 +406,11 @@ class LightVector(PropertyVector):
         while not self._stop:
             # test if any xml data has been received
             try:
-                quexit, root = await queueget(self.dataque)
-                if quexit:
-                    continue
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
+                continue
+            self.dataque.task_done()
+            try:
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -416,7 +418,7 @@ class LightVector(PropertyVector):
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
-            self.dataque.task_done()
+
 
     @property
     def perm(self):
@@ -573,9 +575,11 @@ class TextVector(PropertyVector):
         """Check received data and take action"""
         while not self._stop:
             try:
-                quexit, root = await queueget(self.dataque)
-                if quexit:
-                    continue
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
+                continue
+            self.dataque.task_done()
+            try:
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -587,7 +591,7 @@ class TextVector(PropertyVector):
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
-            self.dataque.task_done()
+
 
     def _make_defVector(self, message='', timestamp=None):
         "Creates xml data object for vector definition"
@@ -773,9 +777,11 @@ class NumberVector(PropertyVector):
         """Check received data and take action"""
         while not self._stop:
             try:
-                quexit, root = await queueget(self.dataque)
-                if quexit:
-                    continue
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
+                continue
+            self.dataque.task_done()
+            try:
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -787,7 +793,7 @@ class NumberVector(PropertyVector):
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
-            self.dataque.task_done()
+
 
     def _make_defVector(self, message='', timestamp=None):
         "Creates xml data object for vector definition"
@@ -971,9 +977,11 @@ class BLOBVector(PropertyVector):
         """Check received data and take action"""
         while not self._stop:
             try:
-                quexit, root = await queueget(self.dataque)
-                if quexit:
-                    continue
+                root = await asyncio.wait_for(self.dataque.get(), 0.5)
+            except asyncio.TimeoutError:
+                continue
+            self.dataque.task_done()
+            try:
                 if root.tag == "getProperties":
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
@@ -989,7 +997,6 @@ class BLOBVector(PropertyVector):
             except EventException as ex:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
-            self.dataque.task_done()
 
     def _make_defVector(self, message='', timestamp=None):
         "Creates xml data object for vector definition"
