@@ -1,5 +1,5 @@
 
-import collections, io, asyncio, math, pathlib
+import math, pathlib
 
 import xml.etree.ElementTree as ET
 
@@ -307,9 +307,9 @@ class NumberMember(PropertyMember):
 
         # w is the overall length of the string, prepend with spaces to make the length up to w
         w = int(w)
-        l = len(number)
-        if w>l:
-            number = " "*(w-l) + number
+        lth = len(number)
+        if w>lth:
+            number = " "*(w-lth) + number
         return number
 
     def defnumber(self):

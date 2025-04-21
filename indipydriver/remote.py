@@ -222,7 +222,7 @@ class RemoteConnection:
                 if self._stop:
                     break
                 else:
-                    await self.warning(f"Connection failed, re-trying...")
+                    await self.warning("Connection failed, re-trying...")
                 # wait five seconds before re-trying, but keep checking
                 # that self._stop has not been set
                 count = 0
@@ -357,7 +357,7 @@ class RemoteConnection:
                     # the message is complete, handle message here
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
-                    except ET.ParseError as e:
+                    except ET.ParseError:
                        # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
@@ -373,7 +373,7 @@ class RemoteConnection:
                 # the message is complete, handle message here
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
-                except ET.ParseError as e:
+                except ET.ParseError:
                     # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None

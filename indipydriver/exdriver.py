@@ -75,9 +75,9 @@ class ExDriver:
 
     def shutdown(self):
         self._stop = True
-        if not self.proc is None:
+        if self.proc is not None:
             self.proc.terminate()
-        if not self.comms is None:
+        if self.comms is not None:
             self.comms.shutdown()
 
 
@@ -138,11 +138,11 @@ class ExDriver:
                 devicename = txdata.get("device")
                 if devicename and txdata.tag in DEFTAGS:
                     # its a definition
-                    if not (devicename in self.devicenames):
+                    if devicename not in self.devicenames:
                         self.devicenames[devicename] = {}
                     vectorname = txdata.get("name")
                     if vectorname:
-                        if not vectorname in self.devicenames[devicename]:
+                        if vectorname not in self.devicenames[devicename]:
                             # add this vector to the self.devicenames[devicename] dictionary
                             self.devicenames[devicename][vectorname] = ExVector(vectorname, txdata.tag)
                 # check for a getProperties being sent, record what is being snooped
@@ -214,7 +214,7 @@ class ExDriver:
                     # the message is complete, handle message here
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
-                    except Exception as e:
+                    except Exception:
                         # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
@@ -230,7 +230,7 @@ class ExDriver:
                 # the message is complete, handle message here
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
-                except Exception as e:
+                except Exception:
                     # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None
@@ -269,7 +269,7 @@ class ExDriver:
     async def _run_err(self):
         """gets binary string of data from exdriver proc.stderr
            and logs it to logging.error."""
-        data = b""
+
         while not self._stop:
             bindata = await self.proc.stderr.readline()
             if not bindata:

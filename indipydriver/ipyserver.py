@@ -1,19 +1,19 @@
 
 
-import asyncio, copy
+import asyncio, logging
 
 from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
-
-import logging
-logger = logging.getLogger(__name__)
 
 from .ipydriver import IPyDriver
 
 from .remote import RemoteConnection
 
 from .exdriver import ExDriver
+
+logger = logging.getLogger(__name__)
+
 
 # All xml data should be contained in one of the following tags
 TAGS = (b'getProperties',
@@ -59,7 +59,7 @@ def cleanque(que):
     "Clears out a que"
     try:
         while True:
-            xmldata = que.get_nowait()
+            que.get_nowait()
             que.task_done()
     except asyncio.QueueEmpty:
         # que is now empty, nothing further to do
@@ -126,7 +126,7 @@ class IPyServer:
         for driver in self.drivers:
             if not isinstance(driver, IPyDriver):
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
-            if not driver.comms is None:
+            if driver.comms is not None:
                  raise RuntimeError("A driver communications method has already been set, there can only be one")
             for devicename in driver:
                 if devicename in self.devices:
@@ -177,7 +177,7 @@ class IPyServer:
             exd.shutdown()
         for clientconnection in self.connectionpool:
             clientconnection.shutdown()
-        if not self.server is None:
+        if self.server is not None:
             self.server.close()
 
     async def _queueput(self, queue, value, timeout=0.5):
@@ -427,7 +427,7 @@ class IPyServer:
             if not isinstance(timestamp, datetime):
                 # invalid timestamp given
                 return
-            if not (timestamp.tzinfo is None):
+            if timestamp.tzinfo is not None:
                 if timestamp.tzinfo == timezone.utc:
                     timestamp = timestamp.replace(tzinfo = None)
                 else:
@@ -612,9 +612,9 @@ class _ClientConnection:
         "Sets self.stop to True and calls shutdown on tasks"
         self._stop = True
         self.connected = False
-        if not self.rx is None:
+        if self.rx is not None:
             self.rx.shutdown()
-        if not self.tx is None:
+        if self.tx is not None:
             self.tx.shutdown()
 
     async def handle_data(self, reader, writer):
@@ -772,7 +772,7 @@ class Conn_RX():
                     # the message is complete, handle message here
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
-                    except Exception as e:
+                    except Exception:
                         # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
@@ -788,7 +788,7 @@ class Conn_RX():
                 # the message is complete, handle message here
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
-                except Exception as e:
+                except Exception:
                     # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None
@@ -867,7 +867,7 @@ class SendChecker:
 
         devicename = xmldata.get("device")
 
-        if not (devicename in self.devicestatus):
+        if devicename not in self.devicestatus:
             # devicename not recognised, add it
             self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 

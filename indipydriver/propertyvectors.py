@@ -1,17 +1,17 @@
 
-import collections, sys
+
+import collections, asyncio, logging
 
 from datetime import datetime, timezone
 
-import asyncio
-
 import xml.etree.ElementTree as ET
-
-import logging
-logger = logging.getLogger(__name__)
 
 from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
+
+logger = logging.getLogger(__name__)
+
+
 
 
 def timestamp_string(timestamp = None):
@@ -21,7 +21,7 @@ def timestamp_string(timestamp = None):
     if not isinstance(timestamp, datetime):
         # invalid timestamp given
         return
-    if not (timestamp.tzinfo is None):
+    if timestamp.tzinfo is not None:
         if timestamp.tzinfo == timezone.utc:
             timestamp = timestamp.replace(tzinfo = None)
         else:
@@ -116,7 +116,7 @@ class PropertyVector(collections.UserDict):
            The state should be either None - in which case no change to the state attribute
            will be made, or one of Idle, Ok, Busy or Alert.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -128,7 +128,7 @@ class PropertyVector(collections.UserDict):
                 logger.error("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         xmldata = self._make_defVector(message, timestamp)
-        if not xmldata is None:
+        if xmldata is not None:
             await self.driver.send(xmldata)
 
 
@@ -146,7 +146,7 @@ class PropertyVector(collections.UserDict):
     def state(self, value):
         try:
             self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid state value")
 
     def __setitem__(self, membername, value):
@@ -194,7 +194,7 @@ class SwitchVector(PropertyVector):
     def perm(self, value):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid permission value")
 
     @property
@@ -205,7 +205,7 @@ class SwitchVector(PropertyVector):
     def rule(self, value):
         try:
             self._rule = self.checkvalue(value, ['OneOfMany','AtMostOne','AnyOfMany'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid rule value")
 
     async def _handler(self):
@@ -225,7 +225,7 @@ class SwitchVector(PropertyVector):
                     # create event
                     event = newSwitchVector(self.devicename, self.name, self, root)
                     await self.driver.rxevent(event)
-            except EventException as ex:
+            except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
 
@@ -282,7 +282,7 @@ class SwitchVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -344,7 +344,7 @@ class SwitchVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -415,7 +415,7 @@ class LightVector(PropertyVector):
                     # create event
                     event = getProperties(self.devicename, self.name, self, root)
                     await self.driver.rxgetproperties(event)
-            except EventException as ex:
+            except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
 
@@ -568,7 +568,7 @@ class TextVector(PropertyVector):
     def perm(self, value):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid permission value")
 
     async def _handler(self):
@@ -588,7 +588,7 @@ class TextVector(PropertyVector):
                     # create event
                     event = newTextVector(self.devicename, self.name, self, root)
                     await self.driver.rxevent(event)
-            except EventException as ex:
+            except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
 
@@ -642,7 +642,7 @@ class TextVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -693,7 +693,7 @@ class TextVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -754,7 +754,7 @@ class NumberVector(PropertyVector):
     def perm(self, value):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid permission value")
 
     def getfloatvalue(self, membername):
@@ -790,7 +790,7 @@ class NumberVector(PropertyVector):
                     # create event
                     event = newNumberVector(self.devicename, self.name, self, root)
                     await self.driver.rxevent(event)
-            except EventException as ex:
+            except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
 
@@ -844,7 +844,7 @@ class NumberVector(PropertyVector):
            vector message, state or time values are sent to the client, then use the more
            explicit send_setVectorMembers method instead.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -895,7 +895,7 @@ class NumberVector(PropertyVector):
            then a vector will still be sent, empty of members, which may be required if
            just a state or message is to be sent.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -970,7 +970,7 @@ class BLOBVector(PropertyVector):
     def perm(self, value):
         try:
             self._perm = self.checkvalue(value, ['ro','wo','rw'])
-        except ValueError as ex:
+        except ValueError:
             logger.exception("Invalid permission value")
 
     async def _handler(self):
@@ -994,7 +994,7 @@ class BLOBVector(PropertyVector):
                     # create event
                     event = newBLOBVector(self.devicename, self.name, self, root)
                     await self.driver.rxevent(event)
-            except EventException as ex:
+            except EventException:
                 # if an error is raised parsing the incoming data, just continue
                 logger.exception("Unable to create event from received data")
 
@@ -1043,7 +1043,7 @@ class BLOBVector(PropertyVector):
            a file-like object is given, its contents will be read and its close() method
            will be called, so you do not have to close it.
         """
-        if not timeout is None:
+        if timeout is not None:
             if isinstance(timeout, str):
                 self.timeout = timeout
             else:
@@ -1079,6 +1079,6 @@ class BLOBVector(PropertyVector):
                 try:
                     bytescontent = await loop.run_in_executor(None, blob.getbytes, blob.membervalue)
                     xmldata.append(blob.oneblob(bytescontent))
-                except ValueError as ex:
+                except ValueError:
                     logger.exception("Unable to create setBLOBVector")
         await self.driver.send(xmldata)

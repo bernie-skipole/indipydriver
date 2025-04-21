@@ -1,18 +1,15 @@
 
 
-import collections, asyncio, sys, time, os, fcntl
-
-from datetime import datetime, timezone
+import collections, asyncio, sys, time, os, fcntl, logging
 
 import xml.etree.ElementTree as ET
-
-
-import logging
-logger = logging.getLogger(__name__)
 
 from . import events
 from .propertyvectors import timestamp_string
 from .propertymembers import getfloat
+
+
+logger = logging.getLogger(__name__)
 
 
 # All xml data received from the client, or from snooped devices should be contained in one of the following tags
@@ -148,7 +145,7 @@ class IPyDriver(collections.UserDict):
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
-        if not self.comms is None:
+        if self.comms is not None:
             self.comms.shutdown()
         for device in self.data.values():
             device.shutdown()
@@ -241,7 +238,7 @@ class IPyDriver(collections.UserDict):
         if event.devicename and event.vectorname:
             # update timestamp in self.snoopvectors
             timedata = self.snoopvectors.get((event.devicename, event.vectorname))
-            if not timedata is None:
+            if timedata is not None:
                 timedata[1] = time.time()
         await self.snoopevent(event)
 
@@ -311,7 +308,7 @@ class IPyDriver(collections.UserDict):
                     # create event
                     event = events.setBLOBVector(root)
                     await self._call_snoopevent(event)
-            except events.EventException as ex:
+            except events.EventException:
                 # if an EventException is raised, it is because received data is malformed
                 # so log it
                 logger.exception("An exception occurred creating a snoop event")
@@ -801,7 +798,7 @@ class _STDIN_RX:
                     # the message is complete, handle message here
                     try:
                         root = ET.fromstring(message.decode("us-ascii"))
-                    except Exception as e:
+                    except Exception:
                         # failed to parse the message, continue at beginning
                         message = b''
                         messagetagnumber = None
@@ -817,7 +814,7 @@ class _STDIN_RX:
                 # the message is complete, handle message here
                 try:
                     root = ET.fromstring(message.decode("us-ascii"))
-                except Exception as e:
+                except Exception:
                     # failed to parse the message, continue at beginning
                     message = b''
                     messagetagnumber = None

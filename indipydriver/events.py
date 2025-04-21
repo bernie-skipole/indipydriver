@@ -1,5 +1,6 @@
 
-import sys
+
+import logging
 
 from datetime import datetime, timezone
 
@@ -7,10 +8,9 @@ from base64 import standard_b64decode
 
 from collections import UserDict
 
-import logging
-logger = logging.getLogger(__name__)
-
 from .propertymembers import getfloat
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_timestamp(timestamp_string):
@@ -275,7 +275,7 @@ class defVector(SnoopEvent, UserDict):
         state = root.get("state")
         if not state:
             raise EventException("No state given in snooped defVector")
-        if not state in ('Idle','Ok','Busy','Alert'):
+        if state not in ('Idle','Ok','Busy','Alert'):
             raise EventException("Invalid state given in snooped defVector")
         self.state = state
         self.message = root.get("message", "")
@@ -427,7 +427,7 @@ class defLightVector(defVector):
                 label = member.get("label", membername)
                 self.memberlabels[membername] = label
                 value = member.text.strip()
-                if not value in ('Idle','Ok','Busy','Alert'):
+                if value not in ('Idle','Ok','Busy','Alert'):
                     raise EventException("Invalid value given in snooped defLightVector")
                 self.data[membername] = value
             else:
@@ -457,7 +457,7 @@ class defBLOBVector(SnoopEvent):
         state = root.get("state")
         if not state:
             raise EventException("No state given in snooped defBLOBVector")
-        if not state in ('Idle','Ok','Busy','Alert'):
+        if state not in ('Idle','Ok','Busy','Alert'):
             raise EventException("Invalid state given in snooped defBLOBVector")
         self.state = state
         self.message = root.get("message", "")
@@ -603,7 +603,7 @@ class setLightVector(setVector):
                 if not member.text:
                     raise EventException("Missing value in snooped oneLight")
                 value = member.text.strip()
-                if not value in ('Idle','Ok','Busy','Alert'):
+                if value not in ('Idle','Ok','Busy','Alert'):
                     raise EventException("Invalid value in snooped oneLight")
                 self.data[membername] = value
             else:
