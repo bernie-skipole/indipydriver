@@ -5,6 +5,20 @@ A property vector is set with one or more 'members'.  For example a NumberVector
 
 The vector object is a mapping to a member value, so to access a value you could use vector['membername'], which for example, given a SwitchVector would be either "On" or "Off". Note, it is not a mapping to a member object, it is a mapping to the member value.
 
+For example, to create a SwitchVector holding a set of three radio buttons:
+
+s1 = SwitchMember("opt1", label="Option1, membervalue="On")
+
+s2 = SwitchMember("opt2", label="Option2, membervalue="Off")
+
+s3 = SwitchMember("opt3", label="Option3, membervalue="Off")
+
+sv = SwitchVector("radio", label="Choose an option", group="Settings", perm="rw", rule="OneOfMany", state="Ok", switchmembers=[s1,s2,s3])
+
+The rule "OneOfMany" ensures that this is a radio set, and only one button can be turned "On".
+
+Once created sv["opt1"] will be "On".
+
 As well as the methods documented below, vectors have dict methods such as get() and iteration through keys(), values() and items().
 
 A number of attributes are common to all vectors.
@@ -20,9 +34,9 @@ Which provides a convention for property and member names.
 
 **vectortype** Is equal to self.__class__.__name__ such as "SwitchVector" etc.,
 
-**label** is a string which can be used by the client, if not given it will be set equal to the name.
+**label** is a string which can be used by the client.
 
-**group** is a further label used by the client, which can be used to group properties together. It can be left blank if not used.
+**group** is a further label used by the client, which can be used to group properties together. It can be left as an empty string if not used.
 
 **perm** is the permission - set to one of 'ro', 'wo', 'rw' - so 'ro' means the client can only read the vector values, not set them. Not applicable for the LightVector which does not have permission (being a read only value).
 
