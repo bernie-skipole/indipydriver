@@ -7,11 +7,11 @@ The vector object is a mapping to a member value, so to access a value you could
 
 For example, to create a SwitchVector holding a set of three radio buttons:
 
-s1 = SwitchMember("opt1", label="Option1, membervalue="On")
+s1 = SwitchMember("opt1", label="Option1", membervalue="On")
 
-s2 = SwitchMember("opt2", label="Option2, membervalue="Off")
+s2 = SwitchMember("opt2", label="Option2", membervalue="Off")
 
-s3 = SwitchMember("opt3", label="Option3, membervalue="Off")
+s3 = SwitchMember("opt3", label="Option3", membervalue="Off")
 
 sv = SwitchVector("radio", label="Choose an option", group="Settings", perm="rw", rule="OneOfMany", state="Ok", switchmembers=[s1,s2,s3])
 
