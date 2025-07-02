@@ -31,16 +31,6 @@ https://pypi.org/project/indipyclient
 
 This is a client library providing functions which communicate to an INDI service, and can be used to write scripts to view and control your instruments.
 
-The indipyclient can also be run using
-
-python3 -m indipyclient [options]
-
-In which case it provides a terminal client using Python standard library curses module (Linux only).
-
-A typical session would look like:
-
-.. image:: ./images/image1.png
-
 Further information about indipyclient can be found from:
 
 https://indipyclient.readthedocs.io
@@ -49,7 +39,7 @@ https://indipyclient.readthedocs.io
 indipyterm
 ^^^^^^^^^^
 
-The associated package indipyterm provides a more useful terminal client, using the 'textual' library, and is also available from Pypi.
+The associated package indipyterm provides a terminal client, using the 'textual' library, and is also available from Pypi.
 
 https://pypi.org/project/indipyterm
 
@@ -304,11 +294,7 @@ To run third party INDI drivers created with other languages or tools, the serve
 
 It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
 
-Connecting using the indipyclient terminal client gives:
-
-.. image:: ./images/led.png
-
-And using indipyterm gives:
+Connecting using the indipyterm terminal client gives:
 
 .. image:: ./images/image3.png
 

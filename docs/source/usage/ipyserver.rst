@@ -59,7 +59,3 @@ This example shows two INDI drivers available from indilib.org and both being se
     asyncio.run(server.asyncrun())
 
 For further information regarding indilib.org see :ref:`references`.
-
-Connecting using indipyclient gives:
-
-.. image:: ./images/exdrivers.png
