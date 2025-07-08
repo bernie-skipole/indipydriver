@@ -115,6 +115,7 @@ class RemoteConnection:
                 await self._writer.wait_closed()
         except Exception:
             logger.exception("Exception report from RemoteConnection._clear_connection method")
+        await self.warning(f"Connection closed on {self.indihost}:{self.indiport}")
         self._writer = None
         self._reader = None
 
@@ -241,6 +242,7 @@ class RemoteConnection:
             logger.exception("Exception report from RemoteConnection._comms method")
             raise
         finally:
+            await self._clear_connection()
             self.shutdown()
 
 
@@ -263,7 +265,7 @@ class RemoteConnection:
             if logger.isEnabledFor(logging.DEBUG):
                 self._logtx(xmldata)
         except Exception:
-            logger.exception(f"Exception report from RemoteConnection.send method for {self.indihost}:{self.indiport}")
+            logger.exception(f"Sending error from RemoteConnection.send method for {self.indihost}:{self.indiport}")
             await self._clear_connection()
 
 
