@@ -109,9 +109,12 @@ class RemoteConnection:
 
     async def _clear_connection(self):
         "Clears a connection"
-        if self._writer is not None:
-            self._writer.close()
-            await self._writer.wait_closed()
+        try:
+            if self._writer is not None:
+                self._writer.close()
+                await self._writer.wait_closed()
+        except Exception:
+            logger.exception("Exception report from RemoteConnection._clear_connection method")
         self._writer = None
         self._reader = None
 
@@ -385,8 +388,6 @@ class RemoteConnection:
                 await asyncio.sleep(0.01)
                 continue
             # data received
-            self.tx_timer = None
-            self.idle_timer = time.time()
             if b">" in data:
                 binarydata = binarydata + data
                 return binarydata
