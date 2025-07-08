@@ -401,10 +401,6 @@ class RemoteConnection:
 
     async def _rxhandler(self, xmldata):
         """Populates the events using received data"""
-        if not self.connected:
-            return
-        if self._stop:
-            return
         try:
 
             devicename = xmldata.get("device")
