@@ -11,20 +11,27 @@ This indipydriver package uses the Python standard library logging module, and e
 
 *DEBUG* Logs xml data transmitted and received.
 
-By default, the set level is WARNING, and therefore warning and error logs are sent to stdout. If you want no logs, and you want nothing to be sent to the console, then insert::
+By default, the set level is WARNING. If you want no logs, and you want nothing to be sent to the console, then at the top of your script insert::
 
     import logging
     logger = logging.getLogger()
     logger.addHandler(logging.NullHandler())
+
+Alternatively, if you want more logs to include INFO level data, printed to stdout then use::
+
+    import logging, sys
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
+    logger.addHandler(handler)
 
 
 If you would prefer to log to a file, at the top of your script include::
 
     import logging
     logger = logging.getLogger()
-
-    fh = logging.FileHandler("logfile.log")
-    logger.addHandler(fh)
+    handler = logging.FileHandler("logfile.log")
+    logger.addHandler(handler)
 
 To log the xml traffic add the further line::
 
