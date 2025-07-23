@@ -52,6 +52,16 @@ def _makestart(element):
     return "".join(attriblist)
 
 
+# This class and function is used to terminate a task group as suggested by Python documentation
+
+class TerminateTaskGroup(Exception):
+    """Exception raised to terminate a task group."""
+
+async def force_terminate_task_group():
+    """Used to force termination of a task group."""
+    raise TerminateTaskGroup()
+
+
 class IPyDriver(collections.UserDict):
 
     """A subclass of this should be created with methods written
@@ -85,6 +95,9 @@ class IPyDriver(collections.UserDict):
             self.data[devicename] = device
             # set driver into devices
             device.driver = self
+            # set driver into vectors
+            for pv in device.values():
+                pv.driver = self
 
         # self.data is used by UserDict, it will become
         # a dictionary of {devicename:device, ... }
@@ -92,17 +105,10 @@ class IPyDriver(collections.UserDict):
         # dictionary of optional data
         self.driverdata = driverdata
 
-        # traffic is transmitted out on the writerque
-        self.writerque = asyncio.Queue(4)
-        # and read in from the readerque
-        self.readerque = asyncio.Queue(4)
-        # and snoop data is passed on to the snoopque
-        self.snoopque = asyncio.Queue(4)
-        # data for each device is passed to each device dataque
 
-        # An object for communicating can be set, if not set, then
-        # self.comms = _STDINOUT() will be set in the asyncrun call
-        self.comms = None
+        # initial method of communications, if None it will default to
+        # stdin and stdout
+        self._commsobj = None
 
         # These set the remote traffic which this driver is snooping
         # initially the driver is not snooping anything, until it sends
@@ -145,8 +151,8 @@ class IPyDriver(collections.UserDict):
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
-        if self.comms is not None:
-            self.comms.shutdown()
+        if self._commsobj is not None:
+            self._commsobj.shutdown()
         for device in self.data.values():
             device.shutdown()
 
@@ -168,17 +174,11 @@ class IPyDriver(collections.UserDict):
 
     async def send(self, xmldata):
         "Transmits xmldata, this is an internal method, not normally called by a user."
-        if not self.comms.connected:
+        if self._stop:
             return
-        while not self._stop:
-            if not self.comms.connected:
-                return
-            try:
-                await asyncio.wait_for(self.writerque.put(xmldata), timeout=0.5)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
+
+        await self._commsobj.run_tx(xmldata)
+
         if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
             binarydata = ET.tostring(xmldata)
             logger.debug(f"TX:: {binarydata.decode('utf-8')}")
@@ -186,51 +186,6 @@ class IPyDriver(collections.UserDict):
 
     def __setitem__(self, devicename):
         raise KeyError
-
-    async def _read_readerque(self):
-        client_tags = ("enableBLOB", "newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
-        snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
-                      'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
-                      'defBLOBVector', 'setBLOBVector')
-        while not self._stop:
-            # reads readerque, and sends xml data to the device via its dataque
-            try:
-                root = await asyncio.wait_for(self.readerque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.readerque.task_done()
-            # log the received data
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                binarydata = ET.tostring(root)
-                logger.debug(f"RX:: {binarydata.decode('utf-8')}")
-            if root.tag == "getProperties":
-                version = root.get("version")
-                if version != "1.7":
-                    continue
-                # getProperties received with correct version
-                devicename = root.get("device")
-                # devicename is None (for all devices), or a named device
-                if devicename is None:
-                    for d in self.data.values():
-                        if d.enable:
-                            await self._queueput(d.dataque, root)
-                elif devicename in self.data:
-                    if self.data[devicename].enable:
-                        await self._queueput(self.data[devicename].dataque, root)
-                # else device not recognised
-            elif root.tag in client_tags:
-                # xml received from client
-                devicename = root.get("device")
-                if devicename is None:
-                    # device not given, ignore this
-                    continue
-                elif devicename in self.data:
-                    if self.data[devicename].enable:
-                        await self._queueput(self.data[devicename].dataque, root)
-                # else device not recognised
-            elif root.tag in snoop_tags:
-                # xml received from other devices
-                await self._queueput(self.snoopque, root)
 
 
     async def _call_snoopevent(self, event):
@@ -241,77 +196,6 @@ class IPyDriver(collections.UserDict):
             if timedata is not None:
                 timedata[1] = time.time()
         await self.snoopevent(event)
-
-
-    async def _snoophandler(self):
-        """Creates events using data from self.snoopque"""
-        while not self._stop:
-            # get block of data from the self.snoopque
-            try:
-                root = await asyncio.wait_for(self.snoopque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.snoopque.task_done()
-            devicename = root.get("device")
-            if devicename is not None:
-                # if a device name is given, check
-                # it is not in this drivers devices
-                if devicename in self.data:
-                    logger.error("Cannot snoop on a device already controlled by this driver")
-                    continue
-            try:
-                if root.tag == "message":
-                    # create event
-                    event = events.message(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "delProperty":
-                    # create event
-                    event = events.delProperty(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "defSwitchVector":
-                    # create event
-                    event = events.defSwitchVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "setSwitchVector":
-                    # create event
-                    event = events.setSwitchVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "defLightVector":
-                    # create event
-                    event = events.defLightVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "setLightVector":
-                    # create event
-                    event = events.setLightVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "defTextVector":
-                    # create event
-                    event = events.defTextVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "setTextVector":
-                    # create event
-                    event = events.setTextVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "defNumberVector":
-                    # create event
-                    event = events.defNumberVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "setNumberVector":
-                    # create event
-                    event = events.setNumberVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "defBLOBVector":
-                    # create event
-                    event = events.defBLOBVector(root)
-                    await self._call_snoopevent(event)
-                elif root.tag == "setBLOBVector":
-                    # create event
-                    event = events.setBLOBVector(root)
-                    await self._call_snoopevent(event)
-            except events.EventException:
-                # if an EventException is raised, it is because received data is malformed
-                # so log it
-                logger.exception("An exception occurred creating a snoop event")
 
 
     async def send_message(self, message="", timestamp=None):
@@ -426,18 +310,6 @@ class IPyDriver(collections.UserDict):
         pass
 
 
-    async def rxgetproperties(self, event):
-        """This is an internal method called whenever a getProperties
-           event is received from the client. It replies with a send_defVector
-           to send a property vector definition back to the client.
-           It would normally never be called by users own code.
-           If the auto_send_def attribute is False, this does not send anything,
-           and the getProperties event needs to be handled by rxevent."""
-        if self.auto_send_def:
-            await event.vector.send_defVector()
-        else:
-            await self.rxevent(event)
-
     async def asyncrun(self):
         """await this to operate the driver, which will then communicate by
            stdin and stdout.
@@ -448,30 +320,210 @@ class IPyDriver(collections.UserDict):
         logger.info(f"Driver {self.__class__.__name__} started")
         self._stop = False
 
-        # set an object for communicating, as default this is stdin and stdout
-        if self.comms is None:
-            self.comms = _STDINOUT()
-
-        # get all tasks into a list
-
-        tasks = [ self.comms(self.readerque, self.writerque),    # run communications
-                  self.hardware(),                               # task to operate device hardware, and transmit updates
-                  self._read_readerque(),                        # task to handle received xml data
-                  self._monitorsnoop(),                          # task to monitor if a getproperties needs to be sent
-                  self._snoophandler() ]                         # task to handle incoming snoop data
-
-        for device in self.data.values():
-            tasks.append(device._handler())                           # each device handles its incoming data
-            for pv in device.values():
-                tasks.append(pv._handler())                           # each property handles its incoming data
-                # also give the propertyvector a reference to this driver
-                # so it can call eventaction and have access to writerque
-                pv.driver = self
         try:
-            await asyncio.gather( *tasks )
+
+            if self._commsobj is None:
+                self._commsobj = _STDINOUT(self)
+
+            await asyncio.gather( self._commsobj.run_rx(),        # run STDIN communications
+                                  self.hardware(),                # task to operate device hardware, and transmit updates
+                                  self._monitorsnoop() )          # task to monitor if a getproperties needs to be sent
+
+
         finally:
             self.stopped.set()
             self._stop = True
+
+
+
+    async def readdata(self, root):
+        "Called from communications object with received xmldata"
+
+        client_tags = ("newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
+        snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
+                      'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
+                      'defBLOBVector', 'setBLOBVector')
+        if self._stop:
+            return
+
+        # log the received data
+        if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+            binarydata = ET.tostring(root)
+            logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+
+        if root.tag == "getProperties":
+            version = root.get("version")
+            if version != "1.7":
+                return
+            # getProperties received with correct version
+            devicename = root.get("device")
+            # if devicename is None (for all devices), send definition for every property
+            if devicename is None:
+                try:
+                    async with asyncio.TaskGroup() as tg:
+                        # all devices respond to this getProperties
+                        for dname, device in self.data.items():
+                            if not device.enable:
+                                continue
+                            for pname, pvector in device.items():
+                                if not pvector.enable:
+                                    continue
+                                if self._stop:
+                                    # add an exception-raising task to force the group to terminate
+                                    tg.create_task(force_terminate_task_group())
+                                    break
+                                if self.auto_send_def:
+                                    tg.create_task( pvector.send_defVector() )
+                                else:
+                                    # create event
+                                    e = events.getProperties(dname, pname, pvector, root)
+                                    tg.create_task( self.rxevent(e) )
+                except Exception:
+                    logger.exception("Unable to create getProperties event from received data")
+
+            # If devicename given
+            elif devicename in self.data:
+                device = self.data[devicename]
+                if not device.enable:
+                    return
+                name = root.get("name")
+                if name is None:
+                    try:
+                        async with asyncio.TaskGroup() as tg:
+                            # to all vectors of the device
+                            for pname, pvector in device.items():
+                                if not pvector.enable:
+                                    continue
+                                if self._stop:
+                                    # add an exception-raising task to force the group to terminate
+                                    tg.create_task(force_terminate_task_group())
+                                    break
+                                if self.auto_send_def:
+                                    tg.create_task( pvector.send_defVector() )
+                                else:
+                                    # create event
+                                    e = events.getProperties(devicename, pname, pvector, root)
+                                    tg.create_task( self.rxevent(e) )
+                    except Exception:
+                        logger.exception("Unable to create getProperties event from received data")
+                else:
+                    pvector = device.get(name)
+                    if pvector is None:
+                        # name not recognised in this device
+                        return
+                    if not pvector.enable:
+                        return
+                    try:
+                        if self.auto_send_def:
+                            await pvector.send_defVector()
+                        else:
+                            # create event
+                            e = events.getProperties(devicename, name, pvector, root)
+                            await self.rxevent(e)
+                    except Exception:
+                        logger.exception("Unable to create getProperties event from received data")
+            # else device not recognised, so ignore
+
+        elif root.tag in client_tags:
+            devicename = root.get("device")
+            if devicename is None:
+                # device not given, invalid, ignore this
+                return
+            elif devicename in self.data:
+                if not self.data[devicename].enable:
+                    return
+                name = root.get("name")
+                if name is None:
+                    # vector name not given, invalid, ignore this
+                    return
+                else:
+                    pvector = self.data[devicename].get(name)
+                    if pvector is None:
+                        # name not recognised in this device
+                        return
+                    await pvector.vector_handler(root)
+
+        elif root.tag in snoop_tags:
+            # xml received from other devices
+            # either devicename is unknown, or this data is to/from another driver.
+            # So check if this driver is snooping on this device/vector
+            # only forward def's and set's, not 'new' vectors which
+            # do not come from a device, but only from a client to the target device.
+            devicename = root.get("device")
+            name = root.get("name")
+            if self.snoopall:
+                await self._snoophandler(root)
+            elif devicename and (devicename in self.snoopdevices):
+                self._snoophandler(root)
+            elif devicename and name and ((devicename, name) in self.snoopvectors):
+                self._snoophandler(root)
+
+
+    async def _snoophandler(self, root):
+        """Creates snoop events using data from self.readdata"""
+        if self._stop:
+            return
+        devicename = root.get("device")
+        if devicename is not None:
+            # if a device name is given, check
+            # it is not in this drivers devices
+            if devicename in self.data:
+                logger.error("Cannot snoop on a device already controlled by this driver")
+                return
+        try:
+            if root.tag == "message":
+                # create event
+                event = events.message(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "delProperty":
+                # create event
+                event = events.delProperty(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "defSwitchVector":
+                # create event
+                event = events.defSwitchVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "setSwitchVector":
+                # create event
+                event = events.setSwitchVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "defLightVector":
+                # create event
+                event = events.defLightVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "setLightVector":
+                # create event
+                event = events.setLightVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "defTextVector":
+                # create event
+                event = events.defTextVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "setTextVector":
+                # create event
+                event = events.setTextVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "defNumberVector":
+                # create event
+                event = events.defNumberVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "setNumberVector":
+                # create event
+                event = events.setNumberVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "defBLOBVector":
+                # create event
+                event = events.defBLOBVector(root)
+                await self._call_snoopevent(event)
+            elif root.tag == "setBLOBVector":
+                # create event
+                event = events.setBLOBVector(root)
+                await self._call_snoopevent(event)
+        except events.EventException:
+            # if an EventException is raised, it is because received data is malformed
+            # so log it
+            logger.exception("An exception occurred creating a snoop event")
+
 
 
 class Device(collections.UserDict):
@@ -498,15 +550,15 @@ class Device(collections.UserDict):
         self.enable = True
 
         # the driver places data in this que to send data to this device
-        self.dataque = asyncio.Queue(4)
+        # self.dataque = asyncio.Queue(4)
 
         # Every property of this device has a dataque, which is set into this dictionary
-        self.propertyquedict = {p.name:p.dataque for p in properties}
+        # self.propertyquedict = {p.name:p.dataque for p in properties}
 
         # dictionary of optional data
         self.devicedata = devicedata
 
-        # this will be set when the driver asyncrun is run
+        # this will be set when the driver is created
         self.driver = None
 
         # self.data is a dictionary of name to vector this device owns
@@ -563,6 +615,7 @@ class Device(collections.UserDict):
             xmldata.set("message", message)
         await self.driver.send(xmldata)
 
+
     async def send_delProperty(self, message="", timestamp=None):
         """Sending delProperty with this device method, (as opposed to the vector send_delProperty method)
            informs the client this device is not available, it also sets a device.enable attribute to
@@ -611,155 +664,87 @@ class Device(collections.UserDict):
     def __setitem__(self, vectorname):
         raise KeyError
 
-    async def _handler(self):
-        """Handles data read from dataque"""
-        while not self._stop:
-            # get block of data from the self.dataque
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            if not self.enable:
-                continue
-            if root.tag == "getProperties":
-                name = root.get("name")
-                # name is None (for all properties), or a named property
-                if name is None:
-                    for pvector in self.data.values():
-                        if pvector.enable:
-                            await self._queueput(pvector.dataque, root)
-                elif name in self.data:
-                    if self.data[name].enable:
-                        await self._queueput(self.data[name].dataque, root)
-                else:
-                    # property name not recognised
-                    continue
-            elif root.tag == "enableBLOB":
-                name = root.get("name")
-                # name is None (for all properties), or a named property
-                if name is None:
-                    for pvector in self.data.values():
-                        if pvector.enable:
-                            await self._queueput(pvector.dataque, root)
-                elif name in self.data:
-                    if self.data[name].enable:
-                        await self._queueput(self.data[name].dataque, root)
-                else:
-                    # property name not recognised
-                    continue
-            else:
-                # root.tag will be one of
-                # newSwitchVector, newNumberVector, newTextVector, newBLOBVector
-                name = root.get("name")
-                if name is None:
-                    # name not given, ignore this
-                    continue
-                elif name in self.data:
-                    pvector = self.data[name]
-                    if pvector.perm != "ro" and pvector.enable:
-                        # all ok, add to the vector dataque
-                        await self._queueput(pvector.dataque, root)
 
 
-class _STDOUT_TX:
-    "An object that transmits data on stdout, used by _STDINOUT as one half of the communications path"
+class _STDINOUT():
+    """This class is used to implement communications via stdin and stdout"""
 
-    def __init__(self):
-        self._stop = False       # Gets set to True to stop communications
-
-    def shutdown(self):
-        self._stop = True
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop the driver"
-        return self._stop
-
-
-    async def run_tx(self, writerque):
-        """Gets data from writerque, and transmits it out on stdout"""
-        while not self._stop:
-            await asyncio.sleep(0)
-            # get block of data from writerque and transmit down stdout
-            try:
-                txdata = await asyncio.wait_for(writerque.get(), 0.5)
-            except asyncio.TimeoutError:
-                # test self._stop again
-                continue
-            writerque.task_done()
-            if txdata is None:
-                await asyncio.sleep(0.02)
-                continue
-            if (txdata.tag == "setBLOBVector") and len(txdata):
-                # txdata is a setBLOBVector containing blobs
-                # send initial setBLOBVector
-                startdata = _makestart(txdata)
-                sys.stdout.buffer.write(startdata.encode())
-                sys.stdout.buffer.flush()
-                for oneblob in txdata.iter('oneBLOB'):
-                    bytescontent = oneblob.text.encode()
-                    # send start of oneblob
-                    startoneblob = _makestart(oneblob)
-                    sys.stdout.buffer.write(startoneblob.encode())
-                    sys.stdout.buffer.flush()
-                    # send content in chunks
-                    chunksize = 1000
-                    for b in range(0, len(bytescontent), chunksize):
-                        byteschunk = bytescontent[b:b+chunksize]
-                        sys.stdout.buffer.write(byteschunk)
-                        sys.stdout.buffer.flush()
-                        await asyncio.sleep(0)
-                    sys.stdout.buffer.write(b"</oneBLOB>")
-                    sys.stdout.buffer.flush()
-                # send enddata
-                sys.stdout.buffer.write(b"</setBLOBVector>\n")
-                sys.stdout.buffer.flush()
-            else:
-                # its straight xml, send it out on stdout
-                binarydata = ET.tostring(txdata)
-                binarydata += b"\n"
-                sys.stdout.buffer.write(binarydata)
-                sys.stdout.buffer.flush()
-
-
-class _STDIN_RX:
-    """An object that receives data on stdin, parses it to ElementTree elements
-       and passes it to the driver by appending it to the driver's readerque"""
-
-    def __init__(self):
+    def __init__(self, driver):
+        self.driver = driver
+        self.connected = True
         self._remainder = b""    # Used to store intermediate data
         self._stop = False       # Gets set to True to stop communications
 
-    def shutdown(self):
-        self._stop = True
 
     @property
     def stop(self):
         "returns self._stop, being the instruction to stop the driver"
         return self._stop
 
-    async def run_rx(self, readerque):
-        "pass data to readerque"
+    def shutdown(self):
+        self._stop = True
+
+    async def run_rx(self):
+        """Called from indipydriver to get received data
+           this runs continuosly, checking received data"""
+        # Set stdin to non-blocking mode
+        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
+        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        logger.info("Communicating via STDIN/STDOUT")
+
+        # this runs until self._stop becomes True
+        # passes incoming data to the driver
         try:
             # get block of xml.etree.ElementTree data
-            # from self._xmlinput and append it to readerque
+            # from self._xmlinput and send it to the driver
             while not self._stop:
                 rxdata = await self._xmlinput()
                 if rxdata is None:
                     return
-                # append it to readerque
-                while not self._stop:
-                    try:
-                        await asyncio.wait_for(readerque.put(rxdata), timeout=0.5)
-                    except asyncio.TimeoutError:
-                        # queue is full, continue while loop, checking stop flag
-                        continue
-                    # rxdata is now in readerque, break the inner while loop
-                    break
+                await self.driver.readdata(rxdata)
         except Exception:
-            logger.exception("Exception report from _STDIN_RX.run_rx")
+            logger.exception("Exception report from _STDINOUT.run_rx")
             raise
+
+
+    async def run_tx(self, txdata):
+        """Gets data to be transmitted, and transmits it out on stdout"""
+        if self._stop:
+            return
+
+        if (txdata.tag == "setBLOBVector") and len(txdata):
+            # txdata is a setBLOBVector containing blobs
+            # send initial setBLOBVector
+            startdata = _makestart(txdata)
+            sys.stdout.buffer.write(startdata.encode())
+            sys.stdout.buffer.flush()
+            for oneblob in txdata.iter('oneBLOB'):
+                bytescontent = oneblob.text.encode()
+                # send start of oneblob
+                startoneblob = _makestart(oneblob)
+                sys.stdout.buffer.write(startoneblob.encode())
+                sys.stdout.buffer.flush()
+                # send content in chunks
+                chunksize = 1000
+                for b in range(0, len(bytescontent), chunksize):
+                    byteschunk = bytescontent[b:b+chunksize]
+                    sys.stdout.buffer.write(byteschunk)
+                    sys.stdout.buffer.flush()
+                    await asyncio.sleep(0)
+                sys.stdout.buffer.write(b"</oneBLOB>")
+                sys.stdout.buffer.flush()
+            # send enddata
+            sys.stdout.buffer.write(b"</setBLOBVector>\n")
+            sys.stdout.buffer.flush()
+        else:
+            # its straight xml, send it out on stdout
+            binarydata = ET.tostring(txdata)
+            binarydata += b"\n"
+            sys.stdout.buffer.write(binarydata)
+            sys.stdout.buffer.flush()
+
+
 
     async def _xmlinput(self):
         """get data from  _datainput, parse it, and return it as xml.etree.ElementTree object
@@ -848,38 +833,3 @@ class _STDIN_RX:
                 binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
                 binarydata += b">"
                 return binarydata
-
-
-
-class _STDINOUT():
-    """If indipydriver.comms is set to an instance of this class it is
-       used to implement communications via stdin and stdout"""
-
-    def __init__(self):
-        self.connected = True
-        self.rx = _STDIN_RX()
-        self.tx = _STDOUT_TX()
-        self._stop = False       # Gets set to True to stop communications
-
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop the driver"
-        return self._stop
-
-    def shutdown(self):
-        self._stop = True
-        self.rx.shutdown()
-        self.tx.shutdown()
-
-    async def __call__(self, readerque, writerque):
-        "Called from indipydriver.asyncrun() to run the communications"
-        # Set stdin to non-blocking mode
-        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
-        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        logger.info("Communicating via STDIN/STDOUT")
-
-        await asyncio.gather(self.rx.run_rx(readerque),
-                             self.tx.run_tx(writerque)
-                             )

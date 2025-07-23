@@ -50,17 +50,13 @@ class ExDriver:
     def __init__(self, program, *args, debug_enable=False):
         "Executes a third party indi driver, communicates by stdin stdout"
 
-        # traffic is transmitted out from the driver on the writerque
-        self.writerque = asyncio.Queue(4)
-        # and read in from the readerque
-        self.readerque = asyncio.Queue(4)
         self.program = program
         self.args = args
         self.debug_enable = debug_enable
         self.proc = None
 
-        # An object for communicating can be set
-        self.comms = None
+        # An object for communicating is set when this driver is added to the server
+        self._commsobj = None
 
         # This dictionary will be populated with devicename:{vectorname:vector}
         # where vector is an ExVector object

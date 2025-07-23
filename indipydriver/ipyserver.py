@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
 
-from .ipydriver import IPyDriver
+from .ipydriver import IPyDriver, TerminateTaskGroup, force_terminate_task_group
 
 from .remote import RemoteConnection
 
@@ -100,10 +100,12 @@ class IPyServer:
         self.host = host
         self.port = port
 
-        # traffic is transmitted out on the serverwriterque
-        self.serverwriterque = asyncio.Queue(6)
-        # and read in from the serverreaderque
-        self.serverreaderque = asyncio.Queue(6)
+        # all data is sent on one que with format (con_id, xmldata)
+        # con_id is used to stop a transmitter receiving its own transmitted data
+
+        self.xml_data_que = asyncio.Queue(50)
+
+        self.con_id = 0
 
         # If True, xmldata will be logged at DEBUG level
         self.debug_enable = True
@@ -126,17 +128,17 @@ class IPyServer:
         for driver in self.drivers:
             if not isinstance(driver, IPyDriver):
                 raise TypeError("The drivers set in IPyServer must all be IPyDrivers")
-            if driver.comms is not None:
-                 raise RuntimeError("A driver communications method has already been set, there can only be one")
             for devicename in driver:
                 if devicename in self.devices:
                     # duplicate devicename
                     raise ValueError(f"Device name {devicename} is duplicated in the attached drivers.")
             self.devices.update(driver.data)
 
+
         self.connectionpool = []
-        for connection_id in range(0, maxconnections):
-            self.connectionpool.append(_ClientConnection(connection_id, self.serverreaderque))
+        for c in range(0, maxconnections):
+            self.con_id += 1
+            self.connectionpool.append(_ClientConnection(self.con_id, self.xml_data_que))
 
         # This alldrivers list will have exdrivers added to it, so the list
         # here is initially a copy of self.drivers
@@ -144,14 +146,8 @@ class IPyServer:
 
         for driver in self.drivers:
             # an instance of _DriverComms is created for each driver
-            # each _DriverComms object has lists of drivers and remotes
-            # these will be used to send snooping traffic
-
-            driver.comms = _DriverComms(driver,
-                                        self.serverwriterque,
-                                        self.connectionpool,
-                                        self.alldrivers,
-                                        self.remotes)
+            self.con_id += 1
+            driver._commsobj = _DriverComms(driver, self.con_id, self.xml_data_que)
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
         # this is set when asyncrun is finished
@@ -179,6 +175,8 @@ class IPyServer:
             clientconnection.shutdown()
         if self.server is not None:
             self.server.close()
+        self.stopped.set()
+
 
     async def _queueput(self, queue, value, timeout=0.5):
         while not self._stop:
@@ -225,11 +223,8 @@ class IPyServer:
         # add this exdriver to alldrivers
         self.alldrivers.append(exd)
         # Create a DriverComms object
-        exd.comms = _DriverComms(exd,
-                                 self.serverwriterque,
-                                 self.connectionpool,
-                                 self.alldrivers,
-                                 self.remotes)
+        self.con_id += 1
+        exd._commsobj = _DriverComms(exd, self.con_id, self.xml_data_que)
         # store this object
         self.exdrivers.append(exd)
 
@@ -245,58 +240,80 @@ class IPyServer:
         finally:
             self.shutdown()
 
+
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
 
-        for clientconnection in self.connectionpool:
-            if not clientconnection.connected:
-                # this clientconnection is available
-                await clientconnection.handle_data(reader, writer)
-                break
-        else:
-            # no clientconnection is available
+        try:
+            for clientconnection in self.connectionpool:
+                if not clientconnection.connected:
+                    # this clientconnection is available
+                    await clientconnection.handle_data(reader, writer)
+                    break
+        except Exception:
+            # Call has dropped
+            logger.info("Call dropped")
+        try:
+            # call dropped or no clientconnection is available
             writer.close()
             await writer.wait_closed()
+        except BrokenPipeError:
+            # avoid broken pipe error being displayed
+            pass
 
 
     async def asyncrun(self):
         """await this to operate the server together with its
            drivers and any remote connections."""
 
-        # Note this gather has return_exceptions=True, so exceptions do not stop or cancel
-        # other tasks from running, or stop the running loop.
-        # This requires each coroutine in this gather to call shutdown on the server if any exception
-        # occurs in the coroutine
-
         self._stop = False
-        driverruns = [ self._runners(driver) for driver in self.drivers ]
-        remoteruns = [ self._runners(remoteconnection) for remoteconnection in self.remotes ]
-        externalruns = [ self._runners(exd) for exd in self.exdrivers ]
-        try:
-            await asyncio.gather(*driverruns,
-                                 *remoteruns,
-                                 *externalruns,
-                                 self._runserver(),
-                                 self._copyfromserver(),
-                                 self._sendtoclient(),
-                                 return_exceptions=True
-                                 )
-        finally:
-            self.stopped.set()
-            self._stop = True
 
-
-    async def _runners(self, itemtorun):
-        """Used by above to run drivers, remotes and externals
-           If any shuts down, then calls shutdown the server"""
         try:
-            await itemtorun.asyncrun()
+            async with asyncio.TaskGroup() as tg:
+                for driver in self.drivers:
+                    tg.create_task( driver.asyncrun() )
+                ######### further ones here, remotes and ex drivers
+                tg.create_task( self._runserver() )
+                tg.create_task( self._broadcast() )
+        except Exception:
+            pass
         finally:
             self.shutdown()
 
 
+    async def _broadcast(self):
+        "Get items from the que, and broadcast to drivers"
+        try:
+            while not self._stop:
+                try:
+                    quedata = await asyncio.wait_for(self.xml_data_que.get(), 0.5)
+                except asyncio.TimeoutError:
+                    continue
+                self.xml_data_que.task_done()
+                con_id, xmldata = quedata
+                async with asyncio.TaskGroup() as tg:
+                    if self._stop:
+                        # add an exception-raising task to force the group to terminate
+                        tg.create_task(force_terminate_task_group())
+                        break
+                    for driver in self.drivers:
+                        # send data to the drivers
+                        tg.create_task( driver._commsobj._driver_rx(con_id, xmldata) )
+                    for clientconnection in self.connectionpool:
+                        # send data out to clients
+                        tg.create_task( clientconnection._client_tx(con_id, xmldata) )
+                   ##################################################################remotes and ex drivers to do
+        finally:
+            self.shutdown()
+
+
+
+
     async def _copyfromserver(self):
-        """Gets data from serverreaderque.
+        """
+           OBSOLETE
+
+           Gets data from serverreaderque.
            For every driver, copy data, if applicable, to driver.readerque
            And for every remote connection if applicable, to its send method"""
         try:
@@ -390,31 +407,6 @@ class IPyServer:
         finally:
             self.shutdown()
 
-    async def _sendtoclient(self):
-        "For every clientconnection, get txque and copy data into it from serverwriterque"
-        try:
-            while not self._stop:
-                try:
-                    xmldata = await asyncio.wait_for(self.serverwriterque.get(), 0.5)
-                except asyncio.TimeoutError:
-                    continue
-                self.serverwriterque.task_done()
-                #  This xmldata of None is an indication to shut the server down
-                #  It is set to None when a duplicate devicename is discovered
-                if xmldata is None:
-                    logger.error("A duplicate devicename has caused a server shutdown")
-                    return
-                if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                    binarydata = ET.tostring(xmldata)
-                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-                for clientconnection in self.connectionpool:
-                    if clientconnection.connected:
-                        await self._queueput(clientconnection.txque, xmldata)
-                # The while loop continues
-        finally:
-            self.shutdown()
-
-
 
     async def send_message(self, message, timestamp=None):
         """Send system wide message, timestamp should normally not be set, if
@@ -436,146 +428,49 @@ class IPyServer:
         xmldata = ET.Element('message')
         xmldata.set("timestamp", timestamp.isoformat(sep='T'))
         xmldata.set("message", message)
-        for clientconnection in self.connectionpool:
-            if clientconnection.connected:
-                # at least one is connected, so this data is put into
-                # serverwriterque, and is then sent to each client by
-                # the _sendtoclient method.
-                await self._queueput(self.serverwriterque, xmldata)
-                break
-
-        for remcon in self.remotes:
-            if not remcon.connected:
-                continue
-            await remcon.send(xmldata)
+        # send with a con_id of zero, so it is sent everywhere
+        await self.xml_data_que.put( (0, xmldata) )
 
 
 class _DriverComms:
 
-    """An instance of this is created for each driver, which calls the __call__
-       method.  Any data the driver wishes to be send will be taken
-       from the drivers writerque and transmitted to the client by placing it
-       into the serverwriterque"""
+    """An instance of this is created for each driver.  Any data the driver
+       wishes to send will be transmitted via run_tx
+       Any data received on self.xml_data_que will be sent to the
+       driver by calling its driver.receivedata method"""
 
-    def __init__(self, driver, serverwriterque, connectionpool, alldrivers, remotes):
+    def __init__(self, driver, con_id, xml_data_que):
 
         # This object is attached to this driver
         self.driver = driver
-        self.serverwriterque = serverwriterque
-        # connectionpool is a list of ClientConnection objects, which is used
-        # to test if a client is connected
-        self.connectionpool = connectionpool
-        # self.connected is read by the driver, and in this case is always True
-        # as the driver is connected to IPyServer, which handles snooping traffic,
-        # even if no client is connected
-        self.connected = True
-        # self.alldrivers is set to a list of drivers, including exdrivers
-        self.alldrivers = alldrivers
-        # self.remotes is a list of connections to remote servers
-        self.remotes = remotes
-        self._stop = False       # Gets set to True to stop communications
+        self.con_id = con_id
+        self.xml_data_que = xml_data_que
 
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop the driver"
-        return self._stop
 
     def shutdown(self):
-        "Sets self.stop to True and calls shutdown on tasks"
-        self._stop = True
-
-    async def _queueput(self, queue, value, timeout=0.5):
-        while not self._stop:
-            try:
-                await asyncio.wait_for(queue.put(value), timeout)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
-
-    async def __call__(self, readerque, writerque):
-        """Called by the driver, should run continuously.
-           reads writerque from the driver, and sends xml data to the network"""
-        while not self._stop:
-            try:
-                xmldata = await asyncio.wait_for(writerque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            writerque.task_done()
-            # Check if other drivers/remotes wants to snoop this traffic
-            devicename = xmldata.get("device")
-            propertyname = xmldata.get("name")
-
-            if xmldata.tag in NEWTAGS:
-                # drivers should never transmit a new
-                # but just in case
-                logger.error(f"Driver transmitted invalid tag {xmldata.tag}")
-                continue
-
-            if xmldata.tag.startswith("def"):
-                # check for duplicate devicename
-                for driver in self.alldrivers:
-                    if driver is self.driver:
-                        continue
-                    if devicename in driver:
-                        logger.error(f"A duplicate devicename {devicename} has been detected")
-                        await self._queueput(self.serverwriterque, None)
-                        return
-                for remote in self.remotes:
-                    if devicename in remote.devicenames:
-                        logger.error(f"A duplicate devicename {devicename} has been detected")
-                        await self._queueput(self.serverwriterque, None)
-                        return
+        "Called by driver on shutdown, used by _STDINOUT but not relevant here"
+        pass
 
 
-            # check for a getProperties
-            if xmldata.tag == "getProperties":
-                foundflag = False
-                # if getproperties is targetted at a known device, send it to that device
-                if devicename:
-                    for driver in self.alldrivers:
-                        if driver is self.driver:
-                            # No need to check sending a getProperties to itself
-                            continue
-                        if devicename in driver:
-                            # this getProperties request is meant for an attached driver/device
-                            await self._queueput(driver.readerque, xmldata)
-                            foundflag = True
-                            break
-                    if foundflag:
-                        # no need to transmit this anywhere else, continue the while loop
-                        continue
+    async def run_rx(self):
+        "Called by driver on running, used by _STDINOUT but not relevant here"
+        pass
 
 
-            # transmit xmldata out to other drivers
-            for driver in self.alldrivers:
-                if driver is self.driver:
-                    continue
-                if xmldata.tag == "getProperties":
-                    # either no devicename, or an unknown device
-                    await self._queueput(driver.readerque, xmldata)
-                else:
-                    # Check if this driver is snooping on this device/vector
-                    if driver.snoopall:
-                        await self._queueput(driver.readerque, xmldata)
-                    elif devicename and (devicename in driver.snoopdevices):
-                        await self._queueput(driver.readerque, xmldata)
-                    elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                        await self._queueput(driver.readerque, xmldata)
+    async def _driver_rx(self, con_id, xmldata):
+        "Gets data from xml_data_que, and sends it to the driver"
+        if self.con_id == con_id:
+            # do not rx data this driver is transmitting
+            return
+        # call the drivers receive data function
+        await self.driver.readdata(xmldata)
 
 
-            for remcon in self.remotes:
-                if not remcon.connected:
-                    continue
-                # send to all remotes
-                await remcon.send(xmldata)
-
-            for clientconnection in self.connectionpool:
-                if clientconnection.connected:
-                    # at least one is connected, so this data is put into
-                    # serverwriterque, and is then sent to each client
-                    await self._queueput(self.serverwriterque, xmldata)
-                    break
+    async def run_tx(self, xmldata):
+        """Called by the driver"""
+        # check for duplicate devicename ###########################
+        # and any other validator ##################################
+        await self.xml_data_que.put( (self.con_id, xmldata) )
 
 
 
@@ -584,154 +479,87 @@ class _ClientConnection:
 
     "Handles a client connection"
 
-    def __init__(self, connection_id, serverreaderque):
+    def __init__(self, con_id, xml_data_que):
 
         # number identifying this connection
-        self.connection_id = connection_id
+        self.con_id = con_id
 
-        # self.txque will have data to be transmitted
-        # inserted into it from the IPyServer._sendtoclient()
-        # method
-        self.txque = asyncio.Queue(6)
+        self.xml_data_que = xml_data_que
 
-        self.serverreaderque = serverreaderque
         # self.connected is True if this pool object is running a connection
         self.connected = False
+        self._remainder = b""    # Used to store intermediate data
+        self.sendchecker = None
 
         self.rx = None
-        self.tx = None
 
-        self._stop = False       # Gets set to True to stop communications
-
-    @property
-    def stop(self):
-        "returns self._stop"
-        return self._stop
 
     def shutdown(self):
-        "Sets self.stop to True and calls shutdown on tasks"
-        self._stop = True
+        "Shuts down the connection"
         self.connected = False
-        if self.rx is not None:
-            self.rx.shutdown()
-        if self.tx is not None:
-            self.tx.shutdown()
 
     async def handle_data(self, reader, writer):
         "Used by asyncio.start_server, called to handle a client connection"
         self.connected = True
-        sendchecker = SendChecker()
+        self._remainder = b""    # Used to store intermediate data
+        self.writer = writer
+        self.reader = reader
+        self.sendchecker = SendChecker()
         addr = writer.get_extra_info('peername')
-        self.rx = Conn_RX(self.connection_id, sendchecker, reader)
-        self.tx = Conn_TX(sendchecker, writer)
-        logger.info(f"Connection received from {addr}")
+        logger.info(f"Connection received from {addr} on connection {self.con_id}")
         try:
-            txtask = asyncio.create_task(self.tx.run_tx(self.txque))
-            rxtask = asyncio.create_task(self.rx.run_rx(self.serverreaderque))
-            await asyncio.gather(txtask, rxtask)
+            await self._client_rx()
         except ConnectionError:
             pass
         finally:
-            self.connected = False
-            txtask.cancel()
-            rxtask.cancel()
-        cleanque(self.txque)
+            self.shutdown()
         logger.info(f"Connection from {addr} closed")
-        while True:
-            if txtask.done() and rxtask.done():
-                break
-            await asyncio.sleep(1)
 
 
-
-class Conn_TX():
-    "An object that transmits data on a port"
-
-    def __init__(self, sendchecker, writer):
-        self.sendchecker = sendchecker
-        self.writer = writer
-        self._stop = False       # Gets set to True to stop communications
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop"
-        return self._stop
-
-    def shutdown(self):
-        self._stop = True
-
-    async def run_tx(self, writerque):
-        """Gets data from writerque, and transmits it out on the port writer"""
-        while not self._stop:
-            await asyncio.sleep(0)
-            # get block of data from writerque and transmit
-            try:
-                txdata = await asyncio.wait_for(writerque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            writerque.task_done()
-            if txdata is None:
-                continue
-            if not self.sendchecker.allowed(txdata):
-                # this data should not be transmitted, discard it
-                continue
+    async def _client_tx(self, con_id, xmldata):
+        "Sends data from port to client"
+        if self.con_id == con_id:
+            # do not tx data this driver is receiving
+            return
+        if not self.connected:
+            return
+        if not self.sendchecker.allowed(xmldata):
+            # this data should not be transmitted, discard it
+            return
+        try:
             # this data can be transmitted
-            binarydata = ET.tostring(txdata)
+            binarydata = ET.tostring(xmldata)
             # Send to the port
             self.writer.write(binarydata)
             await self.writer.drain()
-        self.writer.close()
-        await self.writer.wait_closed()
+        except ConnectionError:
+            self.shutdown()
 
 
 
+    async def _client_rx(self):
+        "Receives data coming in to port from client"
 
-class Conn_RX():
-    """Produces xml.etree.ElementTree data from data received on the port"""
-
-    def __init__(self, connection_id, sendchecker, reader):
-        self._remainder = b""    # Used to store intermediate data
-        self._stop = False       # Gets set to True to stop communications
-        self.sendchecker = sendchecker
-        self.reader = reader
-        self.connection_id = connection_id
-
-    def shutdown(self):
-        self._stop = True
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop"
-        return self._stop
-
-    async def run_rx(self, serverreaderque):
-        "pass xml.etree.ElementTree data to serverreaderque"
+        #pass xml.etree.ElementTree data to xml_data_que
         try:
             # get block of xml.etree.ElementTree data
-            # from self._xmlinput and append it to  serverreaderque together with connection_id
-            while not self._stop:
-                rxdata = await self._xmlinput()
-                if rxdata is None:
+            # from self._xmlinput and send it to xml_data_que together with connection_id
+            while self.connected:
+                xmldata = await self._xmlinput()
+                if xmldata is None:
                     return
-                if rxdata.tag == "enableBLOB":
+                if xmldata.tag == "enableBLOB":
                     # set permission flags in the sendchecker object
-                    self.sendchecker.setpermissions(rxdata)
-                # and place rxdata into serverreaderque
-                while not self._stop:
-                    try:
-                        await asyncio.wait_for(serverreaderque.put((self.connection_id, rxdata)), timeout=0.5)
-                    except asyncio.TimeoutError:
-                        # queue is full, continue while loop, checking stop flag
-                        continue
-                    # rxdata is now in serverreaderque, break the inner while loop
-                    break
+                    self.sendchecker.setpermissions(xmldata)
+                    continue
+                await self.xml_data_que.put( (self.con_id, xmldata) )
         except ConnectionError:
             # re-raise this without creating a report, as it probably indicates
             # a normal connection drop
             raise
         except Exception:
             # possibly some other error, so report it
-            logger.exception("Exception report from Conn_RX.run_rx")
+            logger.exception("Exception report from _ClientConnection._client_rx")
             raise
 
 
@@ -740,13 +568,13 @@ class Conn_RX():
            Returns None if stop flags arises"""
         message = b''
         messagetagnumber = None
-        while not self._stop:
+        while self.connected:
             await asyncio.sleep(0)
             data = await self._datainput()
             # data is either None, or binary data ending in b">"
             if data is None:
                 return
-            if self._stop:
+            if not self.connected:
                 return
             if not message:
                 # data is expected to start with <tag, first strip any newlines
@@ -803,7 +631,7 @@ class Conn_RX():
         """Waits for binary string of data ending in > from the port
            Returns None if stop flags arises"""
         binarydata = b""
-        while not self._stop:
+        while self.connected:
             await asyncio.sleep(0)
             try:
                 data = await self.reader.readuntil(separator=b'>')

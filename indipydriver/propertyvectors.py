@@ -48,18 +48,17 @@ class PropertyVector(collections.UserDict):
         # if self.enable is False, this property ignores incoming traffic
         # and (apart from delProperty) does not transmit anything
         self.enable = True
-        # the device places data in this dataque
-        # for the vector to act upon
-        self.dataque = asyncio.Queue(4)
+
 
         # this will be set when the device is initialised
         self.devicename = None
 
-        # this will be set when the driver asyncrun is run
+        # this will be set when the driver is created
         self.driver = None
 
        # shutdown routine sets this to True to stop coroutines
         self._stop = False
+
 
     def shutdown(self):
         """Sets the flag self._stop to True which shuts down the handler"""
@@ -208,26 +207,19 @@ class SwitchVector(PropertyVector):
         except ValueError:
             logger.exception("Invalid rule value")
 
-    async def _handler(self):
-        """Check received data and take action"""
-        while not self._stop:
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            try:
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxgetproperties(event)
-                elif root.tag == "newSwitchVector":
-                    # create event
-                    event = newSwitchVector(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                logger.exception("Unable to create event from received data")
+
+    async def vector_handler(self, root):
+        if self._stop:
+            return
+        if not self.enable:
+            return
+        try:
+            if root.tag == "newSwitchVector":
+                # create event
+                event = newSwitchVector(self.devicename, self.name, self, root)
+                await self.driver.rxevent(event)
+        except EventException:
+            logger.exception("Unable to create event from received data")
 
 
 
@@ -401,23 +393,10 @@ class LightVector(PropertyVector):
                 raise TypeError("Members of a LightVector must all be LightMembers")
             self.data[light.name] = light
 
-    async def _handler(self):
-        """Check received data and take action"""
-        while not self._stop:
-            # test if any xml data has been received
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            try:
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxgetproperties(event)
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                logger.exception("Unable to create event from received data")
+
+    async def vector_handler(self, root):
+        "Read Only - does not accept a new value"
+        pass
 
 
     @property
@@ -571,26 +550,19 @@ class TextVector(PropertyVector):
         except ValueError:
             logger.exception("Invalid permission value")
 
-    async def _handler(self):
-        """Check received data and take action"""
-        while not self._stop:
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            try:
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxgetproperties(event)
-                elif root.tag == "newTextVector":
-                    # create event
-                    event = newTextVector(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                logger.exception("Unable to create event from received data")
+
+    async def vector_handler(self, root):
+        if self._stop:
+            return
+        if not self.enable:
+            return
+        try:
+            if root.tag == "newTextVector":
+                # create event
+                event = newTextVector(self.devicename, self.name, self, root)
+                await self.driver.rxevent(event)
+        except EventException:
+            logger.exception("Unable to create event from received data")
 
 
     def _make_defVector(self, message='', timestamp=None):
@@ -772,27 +744,18 @@ class NumberVector(PropertyVector):
         return member.getformattedvalue()
 
 
-
-    async def _handler(self):
-        """Check received data and take action"""
-        while not self._stop:
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            try:
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxgetproperties(event)
-                elif root.tag == "newNumberVector":
-                    # create event
-                    event = newNumberVector(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                logger.exception("Unable to create event from received data")
+    async def vector_handler(self, root):
+        if self._stop:
+            return
+        if not self.enable:
+            return
+        try:
+            if root.tag == "newNumberVector":
+                # create event
+                event = newNumberVector(self.devicename, self.name, self, root)
+                await self.driver.rxevent(event)
+        except EventException:
+            logger.exception("Unable to create event from received data")
 
 
     def _make_defVector(self, message='', timestamp=None):
@@ -973,30 +936,20 @@ class BLOBVector(PropertyVector):
         except ValueError:
             logger.exception("Invalid permission value")
 
-    async def _handler(self):
-        """Check received data and take action"""
-        while not self._stop:
-            try:
-                root = await asyncio.wait_for(self.dataque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.dataque.task_done()
-            try:
-                if root.tag == "getProperties":
-                    # create event
-                    event = getProperties(self.devicename, self.name, self, root)
-                    await self.driver.rxgetproperties(event)
-                elif root.tag == "enableBLOB":
-                    # create event
-                    event = enableBLOB(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
-                elif root.tag == "newBLOBVector":
-                    # create event
-                    event = newBLOBVector(self.devicename, self.name, self, root)
-                    await self.driver.rxevent(event)
-            except EventException:
-                # if an error is raised parsing the incoming data, just continue
-                logger.exception("Unable to create event from received data")
+
+    async def vector_handler(self, root):
+        if self._stop:
+            return
+        if not self.enable:
+            return
+        try:
+            if root.tag == "newBLOBVector":
+                # create event
+                event = newBLOBVector(self.devicename, self.name, self, root)
+                await self.driver.rxevent(event)
+        except EventException:
+            logger.exception("Unable to create event from received data")
+
 
     def _make_defVector(self, message='', timestamp=None):
         "Creates xml data object for vector definition"
