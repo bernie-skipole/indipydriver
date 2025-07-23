@@ -325,18 +325,21 @@ class IPyDriver(collections.UserDict):
             if self._commsobj is None:
                 self._commsobj = _STDINOUT(self)
 
-            await asyncio.gather( self._commsobj.run_rx(),        # run STDIN communications
-                                  self.hardware(),                # task to operate device hardware, and transmit updates
-                                  self._monitorsnoop() )          # task to monitor if a getproperties needs to be sent
-
-
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task( self._commsobj.run_rx(),        # run STDIN communications
+                tg.create_task( self.hardware(),                # task to operate device hardware, and transmit updates
+                tg.create_task( self._monitorsnoop() )          # task to monitor if a getproperties needs to be sent
+        except Exception:
+            pass
         finally:
             self.stopped.set()
             self._stop = True
 
 
 
-    async def readdata(self, root):
+
+
+    async def _readdata(self, root):
         "Called from communications object with received xmldata"
 
         client_tags = ("newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
@@ -702,7 +705,7 @@ class _STDINOUT():
                 rxdata = await self._xmlinput()
                 if rxdata is None:
                     return
-                await self.driver.readdata(rxdata)
+                await self.driver._readdata(rxdata)
         except Exception:
             logger.exception("Exception report from _STDINOUT.run_rx")
             raise

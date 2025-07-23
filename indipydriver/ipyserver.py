@@ -148,6 +148,7 @@ class IPyServer:
             # an instance of _DriverComms is created for each driver
             self.con_id += 1
             driver._commsobj = _DriverComms(driver, self.con_id, self.xml_data_que)
+
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
         # this is set when asyncrun is finished
@@ -272,6 +273,8 @@ class IPyServer:
             async with asyncio.TaskGroup() as tg:
                 for driver in self.drivers:
                     tg.create_task( driver.asyncrun() )
+                for exdriver in self.exdrivers:
+                    tg.create_task( exdriver.asyncrun() )
                 ######### further ones here, remotes and ex drivers
                 tg.create_task( self._runserver() )
                 tg.create_task( self._broadcast() )
@@ -298,7 +301,10 @@ class IPyServer:
                         break
                     for driver in self.drivers:
                         # send data to the drivers
-                        tg.create_task( driver._commsobj._driver_rx(con_id, xmldata) )
+                        tg.create_task( driver._commsobj.driver_rx(con_id, xmldata) )
+                    for exdriver in self.exdrivers:
+                        # send data to the external drivers
+                        tg.create_task( exdriver._commsobj.driver_rx(con_id, xmldata) )
                     for clientconnection in self.connectionpool:
                         # send data out to clients
                         tg.create_task( clientconnection._client_tx(con_id, xmldata) )
@@ -457,13 +463,19 @@ class _DriverComms:
         pass
 
 
-    async def _driver_rx(self, con_id, xmldata):
+    async def driver_rx(self, con_id, xmldata):
         "Gets data from xml_data_que, and sends it to the driver"
         if self.con_id == con_id:
             # do not rx data this driver is transmitting
             return
+
+        if xmldata.tag == "getProperties":
+            version = xmldata.get("version")
+            if version != "1.7":
+                return
+
         # call the drivers receive data function
-        await self.driver.readdata(xmldata)
+        await self.driver._readdata(xmldata)
 
 
     async def run_tx(self, xmldata):

@@ -69,12 +69,13 @@ class ExDriver:
         self._remainder = b""    # Used to store intermediate data
         self._stop = False       # Gets set to True to stop communications
 
+
     def shutdown(self):
         self._stop = True
+        if self._commsobj is not None:
+            self._commsobj.shutdown()
         if self.proc is not None:
             self.proc.terminate()
-        if self.comms is not None:
-            self.comms.shutdown()
 
 
     def __contains__(self, item):
@@ -82,47 +83,29 @@ class ExDriver:
         return item in self.devicenames
 
 
-    async def _run_rx(self):
-        "Get data from readerque and write into the driver"
-        # wait for external program to start
-        await asyncio.sleep(0.1)
-        # send a getProperties into the driver
-        xldata = ET.fromstring("""<getProperties version="1.7" />""")
-        while not self._stop:
-            try:
-                await asyncio.wait_for(self.readerque.put(xldata), timeout=0.5)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
-        while not self._stop:
-            # get block of data from readerque
-            try:
-                rxdata = await asyncio.wait_for(self.readerque.get(), 0.5)
-            except asyncio.TimeoutError:
-                continue
-            self.readerque.task_done()
-            if rxdata is None:
-                # A sentinal value, check self._stop
-                continue
-            binarydata = ET.tostring(rxdata)
-            # log the received data
-            if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                if ((rxdata.tag == "setBLOBVector") or (rxdata.tag == "newBLOBVector")) and len(rxdata):
-                    data = copy.deepcopy(rxdata)
-                    for element in data:
-                        element.text = "NOT LOGGED"
-                    binstring = ET.tostring(data)
-                    logger.debug(f"RX:: {binstring.decode('utf-8')}")
-                else:
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
-            binarydata += b"\n"
-            self.proc.stdin.write(binarydata)
-            await self.proc.stdin.drain()
+    async def _readdata(self, root):
+        """Called from communications object with received xmldata
+           and sends it towards the driver"""
+
+        if self._stop:
+            return
+
+        # could check here to only allow incoming 'snooped' devices
+
+        binarydata = ET.tostring(root)
+
+        # log the received data
+        if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
+            logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+
+        binarydata += b"\n"
+        self.proc.stdin.write(binarydata)
+        await self.proc.stdin.drain()
+
 
 
     async def _run_tx(self):
-        "Get data from driver and pass into writerque towards the server"
+        "Get data from driver and send it towards the server"
         try:
             # get block of xml.etree.ElementTree data
             # from self._xmlinput and append it to self.writerque
@@ -150,25 +133,14 @@ class ExDriver:
                         self.snoopdevices.add(devicename)
                     else:
                         self.snoopvectors.add((devicename,vectorname))
-                # append it to  writerque
-                while not self._stop:
-                    try:
-                        await asyncio.wait_for(self.writerque.put(txdata), timeout=0.5)
-                    except asyncio.TimeoutError:
-                        # queue is full, continue while loop, checking stop flag
-                        continue
-                    # txdata is now in writerque, break the inner while loop
-                    break
+
+                # transmit this data towards the server
+                await self._commsobj.run_tx(txdata)
+
                 if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                    if (txdata.tag == "setBLOBVector") and len(txdata):
-                        data = copy.deepcopy(txdata)
-                        for element in data:
-                            element.text = "NOT LOGGED"
-                        binarydata = ET.tostring(data)
-                        logger.debug(f"TX:: {binarydata.decode('utf-8')}")
-                    else:
-                        binarydata = ET.tostring(txdata)
-                        logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+                    binarydata = ET.tostring(txdata)
+                    logger.debug(f"TX:: {binarydata.decode('utf-8')}")
+
         except Exception:
             logger.exception("Exception report from ExDriver._run_tx")
             raise
@@ -277,15 +249,25 @@ class ExDriver:
     async def asyncrun(self):
         "Runs the external driver"
 
-        self.proc = await asyncio.create_subprocess_exec(self.program,
-                                                         *self.args,
-                                                   stdin=asyncio.subprocess.PIPE,
-                                                   stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.PIPE)
+        self._stop = False
 
-        await asyncio.gather(self.comms(self.readerque, self.writerque),
-                             self._run_rx(),
-                             self._run_tx(),
-                             self._run_err())
+        try:
 
-#
+            self.proc = await asyncio.create_subprocess_exec(self.program,
+                                                             *self.args,
+                                                       stdin=asyncio.subprocess.PIPE,
+                                                       stdout=asyncio.subprocess.PIPE,
+                                                       stderr=asyncio.subprocess.PIPE)
+
+            # wait for external program to start
+            await asyncio.sleep(0.1)
+            # send a getProperties into the driver
+            await self._readdata( ET.fromstring("""<getProperties version="1.7" />""") )
+
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task( self._run_tx(),            # Get data from driver and send it towards the server
+                tg.create_task( self._run_err() )          # data from exdriver proc.stderr and logs it to logging.error
+        except Exception:
+            pass
+        finally:
+            self._stop = True
