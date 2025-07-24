@@ -103,7 +103,7 @@ class ExDriver:
             return
 
         if root.tag == "getProperties":
-            await self.tx_to_ext(root)
+            await self.xml_to_ext(root)
             return
 
         devicename = root.get("device")
@@ -114,7 +114,7 @@ class ExDriver:
                 # invalid
                 return
             if devicename in self.devicenames:
-                await self.tx_to_ext(root)
+                await self.xml_to_ext(root)
                 return
             else:
                 # not for this driver
@@ -123,11 +123,11 @@ class ExDriver:
         # so not in NEWTAGS
         # Check if this driver is snooping on this device/vector
         if self.snoopall:
-            await self.tx_to_ext(root)
+            await self.xml_to_ext(root)
         elif devicename and (devicename in self.snoopdevices):
-            await self.tx_to_ext(root)
+            await self.xml_to_ext(root)
         elif devicename and propertyname and ((devicename, propertyname) in self.snoopvectors):
-            await self.tx_to_ext(root)
+            await self.xml_to_ext(root)
 
 
     async def xml_to_ext(self, root):
@@ -306,9 +306,9 @@ class ExDriver:
             await self._readdata( ET.fromstring("""<getProperties version="1.7" />""") )
 
             async with asyncio.TaskGroup() as tg:
-                tg.create_task( self._run_tx(),            # Get data from driver and send it towards the server
+                tg.create_task( self._run_tx() )           # Get data from driver and send it towards the server
                 tg.create_task( self._run_err() )          # data from exdriver proc.stderr and logs it to logging.error
         except Exception:
-            pass
+            logger.exception("Driver shutdown")
         finally:
             self._stop = True
