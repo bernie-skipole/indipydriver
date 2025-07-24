@@ -23,11 +23,20 @@ TAGS = (b'message',
         b'getProperties'       # for snooping
        )
 
+# Note these are strings, as they are used for checking xmldata.tag values
+
 DEFTAGS = ( 'defSwitchVector',
             'defLightVector',
             'defTextVector',
             'defNumberVector',
             'defBLOBVector'
+          )
+
+
+NEWTAGS = ('newTextVector',
+           'newNumberVector',
+           'newSwitchVector',
+           'newBLOBVector'
           )
 
 # _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
@@ -90,7 +99,39 @@ class ExDriver:
         if self._stop:
             return
 
-        # could check here to only allow incoming 'snooped' devices
+        if root.tag == "enableBLOB":
+            return
+
+        if root.tag == "getProperties":
+            await self.tx_to_ext(root)
+            return
+
+        devicename = root.get("device")
+        propertyname = root.get("name")
+
+        if root.tag in NEWTAGS:
+            if devicename is None:
+                # invalid
+                return
+            if devicename in self.devicenames:
+                await self.tx_to_ext(root)
+                return
+            else:
+                # not for this driver
+                return
+
+        # so not in NEWTAGS
+        # Check if this driver is snooping on this device/vector
+        if self.snoopall:
+            await self.tx_to_ext(root)
+        elif devicename and (devicename in self.snoopdevices):
+            await self.tx_to_ext(root)
+        elif devicename and propertyname and ((devicename, propertyname) in self.snoopvectors):
+            await self.tx_to_ext(root)
+
+
+    async def xml_to_ext(self, root):
+        "Pass data to the external driver"
 
         binarydata = ET.tostring(root)
 
