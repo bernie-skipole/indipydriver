@@ -65,12 +65,7 @@ class RemoteConnection:
 
     def __init__(self, host, port,
                        blob_enable,
-                       debug_enable,
-                       alldrivers,      # list of drivers connected to the server
-                       remotes,         # list of RemoteConnection(s) connected to the server
-                       serverwriterque, # queue of items for the server to transmit
-                       connectionpool   # pool of connections calling this server
-                 ):
+                       debug_enable ):
 
         self.indihost = host
         self.indiport = port
@@ -88,10 +83,8 @@ class RemoteConnection:
         # populated as devices are learnt, and used to check for duplicate names
         self.devicenames = set()
 
-        self.alldrivers = alldrivers
-        self.remotes= remotes
-        self.serverwriterque = serverwriterque
-        self.connectionpool = connectionpool
+        # An object for communicating is set when this remote is added to the server
+        self._commsobj = None
 
         # and shutdown routine sets this to True to stop coroutines
         self._stop = False
@@ -121,7 +114,7 @@ class RemoteConnection:
 
 
     async def _hardware(self):
-        """Flag connection made or failed messages into serverwriterque"""
+        """Flag connection made or failed messages into the server"""
         # create a flag so 'remote connection made' message is only set once
         isconnected = False
         while not self._stop:
@@ -130,40 +123,39 @@ class RemoteConnection:
                 if isconnected:
                     continue
                 isconnected = True
-                # a new connection has been made
+                # a new connection has been made, send a getProperties down the link
                 await self.send_getProperties()
-                for clientconnection in self.connectionpool:
-                    if clientconnection.connected:
-                        # a client is connected, send a message
-                        timestamp = datetime.now(tz=timezone.utc)
-                        timestamp = timestamp.replace(tzinfo = None)
-                        tstring = timestamp.isoformat(sep='T')
-                        messagedata = ET.Element('message')
-                        messagedata.set("timestamp", tstring)
-                        messagedata.set("message", f"Remote connection made to {self.indihost}:{self.indiport}")
-                        await self.queueput(self.serverwriterque, messagedata)
-                        break
+                # broadcast a message to everyone else connected to the server
+                if self._commsobj is not None:
+                    timestamp = datetime.now(tz=timezone.utc)
+                    timestamp = timestamp.replace(tzinfo = None)
+                    tstring = timestamp.isoformat(sep='T')
+                    messagedata = ET.Element('message')
+                    messagedata.set("timestamp", tstring)
+                    messagedata.set("message", f"Remote connection made to {self.indihost}:{self.indiport}")
+                    await self._commsobj.run_tx(messagedata)
             else:
                 # The connection has failed
                 if isconnected:
                     isconnected = False
                     self.devicenames.clear()
-                    for clientconnection in self.connectionpool:
-                        if clientconnection.connected:
-                            # a client is connected, send a message
-                            timestamp = datetime.now(tz=timezone.utc)
-                            timestamp = timestamp.replace(tzinfo = None)
-                            tstring = timestamp.isoformat(sep='T')
-                            messagedata = ET.Element('message')
-                            messagedata.set("timestamp", tstring)
-                            messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
-                            await self.queueput(self.serverwriterque, messagedata)
-                            break
+                    # broadcast a message to everyone else connected to the server
+                    if self._commsobj is not None:
+                        # send a message to everyone else connected to the server
+                        timestamp = datetime.now(tz=timezone.utc)
+                        timestamp = timestamp.replace(tzinfo = None)
+                        tstring = timestamp.isoformat(sep='T')
+                        messagedata = ET.Element('message')
+                        messagedata.set("timestamp", tstring)
+                        messagedata.set("message", f"Remote connection to {self.indihost}:{self.indiport} lost")
+                        await self._commsobj.run_tx(messagedata)
 
 
     def shutdown(self):
         "Shuts down the client, sets the flag self._stop to True"
         self._stop = True
+        if self._commsobj is not None:
+            self._commsobj.shutdown()
 
     @property
     def stop(self):
@@ -189,17 +181,13 @@ class RemoteConnection:
 
     async def warning(self, message):
         """The given string message will be logged at level WARNING,
-           and will be injected into the received data, which will be
-           picked up by the rxevent method.
-           It is a way to set a message on to your client display, in the
-           same way messages come from the INDI service."""
+           and will be sent to all drivers and connections."""
         try:
             logger.warning(message)
             timestamp = datetime.now(tz=timezone.utc)
             timestamp = timestamp.replace(tzinfo=None)
             xmldata = ET.fromstring(f"<message timestamp=\"{timestamp.isoformat(sep='T')}\" message=\"{message}\" />")
-            # and call the receive handler, as if this was received data
-            await self._rxhandler(xmldata)
+            self._commsobj.run_tx_everywhere(xmldata)
         except Exception :
             logger.exception("Exception report from RemoteConnection.warning method")
 

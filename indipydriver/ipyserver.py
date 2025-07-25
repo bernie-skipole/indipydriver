@@ -310,7 +310,6 @@ class IPyServer:
                     for clientconnection in self.connectionpool:
                         # send data out to clients
                         tg.create_task( clientconnection._client_tx(con_id, xmldata) )
-                   ##################################################################remotes and ex drivers to do
         finally:
             self.shutdown()
 
@@ -485,6 +484,13 @@ class _DriverComms:
         # check for duplicate devicename ###########################
         # and any other validator ##################################
         await self.xml_data_que.put( (self.con_id, xmldata) )
+
+
+    async def run_tx_everywhere(self, xmldata):
+        """Called to send data down every connection"""
+        # check for duplicate devicename ###########################
+        # and any other validator ##################################
+        await self.xml_data_que.put( (0, xmldata) )
 
 
 
