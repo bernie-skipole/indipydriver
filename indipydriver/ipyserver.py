@@ -201,12 +201,11 @@ class IPyServer:
 
         remcon = RemoteConnection( host=host, port=port,
                                    blob_enable = blob_enable,
-                                   debug_enable = debug_enable,
-                                   alldrivers = self.alldrivers,
-                                   remotes = self.remotes,
-                                   serverwriterque = self.serverwriterque,
-                                   connectionpool = self.connectionpool )
+                                   debug_enable = debug_enable )
 
+        # Create a DriverComms object
+        self.con_id += 1
+        remcon._commsobj = _DriverComms(remcon, self.con_id, self.xml_data_que)
         # store this object
         self.remotes.append(remcon)
 
@@ -275,7 +274,8 @@ class IPyServer:
                     tg.create_task( driver.asyncrun() )
                 for exdriver in self.exdrivers:
                     tg.create_task( exdriver.asyncrun() )
-                ######### further ones here, remotes and ex drivers
+                for remcon in self.remotes:
+                    tg.create_task( remote.asyncrun() )
                 tg.create_task( self._runserver() )
                 tg.create_task( self._broadcast() )
         except Exception:
@@ -305,6 +305,8 @@ class IPyServer:
                     for exdriver in self.exdrivers:
                         # send data to the external drivers
                         tg.create_task( exdriver._commsobj.driver_rx(con_id, xmldata) )
+                    for remcon in self.remotes:
+                        tg.create_task( remcon._commsobj.driver_rx(con_id, xmldata) )
                     for clientconnection in self.connectionpool:
                         # send data out to clients
                         tg.create_task( clientconnection._client_tx(con_id, xmldata) )
