@@ -88,8 +88,6 @@ class RemoteConnection:
 
         # and shutdown routine sets this to True to stop coroutines
         self._stop = False
-        # this is set when asyncrun is finished
-        self.stopped = asyncio.Event()
 
 
     @property
@@ -113,7 +111,7 @@ class RemoteConnection:
         self._reader = None
 
 
-    async def _hardware(self):
+    async def _monitor_connection(self):
         """Flag connection made or failed messages into the server"""
         # create a flag so 'remote connection made' message is only set once
         isconnected = False
@@ -192,7 +190,7 @@ class RemoteConnection:
             logger.exception("Exception report from RemoteConnection.warning method")
 
 
-    async def _comms(self):
+    async def _create_connection(self):
         "Create a connection to an INDI port"
         try:
             while not self._stop:
@@ -227,7 +225,7 @@ class RemoteConnection:
                     if count >= 10:
                         break
         except Exception:
-            logger.exception("Exception report from RemoteConnection._comms method")
+            logger.exception("Exception report from RemoteConnection._create_connection method")
             raise
         finally:
             await self._clear_connection()
@@ -235,7 +233,7 @@ class RemoteConnection:
 
 
     async def send(self, xmldata):
-        """Transmits xmldata, which is an xml.etree.ElementTree object"""
+        """Transmits xmldata, which is an xml.etree.ElementTree object out on the remote connection"""
         if not self.connected:
             return
         if self._stop:
@@ -257,6 +255,14 @@ class RemoteConnection:
             await self._clear_connection()
 
 
+    async def _readdata(self, xmldata):
+        """Called from communications object with  xmldata from other drivers
+           . clients and connections. Sends it towards the remote connection"""
+        if xmldata.tag == "enableBLOB":
+            return
+        self.send(xmldata)
+
+
     def _logtx(self, xmldata):
         "log tx data with level debug"
         if not self.debug_enable:
@@ -274,16 +280,41 @@ class RemoteConnection:
 
 
     async def _run_rx(self):
-        "pass xml.etree.ElementTree data receive handler"
+        "accept xml.etree.ElementTree data from the connection"
         try:
             # get block of xml.etree.ElementTree data
             # from self._xmlinput
             while self.connected and (not self._stop):
-                rxdata = await self._xmlinput()
-                if rxdata is None:
+                xmldata = await self._xmlinput()
+                if xmldata is None:
                     return
-                # and call the receive handler
-                await self._rxhandler(rxdata)
+                if (not self.blob_enable) and (xmldata.tag in ("setBLOBVector", "newBLOBVector") ):
+                    # blobs not enabled
+                    continue
+
+
+                devicename = xmldata.get("device")
+                vectorname = xmldata.get("name")
+
+                if xmldata.tag in DEFTAGS:
+                    if (devicename is None) or (vectorname is None):
+                        continue
+                    # could check for duplicate devicenames here
+                    if devicename not in self.devicenames:
+                        self.devicenames.add(devicename)
+                    if xmldata.tag == "defBLOBVector":
+                        # every time a defBLOBVector is received, send an enable BLOB instruction
+                        senddata = ET.Element('enableBLOB')
+                        senddata.set("device", devicename)
+                        senddata.set("name", vectorname)
+                        if self.blob_enable:
+                            senddata.text = "Also"
+                        else:
+                            senddata.text = "Never"
+                        await self.send(senddata)
+
+                # and pass data to other drivers and connections
+                await self._commsobj._run_tx(xmldata)
                 # log it, then continue with next block
                 if logger.isEnabledFor(logging.DEBUG):
                     self._logrx(rxdata)
@@ -292,6 +323,8 @@ class RemoteConnection:
         except Exception:
             logger.exception("Exception report from RemoteConnection._run_rx")
             raise
+
+
 
 
     async def _xmlinput(self):
@@ -386,101 +419,6 @@ class RemoteConnection:
             # could put a max value here to stop this increasing indefinetly
 
 
-
-    async def _rxhandler(self, xmldata):
-        """Populates the events using received data"""
-        try:
-
-            devicename = xmldata.get("device")
-            vectorname = xmldata.get("name")
-
-            if not self.blob_enable:
-                if xmldata.tag in ("setBLOBVector", "newBLOBVector"):
-                    # blobs not enabled
-                    return
-
-            if devicename:
-                if xmldata.tag in DEFTAGS:
-                    # check for duplicate devicename
-                    for driver in self.alldrivers:
-                        if devicename in driver:
-                            logger.error(f"A duplicate devicename {devicename} has been detected")
-                            await self.queueput(self.serverwriterque, None)
-                            self._clear_connection()
-                            return
-                    for remote in self.remotes:
-                        if remote is self:
-                            continue
-                        if devicename in remote.devicenames:
-                            logger.error(f"A duplicate devicename {devicename} has been detected")
-                            await self.queueput(self.serverwriterque, None)
-                            self._clear_connection()
-                            return
-                    if devicename not in self.devicenames:
-                        self.devicenames.add(devicename)
-                    if xmldata.tag == "defBLOBVector":
-                        # every time a defBLOBVector is received, send an enable BLOB instruction
-                        senddata = ET.Element('enableBLOB')
-                        senddata.set("device", devicename)
-                        senddata.set("name", vectorname)
-                        if self.blob_enable:
-                            senddata.text = "Also"
-                        else:
-                            senddata.text = "Never"
-                        await self.send(senddata)
-
-                # if a new vector or a getProperties has been received, and is targetted at a
-                # driver, send it to the driver and nowhere else
-                if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
-                    dfound = False
-                    for driver in self.alldrivers:
-                        if devicename in driver:
-                            await self.queueput(driver.readerque, xmldata)
-                            # no need to transmit this anywhere else
-                            dfound = True
-                            break
-                    if dfound:
-                        return
-
-            # so not targetted at a local known devicename
-            # transmit to drivers if xmldata is either a getProperties or because the driver is snooping on it
-
-            if xmldata.tag == "getProperties":
-                for driver in self.alldrivers:
-                    # either no devicename, or an unknown device, so send to all drivers
-                    await self.queueput(driver.readerque, xmldata)
-            elif xmldata.tag not in NEWTAGS:
-                for driver in self.alldrivers:
-                    # Check if this driver is snooping on this device/vector
-                    if driver.snoopall:
-                        await self.queueput(driver.readerque, xmldata)
-                    elif devicename and (devicename in driver.snoopdevices):
-                        await self.queueput(driver.readerque, xmldata)
-                    elif devicename and vectorname and ((devicename, vectorname) in driver.snoopvectors):
-                        await self.queueput(driver.readerque, xmldata)
-
-            # transmit xmldata out to clients
-
-            # If no clients are connected, do not put this data into
-            # the serverwriterque
-            for clientconnection in self.connectionpool:
-                if clientconnection.connected:
-                    # at least one is connected, so this data is put into
-                    # serverwriterque
-                    await self.queueput(self.serverwriterque, xmldata)
-                    break
-
-            # transmit xmldata out to other remote connections
-            for remcon in self.remotes:
-                if remcon is self:
-                    continue
-                await remcon.send(xmldata)
-
-        except Exception:
-            logger.exception("Exception report from RemoteConnection._rxhandler method")
-
-
-
     async def send_getProperties(self):
         """Sends a getProperties request"""
         if self.connected:
@@ -493,10 +431,12 @@ class RemoteConnection:
         "Await this method to run the connectiont."
         self._stop = False
         try:
-            await asyncio.gather(self._comms(), self._hardware())
-        except asyncio.CancelledError:
-            self._stop = True
-            raise
+
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task( self._create_connection() )
+                tg.create_task( self._monitor_connection() )
+
+        except Exception:
+            logger.exception("Remote connection shutdown")
         finally:
-            self.stopped.set()
             self._stop = True
