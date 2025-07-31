@@ -182,15 +182,6 @@ class IPyServer:
         self.stopped.set()
 
 
-    async def _queueput(self, queue, value, timeout=0.5):
-        while not self._stop:
-            try:
-                await asyncio.wait_for(queue.put(value), timeout)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
-
     def add_remote(self, host, port, blob_enable=False, debug_enable=False):
         """Adds a connection to a remote server.
            blob_enable can be True or False.

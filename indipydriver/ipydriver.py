@@ -172,15 +172,6 @@ class IPyDriver(collections.UserDict):
         return self._stop
 
 
-    async def _queueput(self, queue, value, timeout=0.5):
-        while not self._stop:
-            try:
-                await asyncio.wait_for(queue.put(value), timeout)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
-
 
     async def send(self, xmldata):
         "Transmits xmldata, this is an internal method, not normally called by a user."
@@ -600,15 +591,6 @@ class Device(collections.UserDict):
         "returns self._stop, being the instruction to stop the driver"
         return self._stop
 
-
-    async def _queueput(self, queue, value, timeout=0.5):
-        while not self._stop:
-            try:
-                await asyncio.wait_for(queue.put(value), timeout)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            break
 
     async def send_device_message(self, message="", timestamp=None):
         """Send a message associated with this device, which the client could display.
