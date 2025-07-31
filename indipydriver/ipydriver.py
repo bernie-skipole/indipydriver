@@ -34,6 +34,15 @@ TAGS = (b'getProperties',
         b'setBLOBVector'
        )
 
+# Note these are strings, as they are used for checking xmldata.tag values
+
+DEFTAGS = ( 'defSwitchVector',
+            'defLightVector',
+            'defTextVector',
+            'defNumberVector',
+            'defBLOBVector'
+          )
+
 
 # _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
 _STARTTAGS = tuple(b'<' + tag for tag in TAGS)
@@ -147,6 +156,7 @@ class IPyDriver(collections.UserDict):
     def devices(self):
         "Returns a list of device objects"
         return list(self.data.values())
+
 
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
@@ -689,7 +699,7 @@ class _STDINOUT():
 
     async def run_rx(self):
         """Called from indipydriver to get received data
-           this runs continuosly, checking received data"""
+           this runs continuously, checking received data"""
         # Set stdin to non-blocking mode
         flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
         fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -701,10 +711,21 @@ class _STDINOUT():
         try:
             # get block of xml.etree.ElementTree data
             # from self._xmlinput and send it to the driver
+            devicenames = self.driver.keys()
             while not self._stop:
                 rxdata = await self._xmlinput()
                 if rxdata is None:
                     return
+                # check for incoming duplicates
+                if rxdata.tag in DEFTAGS:
+                    devicename = rxdata.get("device")
+                    if devicename is None:
+                        # invalid definition
+                        continue
+                    if devicename in devicenames:
+                        # duplicate address
+                        logger.error(f"Duplicate address: Received a definition of device {devicename}")
+                        continue                    
                 await self.driver._readdata(rxdata)
         except Exception:
             logger.exception("Exception report from _STDINOUT.run_rx")

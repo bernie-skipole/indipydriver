@@ -39,6 +39,13 @@ TAGS = (b'getProperties',
 
 # Note these are strings, as they are used for checking xmldata.tag values
 
+DEFTAGS = ( 'defSwitchVector',
+            'defLightVector',
+            'defTextVector',
+            'defNumberVector',
+            'defBLOBVector'
+          )
+
 NEWTAGS = ('newTextVector',
            'newNumberVector',
            'newSwitchVector',
@@ -140,10 +147,6 @@ class IPyServer:
             self.con_id += 1
             self.connectionpool.append(_ClientConnection(self.con_id, self.xml_data_que))
 
-        # This alldrivers list will have exdrivers added to it, so the list
-        # here is initially a copy of self.drivers
-        self.alldrivers = self.drivers.copy()
-
         for driver in self.drivers:
             # an instance of _DriverComms is created for each driver
             self.con_id += 1
@@ -220,8 +223,6 @@ class IPyServer:
            traffic, if False, the xml traffic will not be logged. This can be
            used to prevent multiple drivers all logging xml traffic together."""
         exd = ExDriver(program, *args, debug_enable=debug_enable)
-        # add this exdriver to alldrivers
-        self.alldrivers.append(exd)
         # Create a DriverComms object
         self.con_id += 1
         exd._commsobj = _DriverComms(exd, self.con_id, self.xml_data_que)
@@ -314,107 +315,6 @@ class IPyServer:
             self.shutdown()
 
 
-
-
-    async def _copyfromserver(self):
-        """
-           OBSOLETE
-
-           Gets data from serverreaderque.
-           For every driver, copy data, if applicable, to driver.readerque
-           And for every remote connection if applicable, to its send method"""
-        try:
-            while not self._stop:
-                try:
-                    quedata = await asyncio.wait_for(self.serverreaderque.get(), 0.5)
-                except asyncio.TimeoutError:
-                    continue
-                self.serverreaderque.task_done()
-                connection_id, xmldata = quedata
-                devicename = xmldata.get("device")
-                propertyname = xmldata.get("name")
-
-                if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
-                    binarydata = ET.tostring(xmldata)
-                    logger.debug(f"RX:: {binarydata.decode('utf-8')}")
-
-                exdriverfound = False
-                if (xmldata.tag in NEWTAGS) or (xmldata.tag == "getProperties"):
-                    # if targetted at a known device, send it to that device
-                    if devicename:
-                        if devicename in self.devices:
-                            # this new or getProperties request is meant for an attached device
-                            await self._queueput(self.devices[devicename].driver.readerque, xmldata)
-                            # no need to transmit this anywhere else, continue the while loop
-                            continue
-                        for exd in self.exdrivers:
-                            if devicename in exd:
-                                # this getProperties request is meant for an external driver
-                                await self._queueput(exd.readerque, xmldata)
-                                exdriverfound = True
-                                break
-
-                if exdriverfound:
-                    # no need to transmit this anywhere else, continue the while loop
-                    continue
-
-                # copy to all server connections, apart from the one it came in on
-                for clientconnection in self.connectionpool:
-                    if clientconnection.connected and clientconnection.connection_id != connection_id:
-                        await self._queueput(clientconnection.txque, xmldata)
-
-                # copy to all remote connections
-                if xmldata.tag != "enableBLOB":
-                    for remcon in self.remotes:
-                        if not remcon.connected:
-                            continue
-                        await remcon.send(xmldata)
-
-
-                # transmit xmldata out to exdrivers,
-                if xmldata.tag != "enableBLOB":
-                    # enableBLOB instructions are not forwarded to external drivers
-                    for driver in self.exdrivers:
-                        if xmldata.tag == "getProperties":
-                            # either no devicename, or an unknown device
-                            await self._queueput(driver.readerque, xmldata)
-                        elif xmldata.tag not in NEWTAGS:
-                            # either devicename is unknown, or this data is to/from another driver.
-                            # So check if this driver is snooping on this device/vector
-                            # only forward def's and set's, not 'new' vectors which
-                            # do not come from a device, but only from a client to the target device.
-                            if driver.snoopall:
-                                await self._queueput(driver.readerque, xmldata)
-                            elif devicename and (devicename in driver.snoopdevices):
-                                await self._queueput(driver.readerque, xmldata)
-                            elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                                await self._queueput(driver.readerque, xmldata)
-
-
-                # transmit xmldata out to drivers
-                for driver in self.drivers:
-                    if xmldata.tag == "getProperties":
-                        # either no devicename, or an unknown device
-                        await self._queueput(driver.readerque, xmldata)
-                    elif xmldata.tag not in NEWTAGS:
-                        # either devicename is unknown, or this data is to/from another driver.
-                        # So check if this driver is snooping on this device/vector
-                        # only forward def's and set's, not 'new' vectors which
-                        # do not come from a device, but only from a client to the target device.
-                        if driver.snoopall:
-                            await self._queueput(driver.readerque, xmldata)
-                        elif devicename and (devicename in driver.snoopdevices):
-                            await self._queueput(driver.readerque, xmldata)
-                        elif devicename and propertyname and ((devicename, propertyname) in driver.snoopvectors):
-                            await self._queueput(driver.readerque, xmldata)
-
-                # now every driver/remcon which needs it has this xmldata
-                # and the while loop now continues
-
-        finally:
-            self.shutdown()
-
-
     async def send_message(self, message, timestamp=None):
         """Send system wide message, timestamp should normally not be set, if
            given, it should be a datetime.datetime object with tz set to timezone.utc"""
@@ -475,21 +375,28 @@ class _DriverComms:
             if version != "1.7":
                 return
 
+        # check for incoming duplicates
+        if xmldata.tag in DEFTAGS:
+            devicename = xmldata.get("device")
+            if devicename is None:
+                # invalid definition
+                return
+            if devicename in self.driver:
+                # duplicate address
+                logger.error(f"Duplicate address: Received a definition of device {devicename}")
+                return                    
+
         # call the drivers receive data function
         await self.driver._readdata(xmldata)
 
 
     async def run_tx(self, xmldata):
-        """Called by the driver"""
-        # check for duplicate devicename ###########################
-        # and any other validator ##################################
+        """Called by the driver, places data generated by the driver into xml_data_que with this connection id"""
         await self.xml_data_que.put( (self.con_id, xmldata) )
 
 
     async def run_tx_everywhere(self, xmldata):
-        """Called to send data down every connection"""
-        # check for duplicate devicename ###########################
-        # and any other validator ##################################
+        """Called to send data down every connection,places data generated by the driver into xml_data_que with zero connection id"""
         await self.xml_data_que.put( (0, xmldata) )
 
 

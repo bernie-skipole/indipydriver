@@ -110,6 +110,10 @@ class RemoteConnection:
         self._writer = None
         self._reader = None
 
+    def __contains__(self, item):
+        "So a devicename can easily be checked if it is in this driver"
+        return item in self.devicenames
+
 
     async def _monitor_connection(self):
         """Flag connection made or failed messages into the server"""
@@ -159,22 +163,6 @@ class RemoteConnection:
     def stop(self):
         "returns self._stop, being the instruction to stop the client"
         return self._stop
-
-
-    async def queueput(self, queue, value, timeout=0.5):
-        """Method used internally, but available if usefull.
-           Given an asyncio.Queue object attempts to put value into the queue.
-           If the queue is full, checks self._stop every timeout seconds.
-           Returns True when the value is added to queue,
-           or False if self._stop is True and the value not added."""
-        while not self._stop:
-            try:
-                await asyncio.wait_for(queue.put(value), timeout)
-            except asyncio.TimeoutError:
-                # queue is full, continue while loop, checking stop flag
-                continue
-            return True
-        return False
 
 
     async def warning(self, message):
@@ -299,7 +287,6 @@ class RemoteConnection:
                 if xmldata.tag in DEFTAGS:
                     if (devicename is None) or (vectorname is None):
                         continue
-                    # could check for duplicate devicenames here
                     if devicename not in self.devicenames:
                         self.devicenames.add(devicename)
                     if xmldata.tag == "defBLOBVector":
