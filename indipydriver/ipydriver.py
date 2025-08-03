@@ -707,7 +707,9 @@ class _STDINOUT():
                     if devicename in devicenames:
                         # duplicate address
                         logger.error(f"Duplicate address: Received a definition of device {devicename}")
-                        continue                    
+                        self.driver.shutdown()
+                        self.shutdown()
+                        break
                 await self.driver._readdata(rxdata)
         except Exception:
             logger.exception("Exception report from _STDINOUT.run_rx")
