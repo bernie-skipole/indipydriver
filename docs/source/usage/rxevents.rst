@@ -65,7 +65,7 @@ The INDI specification describes enableBLOB when sent from a client::
     individual Device drivers shall disregard enableBLOB and send all elements at will.
 
 
-Your driver would normally ignore the enableBLOB event as the IPyServer class obeys it for you, however it is still presented as your application may wish to know about it, to log it for example.
+Depending on the intermediate INDI server process, the driver may or may not receive enableBLOB events, and your driver would normally ignore them.
 
 The client will also send a getProperties request to obtain property definitions. As default this is handled automatically, and rxevent is not called. However if the attribute driver.auto_send_def is set to False, then the automatic function is disabled, and rxevent will be called with 'getProperties' events.
 
