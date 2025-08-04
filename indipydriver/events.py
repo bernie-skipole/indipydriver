@@ -60,23 +60,6 @@ class getProperties(Event):
         self.timestamp = datetime.now(tz=timezone.utc)
 
 
-
-class enableBLOB(Event):
-    """Defines an event with self.value being one of Never, Also,
-       or Only. This can be ignored by the driver. It is automatically
-       acted on."""
-
-    def __init__(self, devicename, vectorname, vector, root):
-        super().__init__(devicename, vectorname, vector, root)
-        self.timestamp = datetime.now(tz=timezone.utc)
-        value = root.text.strip()
-        if value in ("Never", "Also", "Only"):
-            self.value = value
-        else:
-            # unrecognised value
-            raise EventException("Invalid value for enableBLOB")
-
-
 class newVector(Event, UserDict):
     "Parent to new vectors, adds dictionary and self.timestamp"
     def __init__(self, devicename, vectorname, vector, root):

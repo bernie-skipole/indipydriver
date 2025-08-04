@@ -338,8 +338,6 @@ class IPyDriver(collections.UserDict):
 
 
 
-
-
     async def _readdata(self, root):
         "Called from communications object with received xmldata"
 

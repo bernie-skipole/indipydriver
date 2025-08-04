@@ -459,7 +459,6 @@ class _ClientConnection:
     async def _client_rx(self):
         "Receives data coming in to port from client"
 
-        #pass xml.etree.ElementTree data to xml_data_que
         try:
             # get block of xml.etree.ElementTree data
             # from self._xmlinput and send it to xml_data_que together with connection_id
@@ -470,7 +469,9 @@ class _ClientConnection:
                 if xmldata.tag == "enableBLOB":
                     # set permission flags in the sendchecker object
                     self.sendchecker.setpermissions(xmldata)
+                    # do not broadcast this, so continue
                     continue
+                # pass xmldata to xml_data_que
                 await self.xml_data_que.put( (self.con_id, xmldata) )
         except ConnectionError:
             # re-raise this without creating a report, as it probably indicates

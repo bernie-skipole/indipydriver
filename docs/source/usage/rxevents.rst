@@ -50,11 +50,7 @@ When the client transmits the change, it assumes a state of Busy, until it gets 
 
 However on receiving a BLOB, you would not want to send the entire BLOB back to the client, you would just want to ensure state is set to Ok, so you would call vector.send_setVectorMembers(state="Ok", members=[]). As there are no members specified, this will be sent with no member data, but the state on the client will be reset.
 
-The rxevent method may also receive an enableBLOB event, which in general should be ignored.
-
-.. autoclass:: indipydriver.enableBLOB
-
-The INDI specification describes enableBLOB when sent from a client::
+The client may also send an enableBLOB instruction, which the INDI specification describes::
 
     Command to control whether setBLOBs should be sent to this channel from a
     given Device. They can be turned off completely by setting Never (the default),
@@ -65,7 +61,7 @@ The INDI specification describes enableBLOB when sent from a client::
     individual Device drivers shall disregard enableBLOB and send all elements at will.
 
 
-Depending on the intermediate INDI server process, the driver may or may not receive enableBLOB events, and your driver would normally ignore them.
+Depending on the intermediate INDI server process used, the driver may or may not receive enableBLOB instructions. If debugging logging is enabled your driver would log them, but no event is created.
 
 The client will also send a getProperties request to obtain property definitions. As default this is handled automatically, and rxevent is not called. However if the attribute driver.auto_send_def is set to False, then the automatic function is disabled, and rxevent will be called with 'getProperties' events.
 
