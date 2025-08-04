@@ -456,9 +456,9 @@ class IPyDriver(collections.UserDict):
             if self.snoopall:
                 await self._snoophandler(root)
             elif devicename and (devicename in self.snoopdevices):
-                self._snoophandler(root)
+                await self._snoophandler(root)
             elif devicename and name and ((devicename, name) in self.snoopvectors):
-                self._snoophandler(root)
+                await self._snoophandler(root)
 
 
     async def _snoophandler(self, root):
