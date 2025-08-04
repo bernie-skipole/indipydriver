@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
 
-from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, enableBLOB, newNumberVector
+from .events import EventException, getProperties, newSwitchVector, newTextVector, newBLOBVector, newNumberVector
 from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember, BLOBMember
 
 logger = logging.getLogger(__name__)
