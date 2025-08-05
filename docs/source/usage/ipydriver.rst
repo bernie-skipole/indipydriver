@@ -50,7 +50,7 @@ a message with every vector definition.
 
 **debug_enable** - As default this is set to False.
 
-With debug_enable set to False, then xml traffic will not be logged at the driver level, but will still be logged at the server level which logs all traffic between server and attached clients. See the logging section of this documentation for further details.
+With debug_enable set to False, then this drivers xml traffic will not be logged. Setting it to True, and the logging level to DEBUG, will log the drivers xml traffic. See the logging section of this documentation for further details.
 
 ----
 

@@ -114,9 +114,6 @@ class IPyServer:
 
         self.con_id = 0
 
-        # If True, xmldata will be logged at DEBUG level
-        self.debug_enable = True
-
         if maxconnections<1 or maxconnections>10:
             raise ValueError("maxconnections should be a number between 1 and 10 inclusive.")
         self.maxconnections = maxconnections
@@ -620,6 +617,9 @@ class SendChecker:
             self.devicestatus[devicename] = {"Default":"Never", "Properties":{}}
 
         if xmldata.tag == "defBLOBVector":
+            return True
+
+        if (xmldata.tag == "setBLOBVector") and (not xmldata):   # empty setBLOBVectors are allowed regardless
             return True
 
         devicedict = self.devicestatus[devicename]
