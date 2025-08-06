@@ -19,6 +19,10 @@ self.stop - This is set to True when the server.shutdown() method is called.
 
 self.stopped - An asyncio.Event() object, await server.stopped.wait() will block until the server stops.
 
+self.keepalive - As default this is set to 30
+
+If self.keepalive is set to a number of seconds, should no traffic pass through the server for that many seconds, a 'keepalive' message will be broadcast on any client and remote connections. If set to 0 then no keepalive messages will be sent.
+
 
 add_remote
 ^^^^^^^^^^

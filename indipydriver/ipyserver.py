@@ -1,6 +1,6 @@
 
 
-import asyncio, logging
+import asyncio, logging, time
 
 from datetime import datetime, timezone
 
@@ -106,6 +106,10 @@ class IPyServer:
         self.drivers = list(drivers)
         self.host = host
         self.port = port
+
+        self.keepalive = 30
+        # If set to an integer number of seconds, should no traffic pass through the server
+        # for that many seconds, a 'keepalive' message will be broadcast
 
         # all data is sent on one que with format (con_id, xmldata)
         # con_id is used to stop a transmitter receiving its own transmitted data
@@ -275,14 +279,24 @@ class IPyServer:
 
     async def _broadcast(self):
         "Get items from the que, and broadcast to drivers"
+        timeout = time.time()+self.keepalive
         try:
             while not self._stop:
+                if self.keepalive:
+                    current_time = time.time()
+                    if current_time > timeout:
+                        timeout = current_time + self.keepalive
+                        await self._send_keepalive()
                 try:
                     quedata = await asyncio.wait_for(self.xml_data_que.get(), 0.5)
                 except asyncio.TimeoutError:
                     continue
                 self.xml_data_que.task_done()
                 con_id, xmldata = quedata
+                # data to send, therefore increase keepalive timeout
+                # however, do not increase it if this is a setBLOBVector, as these may be blocked
+                if xmldata.tag != "setBLOBVector":
+                    timeout = time.time()+self.keepalive
                 async with asyncio.TaskGroup() as tg:
                     if self._stop:
                         # add an exception-raising task to force the group to terminate
@@ -301,6 +315,22 @@ class IPyServer:
                         tg.create_task( clientconnection._client_tx(con_id, xmldata) )
         finally:
             self.shutdown()
+
+
+    async def _send_keepalive(self):
+        "This transmits a keep-alive to the client connections"
+        timestamp = datetime.now(tz=timezone.utc).replace(tzinfo = None)
+        xmldata = ET.Element('message')
+        xmldata.set("timestamp", timestamp.isoformat(sep='T'))
+        xmldata.set("message", "Keep alive message")
+        async with asyncio.TaskGroup() as tg:
+            for remcon in self.remotes:
+                # send data out to remote connections
+                tg.create_task( remcon._commsobj.driver_rx(0, xmldata) )
+            for clientconnection in self.connectionpool:
+                # send data out to clients
+                tg.create_task( clientconnection._client_tx(0, xmldata) )
+
 
 
     async def send_message(self, message, timestamp=None):

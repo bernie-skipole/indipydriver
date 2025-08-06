@@ -10,7 +10,7 @@ from .ipyserver import IPyServer
 if sys.version_info < (3, 11):
     raise ImportError('indipydriver requires Python >= 3.11')
 
-version = "2.4.4"
+version = "2.4.5"
 
 
 __all__ = ["version", "IPyDriver", "Device", "getfloat", "IPyServer",
