@@ -173,7 +173,7 @@ class RemoteConnection:
             timestamp = datetime.now(tz=timezone.utc)
             timestamp = timestamp.replace(tzinfo=None)
             xmldata = ET.fromstring(f"<message timestamp=\"{timestamp.isoformat(sep='T')}\" message=\"{message}\" />")
-            self._commsobj.run_tx_everywhere(xmldata)
+            await self._commsobj.run_tx_everywhere(xmldata)
         except Exception :
             logger.exception("Exception report from RemoteConnection.warning method")
 
@@ -248,7 +248,7 @@ class RemoteConnection:
            . clients and connections. Sends it towards the remote connection"""
         if xmldata.tag == "enableBLOB":
             return
-        self.send(xmldata)
+        await self.send(xmldata)
 
 
     def _logtx(self, xmldata):
@@ -301,7 +301,7 @@ class RemoteConnection:
                         await self.send(senddata)
 
                 # and pass data to other drivers and connections
-                await self._commsobj._run_tx(xmldata)
+                await self._commsobj.run_tx(xmldata)
                 # log it, then continue with next block
                 if logger.isEnabledFor(logging.DEBUG):
                     self._logrx(rxdata)

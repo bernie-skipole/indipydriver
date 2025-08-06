@@ -268,11 +268,11 @@ class IPyServer:
                 for exdriver in self.exdrivers:
                     tg.create_task( exdriver.asyncrun() )
                 for remcon in self.remotes:
-                    tg.create_task( remote.asyncrun() )
+                    tg.create_task( remcon.asyncrun() )
                 tg.create_task( self._runserver() )
                 tg.create_task( self._broadcast() )
         except Exception:
-            pass
+            logger.exception("Exception in IPyServer.asyncrun")
         finally:
             self.shutdown()
 
