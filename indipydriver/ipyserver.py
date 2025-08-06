@@ -403,7 +403,8 @@ class _DriverComms:
                 # duplicate address
                 logger.error(f"Duplicate address: Received a definition of device {devicename}")
                 self.driver.shutdown()
-                return
+                raise RuntimeError(f"Device name {devicename} is duplicated in the attached drivers.")
+
 
         # call the drivers receive data function
         await self.driver._readdata(xmldata)
