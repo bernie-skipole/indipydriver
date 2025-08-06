@@ -304,7 +304,7 @@ class RemoteConnection:
                 await self._commsobj.run_tx(xmldata)
                 # log it, then continue with next block
                 if logger.isEnabledFor(logging.DEBUG):
-                    self._logrx(rxdata)
+                    self._logrx(xmldata)
         except ConnectionError:
             raise
         except Exception:
