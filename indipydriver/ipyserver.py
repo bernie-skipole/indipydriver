@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import xml.etree.ElementTree as ET
 
-from .ipydriver import IPyDriver, TerminateTaskGroup, force_terminate_task_group
+from .ipydriver import IPyDriver
 
 from .remote import RemoteConnection
 
@@ -292,16 +292,14 @@ class IPyServer:
                 except asyncio.TimeoutError:
                     continue
                 self.xml_data_que.task_done()
+                if self._stop:
+                    return
                 con_id, xmldata = quedata
                 # data to send, therefore increase keepalive timeout
                 # however, do not increase it if this is a setBLOBVector, as these may be blocked
                 if xmldata.tag != "setBLOBVector":
                     timeout = time.time()+self.keepalive
                 async with asyncio.TaskGroup() as tg:
-                    if self._stop:
-                        # add an exception-raising task to force the group to terminate
-                        tg.create_task(force_terminate_task_group())
-                        break
                     for driver in self.drivers:
                         # send data to the drivers
                         tg.create_task( driver._commsobj.driver_rx(con_id, xmldata) )

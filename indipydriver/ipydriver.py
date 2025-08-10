@@ -61,16 +61,6 @@ def _makestart(element):
     return "".join(attriblist)
 
 
-# This class and function is used to terminate a task group as suggested by Python documentation
-
-class TerminateTaskGroup(Exception):
-    """Exception raised to terminate a task group."""
-
-async def force_terminate_task_group():
-    """Used to force termination of a task group."""
-    raise TerminateTaskGroup()
-
-
 class IPyDriver(collections.UserDict):
 
     """A subclass of this should be created with methods written
@@ -330,12 +320,9 @@ class IPyDriver(collections.UserDict):
                 tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
                 tg.create_task( self._monitorsnoop() )          # task to monitor if a getproperties needs to be sent
-        except Exception:
-            pass
         finally:
+            self.shutdown()
             self.stopped.set()
-            self._stop = True
-
 
 
     async def _readdata(self, root):
@@ -370,10 +357,6 @@ class IPyDriver(collections.UserDict):
                             for pname, pvector in device.items():
                                 if not pvector.enable:
                                     continue
-                                if self._stop:
-                                    # add an exception-raising task to force the group to terminate
-                                    tg.create_task(force_terminate_task_group())
-                                    break
                                 if self.auto_send_def:
                                     tg.create_task( pvector.send_defVector() )
                                 else:
@@ -396,10 +379,6 @@ class IPyDriver(collections.UserDict):
                             for pname, pvector in device.items():
                                 if not pvector.enable:
                                     continue
-                                if self._stop:
-                                    # add an exception-raising task to force the group to terminate
-                                    tg.create_task(force_terminate_task_group())
-                                    break
                                 if self.auto_send_def:
                                     tg.create_task( pvector.send_defVector() )
                                 else:
@@ -443,7 +422,12 @@ class IPyDriver(collections.UserDict):
                     if pvector is None:
                         # name not recognised in this device
                         return
-                    await pvector.vector_handler(root)
+                    e = pvector.create_event(root)
+                    if e is None:
+                        # no event created
+                        return
+                    await self.rxevent(e)
+
 
         elif root.tag in snoop_tags:
             # xml received from other devices
@@ -578,11 +562,9 @@ class Device(collections.UserDict):
 
 
     def shutdown(self):
-        """Shuts down the device, sets the flag self._stop to True
-           and shuts down property vector handlers"""
+        """Sets the flag self._stop to True"""
         self._stop = True
-        for pv in self.data.values():
-            pv.shutdown()
+
 
     @property
     def stop(self):

@@ -56,18 +56,6 @@ class PropertyVector(collections.UserDict):
         # this will be set when the driver is created
         self.driver = None
 
-       # shutdown routine sets this to True to stop coroutines
-        self._stop = False
-
-
-    def shutdown(self):
-        """Sets the flag self._stop to True which shuts down the handler"""
-        self._stop = True
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop the driver"
-        return self._stop
 
     @property
     def device(self):
@@ -160,6 +148,11 @@ class PropertyVector(collections.UserDict):
         return self.data[membername].membervalue
 
 
+    def create_event(self, root):
+        "Override this so each vector type creates its own event"
+        pass
+
+
 class SwitchVector(PropertyVector):
 
     """A SwitchVector contains one or more members with values 'On' or 'Off'. It also has
@@ -208,18 +201,17 @@ class SwitchVector(PropertyVector):
             logger.exception("Invalid rule value")
 
 
-    async def vector_handler(self, root):
-        if self._stop:
-            return
+    def create_event(self, root):
         if not self.enable:
             return
         try:
             if root.tag == "newSwitchVector":
                 # create event
                 event = newSwitchVector(self.devicename, self.name, self, root)
-                await self.driver.rxevent(event)
         except EventException:
             logger.exception("Unable to create event from received data")
+            return
+        return event
 
 
 
@@ -394,11 +386,6 @@ class LightVector(PropertyVector):
             self.data[light.name] = light
 
 
-    async def vector_handler(self, root):
-        "Read Only - does not accept a new value"
-        pass
-
-
     @property
     def perm(self):
         return "ro"
@@ -551,18 +538,17 @@ class TextVector(PropertyVector):
             logger.exception("Invalid permission value")
 
 
-    async def vector_handler(self, root):
-        if self._stop:
-            return
+    def create_event(self, root):
         if not self.enable:
             return
         try:
             if root.tag == "newTextVector":
                 # create event
                 event = newTextVector(self.devicename, self.name, self, root)
-                await self.driver.rxevent(event)
         except EventException:
             logger.exception("Unable to create event from received data")
+            return
+        return event
 
 
     def _make_defVector(self, message='', timestamp=None):
@@ -744,18 +730,17 @@ class NumberVector(PropertyVector):
         return member.getformattedvalue()
 
 
-    async def vector_handler(self, root):
-        if self._stop:
-            return
+    def create_event(self, root):
         if not self.enable:
             return
         try:
             if root.tag == "newNumberVector":
                 # create event
                 event = newNumberVector(self.devicename, self.name, self, root)
-                await self.driver.rxevent(event)
         except EventException:
             logger.exception("Unable to create event from received data")
+            return
+        return event
 
 
     def _make_defVector(self, message='', timestamp=None):
@@ -937,18 +922,17 @@ class BLOBVector(PropertyVector):
             logger.exception("Invalid permission value")
 
 
-    async def vector_handler(self, root):
-        if self._stop:
-            return
+    def create_event(self, root):
         if not self.enable:
             return
         try:
             if root.tag == "newBLOBVector":
                 # create event
                 event = newBLOBVector(self.devicename, self.name, self, root)
-                await self.driver.rxevent(event)
         except EventException:
             logger.exception("Unable to create event from received data")
+            return
+        return event
 
 
     def _make_defVector(self, message='', timestamp=None):
