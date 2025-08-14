@@ -11,11 +11,13 @@ The package creates and serves the INDI protocol which is defined so that driver
 
 For further information on INDI, see :ref:`references`.
 
-This is one of three associated packages.
+This is one of four associated packages.
 
 **Indipydriver** provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
 
 **Indipyterm** is a terminal client, which can be run to view the instrument controls.
+
+**Indipyconsole** is another terminal client, with cruder output, Linux only, but has less dependencies.
 
 Optionally - if you wanted to create dedicated client programs:
 
@@ -27,7 +29,7 @@ These packages are available on Pypi, and should interwork with other services t
 
 INDI is often used with astronomical instruments, but is a general purpose protocol which can be used for any instrument control if appropriate drivers are written.
 
-The package can be installed from:
+The indipydriver package can be installed from:
 
 https://pypi.org/project/indipydriver
 
