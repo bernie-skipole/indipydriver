@@ -187,9 +187,7 @@ The class IPyDriver should be subclassed with your own 'rxevent(event)' coroutin
 rxevent method
 ^^^^^^^^^^^^^^
 
-The event object is triggered by data received from the client, and is one of "enableBLOB", "newSwitchVector", "newNumberVector", "newTextVector" or "newBLOBVector".
-
-The enableBLOB event can be ignored - it is used internally by IPyServer.
+The event object is triggered by data received from the client, and is one of "newSwitchVector", "newNumberVector", "newTextVector" or "newBLOBVector".
 
 The new vector events are sent by the client to change the instrument settings, in this case to switch on or off the LED. These events are mappings of membername to value which the client is submitting, not all membernames may be present if they are not being changed.
 
