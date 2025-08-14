@@ -8,11 +8,13 @@ INDI - Instrument Neutral Distributed Interface.
 
 See https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 
-This is one of three associated packages.
+This is one of four associated packages.
 
 **Indipydriver** provides an 'IPyDriver' class to work with your own code to produce the INDI protocol, and an 'IPyServer' class to serve it on a port.
 
 **Indipyterm** is a terminal client, which can be run to view the instrument controls.
+
+**Indipyconsole** is another terminal client, with cruder output, Linux only, but has less dependencies.
 
 Optionally - if you wanted to create dedicated client programs:
 
