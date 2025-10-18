@@ -142,6 +142,21 @@ class IPyDriver(collections.UserDict):
         self.stopped = asyncio.Event()
         # this is set when asyncrun is finished
 
+        # This holds any background tasks which are to be run
+        self._background_tasks = set()
+
+
+    def run_background_task(self, task):
+        """This method is typically called from the rxevent method with
+           a task to be run in the background, it retains a strong reference
+           to the task until it is done."""
+        self._background_tasks.add(task)
+        # To prevent keeping references to finished tasks forever,
+        # make each task remove its own reference from the set after
+        # completion:
+        task.add_done_callback(self._background_tasks.discard)
+        # This task is now running in the background
+
 
     def devices(self):
         "Returns a list of device objects"

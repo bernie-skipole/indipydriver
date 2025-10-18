@@ -43,7 +43,7 @@ class PropertyVector(collections.UserDict):
         self.label = label
         self.group = group
         self.state = state
-        self.timeout = "0"
+        self._timeout = "0"
         self.vectortype = self.__class__.__name__
         # if self.enable is False, this property ignores incoming traffic
         # and (apart from delProperty) does not transmit anything
@@ -55,6 +55,17 @@ class PropertyVector(collections.UserDict):
 
         # this will be set when the driver is created
         self.driver = None
+
+    @property
+    def timeout(self):
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value):
+        if isinstance(value, str):
+            self._timeout = value
+        else:
+            self._timeout = str(value)
 
 
     @property
@@ -104,10 +115,7 @@ class PropertyVector(collections.UserDict):
            will be made, or one of Idle, Ok, Busy or Alert.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -235,7 +243,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("rule", self.rule)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for switch in self.data.values():
@@ -267,10 +275,7 @@ class SwitchVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -291,7 +296,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
@@ -329,10 +334,7 @@ class SwitchVector(PropertyVector):
            just a state or message is to be sent.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -353,7 +355,7 @@ class SwitchVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
@@ -570,7 +572,7 @@ class TextVector(PropertyVector):
         xmldata.set("perm", self.perm)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for text in self.data.values():
@@ -601,10 +603,7 @@ class TextVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -625,7 +624,7 @@ class TextVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -652,10 +651,7 @@ class TextVector(PropertyVector):
            just a state or message is to be sent.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -676,7 +672,7 @@ class TextVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for text in self.data.values():
@@ -762,7 +758,7 @@ class NumberVector(PropertyVector):
         xmldata.set("perm", self.perm)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for number in self.data.values():
@@ -793,10 +789,7 @@ class NumberVector(PropertyVector):
            explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -817,7 +810,7 @@ class NumberVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         # set a flag to test if at least one member is included
@@ -844,10 +837,7 @@ class NumberVector(PropertyVector):
            just a state or message is to be sent.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -868,7 +858,7 @@ class NumberVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for number in self.data.values():
@@ -954,7 +944,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("perm", self.perm)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
         for blob in self.data.values():
@@ -981,10 +971,7 @@ class BLOBVector(PropertyVector):
            will be called, so you do not have to close it.
         """
         if timeout is not None:
-            if isinstance(timeout, str):
-                self.timeout = timeout
-            else:
-                self.timeout = str(timeout)
+            self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
@@ -1005,7 +992,7 @@ class BLOBVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
-            xmldata.set("timeout", self.timeout)
+            xmldata.set("timeout", self._timeout)
         if message:
             xmldata.set("message", message)
 
