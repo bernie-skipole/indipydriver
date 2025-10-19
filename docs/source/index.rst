@@ -14,7 +14,6 @@ indipydriver = Enabling remote instrument control
    usage/rxevents
    usage/hardware
    usage/snoopevents
-   usage/ipyserver
    usage/logging
    usage/example1
    usage/example2

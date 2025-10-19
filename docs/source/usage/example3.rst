@@ -7,6 +7,8 @@ This example simulates a driver which snoops on the thermostat of the previous e
 
     import indipydriver as ipd
 
+    from indipyserver import IPyServer
+
 
     class WindowControl:
         "This is a simulation containing variables only"
@@ -113,7 +115,7 @@ This example simulates a driver which snoops on the thermostat of the previous e
         # make the window driver
         windowdriver = make_driver("Window", "Thermostat")
 
-        server = ipd.IPyServer(thermodriver, windowdriver)
+        server = IPyServer(thermodriver, windowdriver)
         print(f"Running {__file__}")
         asyncio.run( server.asyncrun() )
 
@@ -128,10 +130,10 @@ Alternatively if the thermostat of example2 was running on a remote machine (wit
 
 Example2 would need one minor modification::
 
-        server = ipd.IPyServer( thermodriver,
-                                host="0.0.0.0",
-                                port=7624,
-                                maxconnections=5)
+        server = IPyServer( thermodriver,
+                            host="0.0.0.0",
+                            port=7624,
+                            maxconnections=5)
 
 The server host has 'localhost' changed to "0.0.0.0" indicating it is listening on all IP addresses, allowing the window control machine to connect to it.
 
@@ -141,9 +143,9 @@ The machine operating the window could then be changed to::
 
         # make the window driver
         windowdriver = make_driver("Window", "Thermostat")
-        server = ipd.IPyServer(windowdriver)
+        server = IPyServer(windowdriver)
         server.add_remote(host='raspberrypi', port=7624)
         print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
 
-The server.add_remote command enables this to make a connection to raspberrypi which is running the thermostat, and this connects the two. If indipyclient is then run on the machine running the windowdriver, it is able to control both drivers as before.
+The server.add_remote command enables this to make a connection to raspberrypi which is running the thermostat, and this connects the two. If indipyterm is then run on the machine running the windowdriver, it is able to control both drivers as before.

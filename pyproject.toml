@@ -7,8 +7,8 @@ name = "indipydriver"
 authors = [{name = "Bernard Czenkusz", email = "bernie@skipole.co.uk"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License", "Operating System :: POSIX :: Linux","Topic :: Scientific/Engineering :: Astronomy", "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator"]
-version = "2.5.0"
-description="Provides classes enabling remote instrument control."
+version = "3.0.0"
+description="Enable drivers to be written for instrument control using the INDI protocol."
 readme = "README.md"
 requires-python = ">=3.11"
 keywords=['indi', 'driver', 'astronomy', 'instrument', 'remote', 'control']

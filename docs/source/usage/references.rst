@@ -7,27 +7,29 @@ indipydriver development site:
 
 https://github.com/bernie-skipole/indipydriver
 
-The package can be installed from:
-
 https://pypi.org/project/indipydriver
 
-The associated indipyclient sites:
+https://indipydriver.readthedocs.io
 
-https://github.com/bernie-skipole/indipyclient
 
-https://indipyclient.readthedocs.io
+Associated packages:
 
-https://pypi.org/project/indipyclient
+indipyserver
+^^^^^^^^^^^^
 
-The associated indipyterm and indipyconsole sites:
+https://github.com/bernie-skipole/indipyserver
+
+https://pypi.org/project/indipyserver/
+
+https://indipyserver.readthedocs.io
+
+
+indipyterm
+^^^^^^^^^^
 
 https://github.com/bernie-skipole/indipyterm
 
 https://pypi.org/project/indipyterm
-
-https://github.com/bernie-skipole/indipyconsole
-
-https://pypi.org/project/indipyconsole
 
 Examples of clients and drivers are collected at:
 
@@ -35,7 +37,7 @@ https://github.com/bernie-skipole/inditest
 
 Further relevant sites:
 
-Please note: The author has no relationship with indilib, these indipyclient and indipydriver packages are independently developed implementations. However they were developed with reference to the INDI version 1.7 specification, and are intended to interwork with other implementations that also meets that spec.
+Please note: The author has no relationship with indilib, these indipyserver and indipydriver packages are independently developed implementations. However they were developed with reference to the INDI version 1.7 specification, and are intended to interwork with other implementations that also meets that spec.
 
 https://en.wikipedia.org/wiki/Instrument_Neutral_Distributed_Interface
 

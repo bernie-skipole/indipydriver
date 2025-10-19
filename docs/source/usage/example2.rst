@@ -12,6 +12,8 @@ using the rxevent(self, event) method to accept the new target value::
 
     import indipydriver as ipd
 
+    from indipyserver import IPyServer
+
     class ThermalControl:
         """This is a simulation containing variables only, normally it
            would control a real heater, and take temperature measurements
@@ -169,7 +171,7 @@ using the rxevent(self, event) method to accept the new target value::
         # make a driver for the instrument
         thermodriver = make_driver("Thermostat", 15)
         # and a server, which serves this driver
-        server = ipd.IPyServer(thermodriver)
+        server = IPyServer(thermodriver)
         print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
 

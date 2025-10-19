@@ -22,20 +22,6 @@ There are further facilities available; in which one driver can monitor (snoop) 
 .. image:: ./images/rem2.png
 
 
-indipyclient
-^^^^^^^^^^^^
-
-The associated package indipyclient can be installed from Pypi.
-
-https://pypi.org/project/indipyclient
-
-This is a client library providing functions which communicate to an INDI service, and can be used to write scripts to view and control your instruments.
-
-Further information about indipyclient can be found from:
-
-https://indipyclient.readthedocs.io
-
-
 indipyterm
 ^^^^^^^^^^
 
@@ -94,6 +80,10 @@ If you are trying this on a Raspberry pi, you may want to use your system gpioze
 
     pip install indipydriver
 
+If you are using the indipyserver package to serve this driver, you would also install::
+
+    pip install indipyserver
+
 
 Define your instrumentation objects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -104,6 +94,7 @@ You would initially start the script by defining your own classes. In this examp
 
     import asyncio
     import indipydriver as ipd
+    from indipyserver import IPyServer
 
     # from gpiozero import LED
 
@@ -278,7 +269,7 @@ To serve this driver on a port include::
 
         # in this case the devicename is "led", pin 17
         driver = make_driver("led", 17)
-        server = ipd.IPyServer(driver, host="localhost", port=7624, maxconnections=5)
+        server = IPyServer(driver, host="localhost", port=7624, maxconnections=5)
         print(f"Running {__file__}")
         asyncio.run(server.asyncrun())
 
@@ -286,11 +277,7 @@ If the host, port and maxconnections are not specified in the IPyServer call, th
 
 The IPyServer class takes drivers, only one in this example, and serves them all on the host/port. It allows connections from multiple clients. If more than one driver is to be served, the call would be::
 
-    server = ipd.IPyServer(driver1, driver2, driver3,...., host="localhost", port=7624, maxconnections=5)
-
-To run third party INDI drivers created with other languages or tools, the server object has an add_exdriver method, which given an executable will run it, and will communicate to it by stdin and stdout. The method can be called multiple times to add several executable drivers.
-
-It also has an add_remote method which can be used to add connections to remote servers, creating a tree network of servers.
+    server = IPyServer(driver1, driver2, driver3,...., host="localhost", port=7624, maxconnections=5)
 
 Connecting using the indipyterm terminal client gives:
 

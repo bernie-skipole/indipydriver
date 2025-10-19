@@ -62,7 +62,7 @@ This coroutine outputs the xml data on stdout, and reads it on stdin::
 
 This could be awaited together with any other co-routines needed to run your instrument. Making your script executable, and using the above method should allow your driver to work with other parties INDI server software that expect stdin and stdout streams from drivers.
 
-Alternatively, use indipydriver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
+Alternatively, use indipyserver.IPyServer, this listens on the given host and port, to which a client can connect. Multiple drivers can be served, and multiple client connections can be made::
 
         server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
         await server.asyncrun()
