@@ -8,6 +8,8 @@ It expands on example1 by adding a further NumberVector and NumberMember, and
 using the rxevent(self, event) method to accept the new target value::
 
 
+    # Simulated thermostat with settable target.
+
     import asyncio
 
     import indipydriver as ipd
@@ -27,15 +29,12 @@ using the rxevent(self, event) method to accept the new target value::
             self.target = target
             self.temperature = 20
             self.heater = "Off"
-            self.stop = False
 
-        def shutdown(self):
-            self.stop = True
 
         async def run_thermostat(self):
             """This simulates temperature increasing/decreasing, and turns
                on/off a heater if moving too far from the target."""
-            while not self.stop:
+            while True:
                 await asyncio.sleep(2)
                 if self.heater == "On":
                     # increasing temperature if the heater is on
@@ -64,12 +63,9 @@ using the rxevent(self, event) method to accept the new target value::
             "On receiving data, this is called"
 
             thermalcontrol = self.driverdata["thermalcontrol"]
-            devicename = thermalcontrol.devicename
 
-            if event.devicename != devicename:
-                # No other device data is expected, ignore anything
-                # without the correct devicename
-                return
+            # There is only one device in this driver,
+            # so no need to check devicename
 
             if isinstance(event, ipd.newNumberVector):
                 if event.vectorname == "targetvector" and 'target' in event:
@@ -93,13 +89,14 @@ using the rxevent(self, event) method to accept the new target value::
         async def hardware(self):
             """This coroutine starts when the driver starts."""
 
-            # get the object controlling the instrument, which is available
-            # in the named arguments dictionary 'self.driverdata'.
+            # get the ThermalControl object which actually runs the
+            # instrument, and which is available in the named
+            # arguments dictionary 'self.driverdata'.
             thermalcontrol = self.driverdata["thermalcontrol"]
             devicename = thermalcontrol.devicename
 
             # set the thermalcontrol instrument running
-            controltask = asyncio.create_task(thermalcontrol.run_thermostat())
+            self.add_background(thermalcontrol.run_thermostat())
 
             vector = self[devicename]['temperaturevector']
             while not self.stop:
@@ -108,11 +105,6 @@ using the rxevent(self, event) method to accept the new target value::
                 vector['temperature'] = thermalcontrol.temperature
                 # and transmit it to the client
                 await vector.send_setVector()
-
-            # the loop above has finished, so stop the controltask
-            thermalcontrol.shutdown()
-            # and wait for it to stop
-            await controltask
 
 
     def make_driver(devicename, target):
@@ -164,17 +156,18 @@ using the rxevent(self, event) method to accept the new target value::
 
         # create and serve the driver
         # the devicename has to be unique in a network of devices,
-        # and this name and target could come from script arguments
+        # so rather than statically setting it, the name and
+        # initial target temperature could come from script arguments
 
-        # in this case the devicename is "Thermostat", target 15
+        # in this case we'll set the devicename as "Thermostat",
+        # and the target as 15
 
         # make a driver for the instrument
         thermodriver = make_driver("Thermostat", 15)
         # and a server, which serves this driver
         server = IPyServer(thermodriver)
-        print(f"Running {__file__}")
+        print(f"Running {__file__} with indipydriver version {ipd.version}")
         asyncio.run(server.asyncrun())
-
 
 And the result, when connecting using indipyterm is:
 
