@@ -10,7 +10,7 @@ from .events import getProperties, newSwitchVector, newTextVector, newNumberVect
 if sys.version_info < (3, 11):
     raise ImportError('indipydriver requires Python >= 3.11')
 
-version = "3.0.0"
+version = "3.0.1"
 
 
 __all__ = ["version", "IPyDriver", "Device", "getfloat",

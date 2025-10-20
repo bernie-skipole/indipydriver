@@ -46,6 +46,8 @@ a message with every vector definition.
 
 **stop** - Normally False, but set to True when the driver shutdown() method is called.
 
+**shutdownrequested** - An asyncio.Event() object, set when shutdown() is called, await driver.shutdownrequested.wait() will block until shutdown() called.
+
 **stopped** - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
 
 **debug_enable** - As default this is set to False.

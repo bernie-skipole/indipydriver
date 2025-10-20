@@ -1,6 +1,6 @@
 
 
-import collections, asyncio, sys, time, os, fcntl, logging
+import collections, asyncio, sys, time, os, fcntl, logging, inspect
 
 import xml.etree.ElementTree as ET
 
@@ -142,20 +142,41 @@ class IPyDriver(collections.UserDict):
         self.stopped = asyncio.Event()
         # this is set when asyncrun is finished
 
-        # This holds any background tasks which are to be run
-        self._background_tasks = set()
+        self.shutdownrequested = asyncio.Event()
+        # this is set when shutdown is called
+
+        self._background_added = asyncio.Event()
+        # this is set, then cleared, as background coroutines are added
+        # only used by the _start_background method
+
+        # This temporarily holds any background coroutines
+        # to be passed to the _start_background method
+        self._backgroundque = collections.deque()
 
 
-    def run_background_task(self, task):
-        """This method is typically called from the rxevent method with
-           a task to be run in the background, it retains a strong reference
-           to the task until it is done."""
-        self._background_tasks.add(task)
-        # To prevent keeping references to finished tasks forever,
-        # make each task remove its own reference from the set after
-        # completion:
-        task.add_done_callback(self._background_tasks.discard)
-        # This task is now running in the background
+    def add_background(self, coro):
+        """This method is typically called from the rxevent or hardware methods
+           with a coroutine to be run in the background."""
+        if not inspect.iscoroutine(coro):
+            raise TypeError("Value passed to add_background should be a coroutine")
+        self._backgroundque.append(coro)
+        self._background_added.set()
+        self._background_added.clear()
+
+
+    async def _start_background(self, tg):
+        while not self._stop:
+            await self._background_added.wait()
+            if self._stop:
+                self._backgroundque.clear()
+                return
+            # get the coroutine
+            try:
+                coro = self._backgroundque.pop()
+            except IndexError:
+                continue
+            # add this coroutine to tg
+            tg.create_task(coro)
 
 
     def devices(self):
@@ -166,6 +187,8 @@ class IPyDriver(collections.UserDict):
     def shutdown(self):
         "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
+        self.shutdownrequested.set()
+        self._background_added.set() # ensures the _start_background task stops
         if self._commsobj is not None:
             self._commsobj.shutdown()
         for device in self.data.values():
@@ -334,7 +357,9 @@ class IPyDriver(collections.UserDict):
             async with asyncio.TaskGroup() as tg:
                 tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
-                tg.create_task( self._monitorsnoop() )          # task to monitor if a getproperties needs to be sent
+                tg.create_task( self._monitorsnoop() )           # task to monitor if a getproperties needs to be sent
+                tg.create_task( self._start_background(tg) )     # monitors and starts any background tasks
+
         finally:
             self.shutdown()
             self.stopped.set()
