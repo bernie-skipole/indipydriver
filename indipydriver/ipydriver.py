@@ -355,10 +355,11 @@ class IPyDriver(collections.UserDict):
                 self._commsobj = _STDINOUT(self)
 
             async with asyncio.TaskGroup() as tg:
+                tg.create_task( self._start_background(tg) )     # monitors and starts any background tasks
                 tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
                 tg.create_task( self._monitorsnoop() )           # task to monitor if a getproperties needs to be sent
-                tg.create_task( self._start_background(tg) )     # monitors and starts any background tasks
+
 
         finally:
             self.shutdown()
