@@ -60,6 +60,8 @@ action for scheduling purposes..."
 
 **enable** is by default True, and is automatically set to False if the send_delProperty() method is called. When False no further data is sent by this property and any incoming values are ignored, until the enable attribute is set True again. Calling send_delProperty() therefore has the effect of removing the property from the client.
 
+To re-enable a vector, set this attribute to True, also the device enable attribute must be True, and then call the vector send_defVector() method.
+
 If in the initial state of the device, it is required that a particular property should be hidden, then when the vector is first created, set vector.enable = False, and the vector will be disabled until the enable attribute is set True, and the vector send_defVector() method called, which informs the client of the existence of this property.
 
 Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the LEDDriver example, the value of the vector member is set by::
@@ -68,7 +70,7 @@ Each vector is also a mapping of membername to memberVALUE  - note, not member o
 
 Numeric values are preferably set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol. If given as floats or integers they will be converted to strings. The only exception is blobsize, where the number should be an integer.
 
-When transmitting a vector, using the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
+When transmitting a vector after updating its values, use the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
 
 The Text, Light, Switch, Number and BLOB members and vectors are described below. When creating a driver you would typically first make the members that hold the values associated with your instrument, these members would then be inserted into vectors, and the vectors into a Device.
 
