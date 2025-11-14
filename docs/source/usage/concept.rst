@@ -62,6 +62,46 @@ Further information about indipyterm can be found from:
 https://github.com/bernie-skipole/indipyterm
 
 
+indipyweb
+^^^^^^^^^
+
+The associated package indipyweb provides a client which serves web pages, and is also available from Pypi.
+
+https://pypi.org/project/indipyweb
+
+The client can be run from a virtual environment with
+
+indipyweb [options]
+
+or with
+
+python3 -m indipyweb [options]
+
+The package help is:
+
+.. code-block:: text
+
+    usage: indipyweb [options]
+
+    Web server to communicate to an INDI service.
+
+    options:
+      -h, --help   show this help message and exit
+      --port PORT  Listening port of the web server.
+      --host HOST  Hostname/IP of the web server.
+      --db DB      Folder where the database will be set.
+      --version    show program's version number and exit
+
+A typical session would look like:
+
+.. image:: ./images/indipyweb.png
+
+Further information about indipyweb can be found from:
+
+https://github.com/bernie-skipole/indipyweb
+
+
+
 First Example
 =============
 
