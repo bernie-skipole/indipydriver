@@ -49,6 +49,8 @@ The next page shows an example driver using the above structure, describing an L
 Clients
 =======
 
+To connect to the INDI service, and display the instrument properties you need a client. Clients could be written for a particular instrument, or could be general purpose, able to display any instrument. Two such are are shown below.
+
 indipyterm
 ^^^^^^^^^^
 
