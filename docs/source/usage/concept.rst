@@ -86,11 +86,20 @@ The package help is:
     Web server to communicate to an INDI service.
 
     options:
-      -h, --help   show this help message and exit
-      --port PORT  Listening port of the web server.
-      --host HOST  Hostname/IP of the web server.
-      --db DB      Folder where the database will be set.
-      --version    show program's version number and exit
+      -h, --help                  show this help message and exit
+      --port PORT                 Listening port of the web server.
+      --host HOST                 Hostname/IP of the web server.
+      --dbfolder DBFOLDER         Folder where the database will be set.
+      --securecookie SECURECOOKIE Set True to enforce https only for cookies.
+      --version                   show program's version number and exit
+
+    The host and port set here have priority over values set in the database.
+    If not given, and not set in the database, 'localhost:8000' is used.
+    If it does not already exist, a database file will be created in the
+    given db folder, if not set the current working directory will be used.
+    The securecookie is 'False' by default, set it to the string 'True'
+    to ensure remote login can only happen over https.
+
 
 A typical session would look like:
 
