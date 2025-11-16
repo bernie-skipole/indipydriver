@@ -23,7 +23,7 @@ There are further facilities available; in which one driver can monitor (snoop) 
 
 
 Install indipydriver
-^^^^^^^^^^^^^^^^^^^^
+====================
 
 Generally you would install from Pypi into a virtual environment.
 
@@ -41,7 +41,7 @@ If you are using the indipyserver package to serve this driver, you would also i
 
 
 First Example
-=============
+^^^^^^^^^^^^^
 
 The next page shows an example driver using the above structure, describing an LED control on a Raspberry Pi, see :ref:`firstexample`.
 
