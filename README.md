@@ -14,11 +14,13 @@ Indipydriver provides classes of 'members', 'vectors' and 'devices', where membe
 
 The 'IPyDriver' class holds one or more devices, and provides methods you can use to send and receive data, which you would use to interface with your own code.
 
-This is one of three associated packages.
+This is one of associated packages.
 
 **Indipydriver** provides classes to work with your own code to control instruments and produce the INDI protocol.
 
 **Indipyserver** provides an 'IPyServer' class to run drivers and serve the INDI protocol on a port.
+
+**Indipyweb** is an INDI client and a web server, it connects to the serving INDI port and provides a web view of instruments.
 
 **Indipyterm** is a terminal client, which connects to the serving port and can be run to view the instrument controls.
 
@@ -74,5 +76,7 @@ Documentation at https://indipydriver.readthedocs.io
 Installation from https://pypi.org/project/indipydriver
 
 indipyserver available from https://pypi.org/project/indipyserver
+
+indipyweb available from https://pypi.org/project/indipyweb
 
 indipyterm available from https://pypi.org/project/indipyterm

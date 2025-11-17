@@ -24,6 +24,14 @@ https://pypi.org/project/indipyserver/
 https://indipyserver.readthedocs.io
 
 
+indipyweb
+^^^^^^^^^
+
+https://github.com/bernie-skipole/indipyweb
+
+https://pypi.org/project/indipyweb
+
+
 indipyterm
 ^^^^^^^^^^
 
