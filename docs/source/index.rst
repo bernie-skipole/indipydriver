@@ -19,6 +19,7 @@ indipydriver = Enabling remote instrument control
    usage/example1
    usage/example2
    usage/example3
+   usage/example4
    usage/references
    usage/license
 
