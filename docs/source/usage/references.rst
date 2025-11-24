@@ -61,8 +61,15 @@ indipyconsole
 
 Rather crude terminal client, Linux only. However it has no dependencies outside of the Python standard library and if the source is copied, it can be run without a virtual environment using:
 
-python3 -m indipyclient
+python3 -m indipyconsole
 
+https://github.com/bernie-skipole/indipyconsole
+
+https://pypi.org/project/indipyconsole
+
+
+Other links
+^^^^^^^^^^^
 
 Examples of clients and drivers are collected at:
 
