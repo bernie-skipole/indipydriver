@@ -3,6 +3,10 @@ Example4
 
 This script serves the drivers as in the previous example, but also serves web pages using indipyweb.
 
+This example, and the previous examples are available at:
+
+https://github.com/bernie-skipole/inditest
+
 This requires indipydriver, indipyserver and indipyweb to be installed into a virtual environment::
 
     # A single script to run the thermostat and window drivers
@@ -60,7 +64,9 @@ This requires indipydriver, indipyserver and indipyweb to be installed into a vi
     print("Application Stopped")
 
 
-It would probably be more usual to run example3.py in one process, and open a new process to run indipyweb, however the above shows how it can all be run as a single script.
+It would probably be more usual to run example3.py in one process, and open a new session to run indipyweb, however the above shows how it can all be run as a single script.
+
+This has been run on a RaspberryPi 5 to show that indipydriver, indipyserver and indipyweb are all RaspberryPi compatable. At the same time SSH was used to connect to the Pi and indipyterm was run to also connect to the service. Again this showed that indipyterm is Raspberry Pi compatable, and works well in an SSH session.
 
 For more information on indipyweb see:
 
