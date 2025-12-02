@@ -39,11 +39,9 @@ If you are using the indipyserver package to serve this driver, you would also i
 
     pip install indipyserver
 
-
-First Example
-^^^^^^^^^^^^^
-
 The next page shows an example driver using the above structure, describing an LED control on a Raspberry Pi, see :ref:`firstexample`.
+
+However before creating an example it may be worth looking at clients first.
 
 
 Clients

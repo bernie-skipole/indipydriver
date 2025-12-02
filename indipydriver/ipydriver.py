@@ -145,13 +145,9 @@ class IPyDriver(collections.UserDict):
         self.shutdownrequested = asyncio.Event()
         # this is set when shutdown is called
 
-        self._background_added = asyncio.Event()
-        # this is set, then cleared, as background coroutines are added
-        # only used by the _start_background method
-
-        # This temporarily holds any background coroutines
-        # to be passed to the _start_background method
-        self._backgroundque = collections.deque()
+        # self._tg will become the taskgroup created by self.asyncrun()
+        self._tg = None
+        self._backgroundlist = []
 
 
     def add_background(self, coro):
@@ -159,24 +155,12 @@ class IPyDriver(collections.UserDict):
            with a coroutine to be run in the background."""
         if not inspect.iscoroutine(coro):
             raise TypeError("Value passed to add_background should be a coroutine")
-        self._backgroundque.append(coro)
-        self._background_added.set()
-        self._background_added.clear()
-
-
-    async def _start_background(self, tg):
-        while not self._stop:
-            await self._background_added.wait()
-            if self._stop:
-                self._backgroundque.clear()
-                return
-            # get the coroutine
-            try:
-                coro = self._backgroundque.pop()
-            except IndexError:
-                continue
+        if self._tg is None:
+            # taskgroup not started yet, so add to list
+            self._backgroundlist.append(coro)
+        else:
             # add this coroutine to tg
-            tg.create_task(coro)
+            self._tg.create_task(coro)
 
 
     def devices(self):
@@ -188,7 +172,7 @@ class IPyDriver(collections.UserDict):
         "Shuts down the driver, sets the flag self.stop to True"
         self._stop = True
         self.shutdownrequested.set()
-        self._background_added.set() # ensures the _start_background task stops
+
         if self._commsobj is not None:
             self._commsobj.shutdown()
         for device in self.data.values():
@@ -344,7 +328,8 @@ class IPyDriver(collections.UserDict):
            stdin and stdout.
 
            Do not await this if the driver is being set into IPyServer, in
-           that situation the IPyServer will control communications."""
+           that situation the IPyServer will control communications and will
+           call this itself when run."""
 
         logger.info(f"Driver {self.__class__.__name__} started")
         self._stop = False
@@ -355,7 +340,9 @@ class IPyDriver(collections.UserDict):
                 self._commsobj = _STDINOUT(self)
 
             async with asyncio.TaskGroup() as tg:
-                tg.create_task( self._start_background(tg) )     # monitors and starts any background tasks
+                self._tg = tg
+                for coro in self._backgroundlist:
+                    tg.create_task( coro )                       # Start any background tasks already added
                 tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
                 tg.create_task( self._monitorsnoop() )           # task to monitor if a getproperties needs to be sent
