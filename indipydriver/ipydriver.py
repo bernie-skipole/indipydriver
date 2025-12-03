@@ -147,12 +147,12 @@ class IPyDriver(collections.UserDict):
 
         # self._tg will become the taskgroup created by self.asyncrun()
         self._tg = None
+        # holds any background coroutines added prior to asyncrun being awaited
         self._backgroundlist = []
 
 
     def add_background(self, coro):
-        """This method is typically called from the rxevent or hardware methods
-           with a coroutine to be run in the background."""
+        """This method adds a coroutine to be run in the background."""
         if not inspect.iscoroutine(coro):
             raise TypeError("Value passed to add_background should be a coroutine")
         if self._tg is None:
@@ -343,6 +343,9 @@ class IPyDriver(collections.UserDict):
                 self._tg = tg
                 for coro in self._backgroundlist:
                     tg.create_task( coro )                       # Start any background tasks already added
+                for device in self.data.values():
+                    for coro in device._backgroundlist:
+                        tg.create_task( coro )                   # Start any background tasks already added to devices
                 tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
                 tg.create_task( self._monitorsnoop() )           # task to monitor if a getproperties needs to be sent
@@ -582,6 +585,28 @@ class Device(collections.UserDict):
 
         # shutdown routine sets this to True to stop coroutines
         self._stop = False
+
+        # holds any background coroutines added prior to asyncrun being awaited
+        self._backgroundlist = []
+
+
+    @staticmethod
+    def indi_number_to_float(value):
+        """The INDI spec allows a number of different number formats, given any number string, this returns a float.
+           If an error occurs while parsing the number, a TypeError exception is raised."""
+        return getfloat(value)
+
+
+    def add_background(self, coro):
+        """This method adds a coroutine to be run in the background."""
+        if not inspect.iscoroutine(coro):
+            raise TypeError("Value passed to add_background should be a coroutine")
+        if self.driver is None or self.driver._tg is None:
+            # taskgroup not started yet, so add to list
+            self._backgroundlist.append(coro)
+        else:
+            # add this coroutine to driver taskgroup
+            self.driver._tg.create_task(coro)
 
 
     def properties(self):
