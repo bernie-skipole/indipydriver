@@ -199,3 +199,6 @@ The device is subclassed to handle these events, rather than the driver handling
         server = IPyServer(thermodriver)
         print(f"Running {__file__} with indipydriver version {ipd.version}")
         asyncio.run(server.asyncrun())
+
+
+This pattern of delegation to a device may be used to break up a complex driver across several modules. So each device, with its vectors, members and its contolling code could be separated. 

@@ -36,7 +36,7 @@ The ipydriver object has attributes:
 
 This is particularly useful to pass in any object which controls your instrument, and which is then accessable in your rxevent and hardware methods.
 
-**auto_send_def** - As default this is set to True.
+**auto_send_def** - As default this is True.
 
 With auto_send_def set to True, whenever a getProperties event is received from a client, a
 vector send_defVector() method will be called, automatically replying with the vector definition.
@@ -44,15 +44,23 @@ If set to False, the driver developer will need to test for a getProperties even
 method, and implement a send_defVector() . Possibly one reason you may want to do this is to send
 a message with every vector definition.
 
-**stop** - Normally False, but set to True when the driver shutdown() method is called.
+**stop** - Normally False, but becomes set to True when the driver shutdown() method is called.
 
 **shutdownrequested** - An asyncio.Event() object, set when shutdown() is called, await driver.shutdownrequested.wait() will block until shutdown() called.
 
 **stopped** - An asyncio.Event() object, await driver.stopped.wait() will block until the driver stops.
 
-**debug_enable** - As default this is set to False.
+**debug_enable** - As default this is False.
 
 With debug_enable set to False, then this drivers xml traffic will not be logged. Setting it to True, and the logging level to DEBUG, will log the drivers xml traffic. See the logging section of this documentation for further details.
+
+The following attributes are not normally accessed, but are available if required, they are dealt with in more detail under :ref:`snoopevents`.
+
+**snoopall** - Default False, gets set to True if this driver is snooping everything.
+
+**snoopdevices** - Default empty set, becomes populated with remote devicenames if those devices are having all vectors snooped.
+ 
+**snoopvectors** - Default empty dictionary. The keys will become tuples of remote (devicename,vectorname) of vectors that are being snooped. The values will be either None or lists of [timeout, timestamp].
 
 ----
 

@@ -39,6 +39,37 @@ When the copied traffic is received by this driver, the snoopevent method will b
 
 The event type passed into the method reflects the command sent by the remote device.
 
+For complex snooping requirements, you may also want to access the following driver attributes:
+
+self.snoopall
+
+Normally False, will be set to True if the user calls send_getProperties without devicename or vectorname, so this flags that all traffic from remote devices will be snooped.
+
+self.snoopdevices
+
+As default this is an empty set. This will become a set of of remote device names if the user calls send_getProperties with devicename but no vectorname. Indicating that all vectors from the chosen device will be snooped.
+
+self.snoopvectors
+
+As default this is an empty dictionary.
+
+The keys of self.snoopvectors will become tuples (devicename,vectorname) of vectors that are being snooped.
+
+The values will be either None or lists of [timeout, timestamp]
+
+The None values are set as the remote vectors are learnt as devices are being snooped.
+
+However if the snoop method has been called to snoop on a particular vector, the [timeout, timestamp] values will be created.
+
+timeout is the integer seconds set by the snoop() method
+
+timestamp is updated whenever snoop data from the vector is received.
+
+A monitoring coroutine checks if current time is greater than timeout+timestamp, and if it is, sends a getproperties for that device and vector.
+
+It would therefore be possible to call send_getProperties, and after a short while inspect the keys of self.snoopvectors to view a list of all remote devices and vectors on the network.
+
+
 Events
 ^^^^^^
 
