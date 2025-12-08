@@ -5,6 +5,8 @@ Assuming you have a script, myscript.py, containing your project, together with 
 
 You also want the project to be served with indipyweb, and be served with a reverse proxy nginx.
 
+Serving using nginx is particularly useful on a Debian system, as nginx can be installed, and automatically run listening on port 80, which is otherwise awkward since the root user is needed to access ports below 1000.
+
 Create a projectfiles directory, beneath your home directory to hold your files:
 
 ~/projectfiles
@@ -173,4 +175,4 @@ Now reboot the server or restart nginx with command "sudo service nginx restart"
 
 Connecting to your server with a browser on port 80 should now show your INDI project.
 
-The above serves port 80, to serve https with a certificate is more complicated. A bit too nmuch to document here!
+The above serves port 80, to serve https with a certificate is more complicated. A bit too much to document here!

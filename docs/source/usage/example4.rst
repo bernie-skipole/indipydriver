@@ -144,7 +144,7 @@ The device is subclassed to handle these events, rather than the driver handling
 
         # Make a NumberMember holding the temperature value
         temperature = ipd.NumberMember( name="temperature",
-                                        format='%3.1f', min=-50, max=99,
+                                        format='%3.1f',
                                         membervalue=thermalcontrol.temperature )
         # Make a NumberVector instance, containing the member.
         temperaturevector = ipd.NumberVector( name="temperaturevector",
