@@ -56,10 +56,18 @@ You could subclass the Device class, and override this method to control that pa
 
 The driver hardware method would need to await each of the devices devhardware methods.
 
-For example the driver hardware method would contain the line::
+For example the driver hardware method could contain the line::
 
     await self[devicename].devhardware()
 
-which awaits the device's devhardware method, containing the code to run that device. If you have multiple devices this could be done using the asyncio.gather function.
+which awaits the device's devhardware method, containing the code to run that device.
+
+If you have multiple devices and you want to await all their devhardware() methods, this could be done with::
+
+    async def hardware(self):
+        for device in self.values():
+            self.add_background(device.devhardware())
+
+which adds each device's devhardware method as a background task.
 
 The args and kwargs arguments of devhardware are there so you can pass in any argument you like when calling this method.

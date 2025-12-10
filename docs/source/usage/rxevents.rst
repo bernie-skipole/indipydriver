@@ -80,10 +80,10 @@ The Device class has method::
 
     async def devrxevent(self, event, *args, **kwargs)
 
-If desired you could subclass Device, and overwrite this method to handle events pertaining to this device. You would then
-ensure devrxevent(event) is called using something like the code below in the driver::
+If desired you could subclass Device, and overwrite this method to handle events pertaining to this device. You would then ensure devrxevent(event) is called using something like the code below in the driver::
 
     async def rxevent(self, event):
-        await self[event.devicename].devrxevent(event)
+        if event.devicename in self:
+           await self[event.devicename].devrxevent(event)
 
 The device method devrxevent(event) then handles those events targeted at that particular device.
