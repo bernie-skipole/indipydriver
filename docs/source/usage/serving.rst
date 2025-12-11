@@ -176,6 +176,8 @@ Under /etc/nginx/sites-available create another configuration file myproj.conf::
 
 Then, within directory /etc/nginx/sites-enabled delete the default link, and create a new link to myproj.conf:
 
+cd /etc/nginx/sites-enabled
+
 sudo rm default
 
 sudo ln -s /etc/nginx/sites-available/myproj.conf /etc/nginx/sites-enabled/
