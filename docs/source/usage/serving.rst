@@ -37,6 +37,9 @@ and any other requirements you may have. Then deactivate
 
 deactivate
 
+auto start the INDI service
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 You now need to create a systemd file to start this
 
 So to create a file:
@@ -85,6 +88,9 @@ Finally reboot.
 
 Test this using indipyterm to connect to localhost:7624, and your INDI service should be working.
 
+auto start indipyweb
+^^^^^^^^^^^^^^^^^^^^
+
 Now, in a similar manner, create an indipyweb service.
 
 create a file:
@@ -122,6 +128,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable indipyweb.service
 
 Once rebooted you should be able (from a local browser) to connect to localhost:8000, and see your service running.
+
+Install and auto start NGINX
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You now want nginx, to serve on port 80, and be able to access it anywhere on your network. nginx can be loaded with the system apt, and will be automatically started.
 
