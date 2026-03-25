@@ -50,7 +50,9 @@ The logging.getlogger() command shown above gets the root logger, which gathers 
 
     driverlogger = logging.getlogger("indipydriver.ipydriver")
 
-indipydriver.ipydriver - generates driver logs
+indipydriver.ipydriver - generates driver logs.
+
+indipyserver.exdriver - generates executable driver logs.
 
 indipyserver.remote - generates remote connection logs.
 
