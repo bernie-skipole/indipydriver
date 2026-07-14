@@ -823,7 +823,7 @@ class _STDINOUT():
                 if message.endswith(b'/>'):
                     # the message is complete, handle message here
                     try:
-                        root = ET.fromstring(message.decode("us-ascii"))
+                        root = ET.fromstring(message.decode("utf-8"))
                     except Exception:
                         # failed to parse the message, continue at beginning
                         message = b''
@@ -839,7 +839,7 @@ class _STDINOUT():
             if message.endswith(_ENDTAGS[messagetagnumber]):
                 # the message is complete, handle message here
                 try:
-                    root = ET.fromstring(message.decode("us-ascii"))
+                    root = ET.fromstring(message.decode("utf-8"))
                 except Exception:
                     # failed to parse the message, continue at beginning
                     message = b''
