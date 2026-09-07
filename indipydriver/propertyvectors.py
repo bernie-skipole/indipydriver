@@ -44,6 +44,11 @@ class PropertyVector(collections.UserDict):
         self.group = group
         self.state = state
         self._timeout = "0"
+        self._message = ''
+
+        # self.changed is a flag to indicate a value has changed
+        self.changed = True
+
         self.vectortype = self.__class__.__name__
         # if self.enable is False, this property ignores incoming traffic
         # and (apart from delProperty) does not transmit anything
@@ -63,9 +68,14 @@ class PropertyVector(collections.UserDict):
     @timeout.setter
     def timeout(self, value):
         if isinstance(value, str):
-            self._timeout = value
+            t = value
         else:
-            self._timeout = str(value)
+            t = str(value)
+
+        if t != self._timeout:
+            self._timeout = t
+            self.changed = True
+
 
 
     @property
@@ -91,9 +101,11 @@ class PropertyVector(collections.UserDict):
         xmldata.set("name", self.name)
         xmldata.set("timestamp", tstring)
         if message:
+            self._message = message
             xmldata.set("message", message)
         await self.driver.send(xmldata)
         self.enable = False
+        self.changed = True
         for member in self.data.values():
             # set all members as changed, so when re-enabled, all values are ready to be sent again
             member.changed = True
@@ -123,8 +135,12 @@ class PropertyVector(collections.UserDict):
                 logger.error("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
         xmldata = self._make_defVector(message, timestamp)
-        if xmldata is not None:
-            await self.driver.send(xmldata)
+        if xmldata is None:
+            return
+        if message:
+            self._message = message
+        await self.driver.send(xmldata)
+        self.changed = False
 
 
     def checkvalue(self, value, allowed):
@@ -140,7 +156,10 @@ class PropertyVector(collections.UserDict):
     @state.setter
     def state(self, value):
         try:
-            self._state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
+            state = self.checkvalue(value, ['Idle','Ok','Busy','Alert'])
+            if state != self._state:
+                self._state = state
+                self.changed = True
         except ValueError:
             logger.exception("Invalid state value")
 
@@ -270,15 +289,14 @@ class SwitchVector(PropertyVector):
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
-           If no values have changed, the vector will not be sent, if you need to ensure the
-           vector message, state or time values are sent to the client, then use the more
-           explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -298,28 +316,32 @@ class SwitchVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
         # so make all 'On' values last
         Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off')
         Onswitches = (switch for switch in self.data.values() if switch.membervalue == 'On')
         # set a flag to test if at least one member is included
-        membersincluded = False
         for switch in Offswitches:
             # only send member if its value has changed or if allvalues is True
             if allvalues or switch.changed:
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
-                membersincluded = True
+                self.changed = True
         for switch in Onswitches:
             # only send member if its value has changed or if allvalues is True
             if allvalues or switch.changed:
                 xmldata.append(switch.oneswitch())
                 switch.changed = False
-                membersincluded = True
-        if membersincluded:
-            # only send xmldata if a member is included in the vector
+                self.changed = True
+        if self.changed:
             await self.driver.send(xmldata)
+            self.changed = False
+        else:
+            logger.debug(f"Did not send setSwitchVector {self.devicename}:{self.name} due to no value change")
 
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
@@ -330,14 +352,15 @@ class SwitchVector(PropertyVector):
            member names which will have their values sent.
 
            This allows members to be explicitly specified. If the members list is empty
-           then a vector will still be sent, empty of members, which may be required if
-           just a state or message is to be sent.
+           then a vector will still be sent, empty of members.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -357,6 +380,9 @@ class SwitchVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
         # so make all 'On' values last
@@ -369,6 +395,7 @@ class SwitchVector(PropertyVector):
             xmldata.append(switch.oneswitch())
             switch.changed = False
         await self.driver.send(xmldata)
+        self.changed = False
 
 
 class LightVector(PropertyVector):
@@ -434,13 +461,12 @@ class LightVector(PropertyVector):
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
-           If no values have changed, the vector will not be sent, if you need to ensure the
-           vector message, state or time values are sent to the client, then use the more
-           explicit send_setVectorMembers method instead.
         """
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -458,18 +484,22 @@ class LightVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
-        # set a flag to test if at least one member is included
-        membersincluded = False
         for light in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or light.changed:
                 xmldata.append(light.onelight())
                 light.changed = False
-                membersincluded = True
-        if membersincluded:
-            # only send xmldata if a member is included in the vector
+                self.changed = True
+        if self.changed:
             await self.driver.send(xmldata)
+            self.changed = False
+        else:
+            logger.debug(f"Did not send setLightVector {self.devicename}:{self.name} due to no value change")
+
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """members is a list of member names.
@@ -479,13 +509,14 @@ class LightVector(PropertyVector):
            member names which will have their values sent.
 
            This allows members to be explicitly specified. If the members list is empty
-           then a vector will still be sent, empty of members, which may be required if
-           just a state or message is to be sent.
+           then a vector will still be sent, empty of members.
         """
         # Note timeout is not used
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -503,12 +534,16 @@ class LightVector(PropertyVector):
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
         for light in self.data.values():
             if light.name in  members:
                 xmldata.append(light.onelight())
                 light.changed = False
         await self.driver.send(xmldata)
+        self.changed = False
 
 
 
@@ -598,15 +633,14 @@ class TextVector(PropertyVector):
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
-           If no values have changed, the vector will not be sent, if you need to ensure the
-           vector message, state or time values are sent to the client, then use the more
-           explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -626,18 +660,22 @@ class TextVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
-        # set a flag to test if at least one member is included
-        membersincluded = False
         for text in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or text.changed:
                 xmldata.append(text.onetext())
                 text.changed = False
-                membersincluded = True
-        if membersincluded:
-            # only send xmldata if a member is included in the vector
+                self.changed = True
+        if self.changed:
             await self.driver.send(xmldata)
+            self.changed = False
+        else:
+            logger.debug(f"Did not send setTextVector {self.devicename}:{self.name} due to no value change")
+
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """members is a list of member names.
@@ -647,14 +685,15 @@ class TextVector(PropertyVector):
            member names which will have their values sent.
 
            This allows members to be explicitly specified. If the members list is empty
-           then a vector will still be sent, empty of members, which may be required if
-           just a state or message is to be sent.
+           then a vector will still be sent, empty of members.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -674,12 +713,16 @@ class TextVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
         for text in self.data.values():
             if text.name in members:
                 xmldata.append(text.onetext())
                 text.changed = False
         await self.driver.send(xmldata)
+        self.changed = False
 
 
 class NumberVector(PropertyVector):
@@ -784,15 +827,14 @@ class NumberVector(PropertyVector):
            If allvalues is True, all values are sent.
 
            If allvalues is False, only values that have changed will be sent, saving bandwidth.
-           If no values have changed, the vector will not be sent, if you need to ensure the
-           vector message, state or time values are sent to the client, then use the more
-           explicit send_setVectorMembers method instead.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -812,18 +854,22 @@ class NumberVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
-        # set a flag to test if at least one member is included
-        membersincluded = False
         for number in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or number.changed:
                 xmldata.append(number.onenumber())
                 number.changed = False
-                membersincluded = True
-        if membersincluded:
-            # only send xmldata if a member is included in the vector
+                self.changed = True
+        if self.changed:
             await self.driver.send(xmldata)
+            self.changed = False
+        else:
+            logger.debug(f"Did not send setNumberVector {self.devicename}:{self.name} due to no value change")
+
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[]):
         """members is a list of member names.
@@ -833,14 +879,15 @@ class NumberVector(PropertyVector):
            member names which will have their values sent.
 
            This allows members to be explicitly specified. If the members list is empty
-           then a vector will still be sent, empty of members, which may be required if
-           just a state or message is to be sent.
+           then a vector will still be sent, empty of members.
         """
         if timeout is not None:
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -860,12 +907,16 @@ class NumberVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
         for number in self.data.values():
             if number.name in members:
                 xmldata.append(number.onenumber())
                 number.changed = False
         await self.driver.send(xmldata)
+        self.changed = False
 
 
 class BLOBVector(PropertyVector):
@@ -895,7 +946,7 @@ class BLOBVector(PropertyVector):
         if not isinstance(blobsize, int):
             logger.error("blobsize rejected, must be an integer object")
             return
-        member = self.data.get[membername]
+        member = self.data.get(membername)
         if not member:
             return
         member.blobsize = blobsize
@@ -974,7 +1025,9 @@ class BLOBVector(PropertyVector):
             self.timeout = timeout
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
-                self._state = state
+                if state != self._state:
+                    self._state = state
+                    self.changed = True
             else:
                 logger.error("Aborting sending setBLOBVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
@@ -994,6 +1047,9 @@ class BLOBVector(PropertyVector):
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
         if message:
+            if message != self._message:
+                self._message = message
+                self.changed = True
             xmldata.set("message", message)
 
         loop = asyncio.get_running_loop()
@@ -1006,3 +1062,4 @@ class BLOBVector(PropertyVector):
                 except ValueError:
                     logger.exception("Unable to create setBLOBVector")
         await self.driver.send(xmldata)
+        self.changed = False
