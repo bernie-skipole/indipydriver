@@ -42,6 +42,7 @@ class PropertyVector(collections.UserDict):
         self.name = name
         self.label = label
         self.group = group
+        self._state = None
         self.state = state
         self._timeout = "0"
         self._message = ''
@@ -340,7 +341,7 @@ class SwitchVector(PropertyVector):
         if self.changed:
             await self.driver.send(xmldata)
             self.changed = False
-        else:
+        elif logger.isEnabledFor(logging.DEBUG) and self.driver.debug_enable:
             logger.debug(f"Did not send setSwitchVector {self.devicename}:{self.name} due to no value change")
 
 
@@ -497,7 +498,7 @@ class LightVector(PropertyVector):
         if self.changed:
             await self.driver.send(xmldata)
             self.changed = False
-        else:
+        elif logger.isEnabledFor(logging.DEBUG) and self.driver.debug_enable:
             logger.debug(f"Did not send setLightVector {self.devicename}:{self.name} due to no value change")
 
 
@@ -673,7 +674,7 @@ class TextVector(PropertyVector):
         if self.changed:
             await self.driver.send(xmldata)
             self.changed = False
-        else:
+        elif logger.isEnabledFor(logging.DEBUG) and self.driver.debug_enable:
             logger.debug(f"Did not send setTextVector {self.devicename}:{self.name} due to no value change")
 
 
@@ -867,7 +868,7 @@ class NumberVector(PropertyVector):
         if self.changed:
             await self.driver.send(xmldata)
             self.changed = False
-        else:
+        elif logger.isEnabledFor(logging.DEBUG) and self.driver.debug_enable:
             logger.debug(f"Did not send setNumberVector {self.devicename}:{self.name} due to no value change")
 
 
