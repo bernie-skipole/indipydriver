@@ -44,6 +44,10 @@ Which provides a convention for property and member names.
 
 The state can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods. If the send method has argument state=None (the default), then the state attribute remains unchanged, however if the argument is set to one of the state values, then the state attribute is changed, and the client will receive the new state.
 
+**message** Set to a string which the client can display with the property.
+
+If set to an empty string then the messages will not be changed from the last value set. The attribute can be changed when calling a send_defVector, or send_setVector method where it is an optional argument of these methods.
+
 **timeout** indicates to the client the worst-case time it might take to change the value to something else.
 
 The default of '0' implies that the vector will be updated in a minimal time should the client request it.

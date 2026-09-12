@@ -77,8 +77,6 @@ class PropertyVector(collections.UserDict):
             self._timeout = t
             self.changed = True
 
-
-
     @property
     def device(self):
         return self.driver[self.devicename]
@@ -101,9 +99,9 @@ class PropertyVector(collections.UserDict):
         xmldata.set("device", self.devicename)
         xmldata.set("name", self.name)
         xmldata.set("timestamp", tstring)
-        if message:
-            self._message = message
-            xmldata.set("message", message)
+        self.message = message
+        if self.message:
+            xmldata.set("message", self.message)
         await self.driver.send(xmldata)
         self.enable = False
         self.changed = True
@@ -129,17 +127,16 @@ class PropertyVector(collections.UserDict):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 self._state = state
             else:
                 logger.error("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
-        xmldata = self._make_defVector(message, timestamp)
+        xmldata = self._make_defVector(self.message, timestamp)
         if xmldata is None:
             return
-        if message:
-            self._message = message
         await self.driver.send(xmldata)
         self.changed = False
 
@@ -163,6 +160,21 @@ class PropertyVector(collections.UserDict):
                 self.changed = True
         except ValueError:
             logger.exception("Invalid state value")
+
+    @property
+    def message(self):
+        return self._message
+
+    @message.setter
+    def message(self, value):
+        if not isinstance(value, str):
+            logger.exception("Invalid message, must be a string")
+            return
+        if value:
+            if value != self._message:
+                self._message = value
+                self.changed = True
+
 
     def __setitem__(self, membername, value):
         try:
@@ -293,6 +305,7 @@ class SwitchVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -316,11 +329,8 @@ class SwitchVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
         # so make all 'On' values last
         Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off')
@@ -357,6 +367,7 @@ class SwitchVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -380,11 +391,8 @@ class SwitchVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         # for rule 'OneOfMany' the standard indicates 'Off' should precede 'On'
         # so make all 'On' values last
         Offswitches = (switch for switch in self.data.values() if switch.membervalue == 'Off' and switch.name in members)
@@ -471,6 +479,7 @@ class LightVector(PropertyVector):
             else:
                 logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        self.message = message
         if not self.device.enable:
             return
         if not self.enable:
@@ -484,11 +493,8 @@ class LightVector(PropertyVector):
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for light in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or light.changed:
@@ -521,6 +527,7 @@ class LightVector(PropertyVector):
             else:
                 logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        self.message = message
         if not self.device.enable:
             return
         if not self.enable:
@@ -534,11 +541,8 @@ class LightVector(PropertyVector):
         xmldata.set("name", self.name)
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for light in self.data.values():
             if light.name in  members:
                 xmldata.append(light.onelight())
@@ -637,6 +641,7 @@ class TextVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -660,11 +665,8 @@ class TextVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for text in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or text.changed:
@@ -690,6 +692,7 @@ class TextVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -713,11 +716,8 @@ class TextVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for text in self.data.values():
             if text.name in members:
                 xmldata.append(text.onetext())
@@ -831,6 +831,7 @@ class NumberVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -854,11 +855,8 @@ class NumberVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for number in self.data.values():
             # only send member if its value has changed or if allvalues is True
             if allvalues or number.changed:
@@ -884,6 +882,7 @@ class NumberVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -907,11 +906,8 @@ class NumberVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for number in self.data.values():
             if number.name in members:
                 xmldata.append(number.onenumber())
@@ -1024,6 +1020,7 @@ class BLOBVector(PropertyVector):
         """
         if timeout is not None:
             self.timeout = timeout
+        self.message = message
         if state:
             if state in ('Idle','Ok','Busy','Alert'):
                 if state != self._state:
@@ -1047,11 +1044,8 @@ class BLOBVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            if message != self._message:
-                self._message = message
-                self.changed = True
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
 
         loop = asyncio.get_running_loop()
 
