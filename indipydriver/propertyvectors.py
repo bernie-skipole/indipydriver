@@ -134,7 +134,7 @@ class PropertyVector(collections.UserDict):
             else:
                 logger.error("Aborting sending defVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
-        xmldata = self._make_defVector(self.message, timestamp)
+        xmldata = self._make_defVector(timestamp)
         if xmldata is None:
             return
         await self.driver.send(xmldata)
@@ -255,7 +255,7 @@ class SwitchVector(PropertyVector):
 
 
 
-    def _make_defVector(self, message='', timestamp=None):
+    def _make_defVector(self, timestamp=None):
         "Creates xml data object for vector definition"
         if not self.device.enable:
             return
@@ -276,8 +276,8 @@ class SwitchVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for switch in self.data.values():
             xmldata.append(switch.defswitch())
         return xmldata
@@ -428,7 +428,7 @@ class LightVector(PropertyVector):
     def perm(self):
         return "ro"
 
-    def _make_defVector(self, message='', timestamp=None):
+    def _make_defVector(self, timestamp=None):
         "Creates xml data object for vector definition"
         if not self.device.enable:
             return
@@ -445,8 +445,8 @@ class LightVector(PropertyVector):
         xmldata.set("group", self.group)
         xmldata.set("state", self.state)
         xmldata.set("timestamp", tstring)
-        if message:
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for light in self.data.values():
             xmldata.append(light.deflight())
         return xmldata
@@ -593,7 +593,7 @@ class TextVector(PropertyVector):
         return event
 
 
-    def _make_defVector(self, message='', timestamp=None):
+    def _make_defVector(self, timestamp=None):
         "Creates xml data object for vector definition"
         if not self.device.enable:
             return
@@ -613,8 +613,8 @@ class TextVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for text in self.data.values():
             xmldata.append(text.deftext())
         return xmldata
@@ -783,7 +783,7 @@ class NumberVector(PropertyVector):
         return event
 
 
-    def _make_defVector(self, message='', timestamp=None):
+    def _make_defVector(self, timestamp=None):
         "Creates xml data object for vector definition"
         if not self.device.enable:
             return
@@ -803,8 +803,8 @@ class NumberVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for number in self.data.values():
             xmldata.append(number.defnumber())
         return xmldata
@@ -973,7 +973,7 @@ class BLOBVector(PropertyVector):
         return event
 
 
-    def _make_defVector(self, message='', timestamp=None):
+    def _make_defVector(self, timestamp=None):
         "Creates xml data object for vector definition"
         if not self.device.enable:
             return
@@ -993,8 +993,8 @@ class BLOBVector(PropertyVector):
         xmldata.set("timestamp", tstring)
         if self._perm != 'ro':
             xmldata.set("timeout", self._timeout)
-        if message:
-            xmldata.set("message", message)
+        if self.message:
+            xmldata.set("message", self.message)
         for blob in self.data.values():
             xmldata.append(blob.defblob())
         return xmldata
