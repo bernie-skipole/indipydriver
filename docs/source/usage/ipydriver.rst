@@ -77,4 +77,4 @@ Alternatively, use indipyserver.IPyServer, this listens on the given host and po
         server = IPyServer(*drivers, host="localhost", port=7624, maxconnections=5)
         await server.asyncrun()
 
-You would use then use indipyterm, or other INDI client, to connect to this port, however note that if your client is running remotely, and you are connecting over a network, then in the above command "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.
+You would then use indipyterm, or other INDI client, to connect to this port. Note that if your client is running remotely, and you are connecting over a network, then in the above command "localhost" would need to be changed to the IP address of the servers listening port, or to "0.0.0.0" to listen on all ports.
