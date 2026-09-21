@@ -34,13 +34,13 @@ As default it sends the vector, including all its members to the client, the all
 
 In which case, only values that have changed will be sent, saving bandwidth.
 
-If no values have changed, the vector will not be sent, if you need to ensure the vector message, state or time values are sent to the client, then use the more explicit send_setVectorMembers method instead::
+Alternatively the more explicit send_setVectorMembers method could be used instead::
 
     async def send_setVectorMembers(self, message='', timestamp=None, timeout=None, state=None, members=[])
 
-The members list specifies the member names which will have their values sent. If the members list is empty then a vector will still be sent, empty of members, which may be required if just a state or message is to be sent.
+The members list specifies the member names which will have their values sent. If the members list is empty then a vector will still be sent, empty of members.
 
-Please note that BLOBVectors do not have a send_setVector method only the more explicit send_setVectorMembers is available, this is to ensure more control over possibly large objects.
+Please note that BLOBVectors do not have a send_setVector method, only the more explicit send_setVectorMembers is available, this is to ensure more control over possibly large objects.
 
 
 devhardware
