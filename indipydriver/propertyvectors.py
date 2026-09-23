@@ -12,8 +12,6 @@ from .propertymembers import SwitchMember, LightMember, TextMember, NumberMember
 logger = logging.getLogger(__name__)
 
 
-
-
 def timestamp_string(timestamp = None):
     "Return a string timestamp or None if invalid"
     if timestamp is None:
@@ -314,6 +312,9 @@ class SwitchVector(PropertyVector):
             else:
                 logger.error("Aborting sending setSwitchVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        if self._state == 'Ok':
+            # always send if state is ok, since this could be an acknowledgement, even if no items changed
+            self.changed = True
         if not self.device.enable:
             return
         if not self.enable:
@@ -479,6 +480,9 @@ class LightVector(PropertyVector):
             else:
                 logger.error("Aborting sending setLightVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        if self._state == 'Ok':
+            # always send if state is ok, since this could be an acknowledgement, even if no items changed
+            self.changed = True
         self.message = message
         if not self.device.enable:
             return
@@ -650,6 +654,9 @@ class TextVector(PropertyVector):
             else:
                 logger.error("Aborting sending setTextVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        if self._state == 'Ok':
+            # always send if state is ok, since this could be an acknowledgement, even if no items changed
+            self.changed = True
         if not self.device.enable:
             return
         if not self.enable:
@@ -840,6 +847,9 @@ class NumberVector(PropertyVector):
             else:
                 logger.error("Aborting sending setNumberVector: The given state must be either None or one of Idle, Ok, Busy or Alert")
                 return
+        if self._state == 'Ok':
+            # always send if state is ok, since this could be an acknowledgement, even if no items changed
+            self.changed = True
         if not self.device.enable:
             return
         if not self.enable:
