@@ -19,8 +19,6 @@ The rule "OneOfMany" ensures that this is a radio set, and only one button can b
 
 Once created sv["opt1"] will be "On".
 
-As well as the methods documented below, vectors have dict methods such as get() and iteration through keys(), values() and items().
-
 A number of attributes are common to all vectors.
 
 Common Attributes
@@ -68,13 +66,20 @@ To re-enable a vector, set this attribute to True, also the device enable attrib
 
 If in the initial state of the device, it is required that a particular property should be hidden, then when the vector is first created, set vector.enable = False, and the vector will be disabled until the enable attribute is set True, and the vector send_defVector() method called, which informs the client of the existence of this property.
 
+Notes
+^^^^^
+
 Each vector is also a mapping of membername to memberVALUE  - note, not member object, rather it is the value held by the member. In the LEDDriver example, the value of the vector member is set by::
 
     event.vector["ledmember"] = newvalue
 
+As well as the methods documented below, vectors have dict methods such as get() and iteration through keys(), values() and items().
+
 Numeric values are preferably set into vectors as strings, this is to explicitly control how numbers are formatted and sent in the protocol. If given as floats or integers they will be converted to strings. The only exception is blobsize, where the number should be an integer.
 
 When transmitting a vector after updating its values, use the send_setVector or send_setVectorMembers methods, the method has a timestamp argument. The specification requires this to be a UTC value. You can either create a datetime.datetime object with timezone UTC, or leave the argument as None, in which case the method will automatically insert a UTC timestamp.
+
+*Warning: The vector send_setVector method has argument allvalues with default set to True, ensuring all values are sent. If allvalues is set to False, then only changed values are sent, saving bandwidth. In some scenarios where acknowledgements, alerts and messages are repeatedly sent, perhaps without changing values there may be a risk that required data is not sent. For complex cases it is therefore preferable to use the default allvalues set as True, or use the explicit send_setVectorMembers method in which you list those members to be sent.*
 
 The Text, Light, Switch, Number and BLOB members and vectors are described below. When creating a driver you would typically first make the members that hold the values associated with your instrument, these members would then be inserted into vectors, and the vectors into a Device.
 
