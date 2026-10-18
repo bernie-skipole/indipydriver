@@ -12,53 +12,13 @@ from .propertymembers import getfloat
 logger = logging.getLogger(__name__)
 
 
-# All xml data received from the client, or from snooped devices should be contained in one of the following tags
-TAGS = (b'getProperties',
-        b'newTextVector',
-        b'newNumberVector',
-        b'newSwitchVector',
-        b'newBLOBVector',
-        b'enableBLOB',
-        # below are tags from snooped devices
-        b'message',
-        b'delProperty',
-        b'defSwitchVector',
-        b'setSwitchVector',
-        b'defLightVector',
-        b'setLightVector',
-        b'defTextVector',
-        b'setTextVector',
-        b'defNumberVector',
-        b'setNumberVector',
-        b'defBLOBVector',
-        b'setBLOBVector'
-       )
-
-# Note these are strings, as they are used for checking xmldata.tag values
-
-DEFTAGS = ( 'defSwitchVector',
-            'defLightVector',
-            'defTextVector',
-            'defNumberVector',
-            'defBLOBVector'
-          )
-
-
-# _STARTTAGS is a tuple of ( b'<defTextVector', ...  ) data received will be tested to start with such a starttag
-_STARTTAGS = tuple(b'<' + tag for tag in TAGS)
-
-
-# _ENDTAGS is a tuple of ( b'</defTextVector>', ...  ) data received will be tested to end with such an endtag
-_ENDTAGS = tuple(b'</' + tag + b'>' for tag in TAGS)
-
-
 def _makestart(element):
     "Given an xml element, returns a string of its start, including < tag attributes >"
-    attriblist = ["<", element.tag]
-    for key,value in element.attrib.items():
-        attriblist.append(f" {key}=\"{value}\"")
-    attriblist.append(">")
-    return "".join(attriblist)
+    start_elem = ET.Element(element.tag, attrib=element.attrib)
+    # short_empty_elements=False forces <tag></tag> instead of <tag />
+    full_str = ET.tostring(start_elem, encoding='utf-8', short_empty_elements=False).decode('utf-8')
+    # Split at the closing bracket of the opening tag
+    return full_str.split('></')[0] + '>'
 
 
 class IPyDriver(collections.UserDict):
@@ -74,6 +34,21 @@ class IPyDriver(collections.UserDict):
 
        This object is also a mapping, of devicename:deviceobject
        """
+
+    # Note these class attributes are strings, as they are used for checking xmldata.tag values
+
+    _client_tags = ("newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
+    _snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
+                   'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
+                   'defBLOBVector', 'setBLOBVector')
+    _def_tags = ( 'defSwitchVector',
+                  'defLightVector',
+                  'defTextVector',
+                  'defNumberVector',
+                  'defBLOBVector'  )
+
+
+
 
     @staticmethod
     def indi_number_to_float(value):
@@ -151,6 +126,11 @@ class IPyDriver(collections.UserDict):
         self._backgroundlist = []
 
 
+    def __setitem__(self, devicename):
+        raise KeyError
+
+
+
     def add_background(self, coro):
         """This method adds a coroutine to be run in the background."""
         if not inspect.iscoroutine(coro):
@@ -190,15 +170,51 @@ class IPyDriver(collections.UserDict):
         if self._stop:
             return
 
-        await self._commsobj.run_tx(xmldata)
+        if self._commsobj is None:
+            await self._run_tx(xmldata)
+        else:
+            await self._commsobj.run_tx(xmldata)
 
         if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
             binarydata = ET.tostring(xmldata)
             logger.debug(f"TX:: {binarydata.decode('utf-8')}")
 
 
-    def __setitem__(self, devicename):
-        raise KeyError
+    async def _run_tx(self, txdata):
+        """Gets ET.Element to be transmitted, and transmits it out on stdout"""
+        if self._stop:
+            return
+
+        if (txdata.tag == "setBLOBVector") and len(txdata):
+            # txdata is a setBLOBVector containing blobs
+            # send initial setBLOBVector
+            startdata = _makestart(txdata)
+            sys.stdout.buffer.write(startdata.encode())
+            sys.stdout.buffer.flush()
+            for oneblob in txdata.iter('oneBLOB'):
+                bytescontent = oneblob.text.encode()
+                # send start of oneblob
+                startoneblob = _makestart(oneblob)
+                sys.stdout.buffer.write(startoneblob.encode())
+                sys.stdout.buffer.flush()
+                # send content in chunks
+                chunksize = 1000
+                for b in range(0, len(bytescontent), chunksize):
+                    byteschunk = bytescontent[b:b+chunksize]
+                    sys.stdout.buffer.write(byteschunk)
+                    sys.stdout.buffer.flush()
+                    await asyncio.sleep(0)
+                sys.stdout.buffer.write(b"</oneBLOB>")
+                sys.stdout.buffer.flush()
+            # send enddata
+            sys.stdout.buffer.write(b"</setBLOBVector>\n")
+            sys.stdout.buffer.flush()
+        else:
+            # its straight xml, send it out on stdout
+            binarydata = ET.tostring(txdata)
+            binarydata += b"\n"
+            sys.stdout.buffer.write(binarydata)
+            sys.stdout.buffer.flush()
 
 
     async def _call_snoopevent(self, event):
@@ -336,9 +352,6 @@ class IPyDriver(collections.UserDict):
 
         try:
 
-            if self._commsobj is None:
-                self._commsobj = _STDINOUT(self)
-
             async with asyncio.TaskGroup() as tg:
                 self._tg = tg
                 for coro in self._backgroundlist:
@@ -346,7 +359,10 @@ class IPyDriver(collections.UserDict):
                 for device in self.data.values():
                     for coro in device._backgroundlist:
                         tg.create_task( coro )                   # Start any background tasks already added to devices
-                tg.create_task( self._commsobj.run_rx() )        # run STDIN communications
+                if self._commsobj is None:
+                    tg.create_task( self._run_rx() )             # run STDIN communications
+                else:
+                    tg.create_task( self._commsobj.run_rx() )    # hook for a possible object controlling communications
                 tg.create_task( self.hardware() )                # task to operate device hardware, and transmit updates
                 tg.create_task( self._monitorsnoop() )           # task to monitor if a getproperties needs to be sent
 
@@ -356,13 +372,78 @@ class IPyDriver(collections.UserDict):
             self.stopped.set()
 
 
-    async def _readdata(self, root):
-        "Called from communications object with received xmldata"
 
-        client_tags = ("newSwitchVector", "newNumberVector", "newTextVector", "newBLOBVector")
-        snoop_tags = ("message", 'delProperty', 'defSwitchVector', 'setSwitchVector', 'defLightVector',
-                      'setLightVector', 'defTextVector', 'setTextVector', 'defNumberVector', 'setNumberVector',
-                      'defBLOBVector', 'setBLOBVector')
+    async def _run_rx(self):
+        """Gets data coming in on STDIN, dispatches to self._readdata
+
+        Uses XMLPullParser for streaming, chunk-at-a-time parsing with no
+        user-space accumulation.  Because INDI sends a sequence of top-level
+        XML elements with no document root, the stream is wrapped in a
+        synthetic <root> element.  "end" events whose depth returns to 1
+        (direct children of the wrapper) mark complete INDI messages.
+        """
+
+        ### Note: using ET.XMLPullParser as contributed by arisada in submission to indipyclient
+
+        # Set stdin to non-blocking mode
+        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
+        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        logger.info("Communicating via STDIN/STDOUT")
+
+        def _make_parser():
+            p = ET.XMLPullParser(events=("start", "end"))
+            p.feed(b"<root>")
+            d = 0
+            root_elem = None
+            for ev, el in p.read_events():
+                if ev == "start":
+                    d += 1
+                    root_elem = el   # the synthetic <root> Element
+            return p, d, root_elem
+
+        parser, depth, root_elem = _make_parser()
+
+        # this runs until self._stop becomes True
+        # passes incoming data to _readdata
+        try:
+
+            while not self._stop:
+                await asyncio.sleep(0)
+                data = sys.stdin.buffer.read(65536)
+                if not data:
+                    await asyncio.sleep(0.01)
+                    continue
+                if self._stop:
+                    return
+                try:
+                    parser.feed(data)
+                except ET.ParseError:
+                    logger.error("IPyDriver: XML parse error, resetting parser state")
+                    parser, depth, root_elem = _make_parser()
+                    continue
+                for event, element in parser.read_events():
+                    if self._stop:
+                        break
+                    if event == "start":
+                        depth += 1
+                    elif event == "end":
+                        depth -= 1
+                        if depth == 1:
+                            # A complete top-level INDI element is ready.
+                            if root_elem is not None:
+                                root_elem.remove(element)
+                            await self._readdata(element)
+
+        except Exception:
+            logger.exception("Exception report from IPyDriver._run_rx")
+            raise
+
+
+
+    async def _readdata(self, root):
+        "Called with received ET.Element"
+
         if self._stop:
             return
 
@@ -370,6 +451,20 @@ class IPyDriver(collections.UserDict):
         if logger.isEnabledFor(logging.DEBUG) and self.debug_enable:
             binarydata = ET.tostring(root)
             logger.debug(f"RX:: {binarydata.decode('utf-8')}")
+
+
+        # check for incoming duplicates
+        if root.tag in self._def_tags:
+            devicename = root.get("device")
+            if devicename is None:
+                # invalid definition
+                return
+            if devicename in self.keys():
+                # duplicate address
+                logger.error(f"Duplicate address: Received a definition of device {devicename}")
+                self.shutdown()
+                return
+
 
         if root.tag == "getProperties":
             version = root.get("version")
@@ -436,7 +531,7 @@ class IPyDriver(collections.UserDict):
                         logger.exception("Unable to create getProperties event from received data")
             # else device not recognised, so ignore
 
-        elif root.tag in client_tags:
+        elif root.tag in self._client_tags:
             devicename = root.get("device")
             if devicename is None:
                 # device not given, invalid, ignore this
@@ -460,7 +555,7 @@ class IPyDriver(collections.UserDict):
                     await self.rxevent(e)
 
 
-        elif root.tag in snoop_tags:
+        elif root.tag in self._snoop_tags:
             # xml received from other devices
             # either devicename is unknown, or this data is to/from another driver.
             # So check if this driver is snooping on this device/vector
@@ -477,7 +572,7 @@ class IPyDriver(collections.UserDict):
 
 
     async def _snoophandler(self, root):
-        """Creates snoop events using data from self.readdata"""
+        """Creates snoop events using data from self._readdata"""
         if self._stop:
             return
         devicename = root.get("device")
@@ -694,183 +789,8 @@ class Device(collections.UserDict):
 
 
 
-class _STDINOUT():
-    """This class is used to implement communications via stdin and stdout"""
-
-    def __init__(self, driver):
-        self.driver = driver
-        self.connected = True
-        self._remainder = b""    # Used to store intermediate data
-        self._stop = False       # Gets set to True to stop communications
-
-
-    @property
-    def stop(self):
-        "returns self._stop, being the instruction to stop the driver"
-        return self._stop
-
-    def shutdown(self):
-        self._stop = True
-
-    async def run_rx(self):
-        """Called from indipydriver to get received data
-           this runs continuously, checking received data"""
-        # Set stdin to non-blocking mode
-        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL)
-        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        logger.info("Communicating via STDIN/STDOUT")
-
-        # this runs until self._stop becomes True
-        # passes incoming data to the driver
-        try:
-            # get block of xml.etree.ElementTree data
-            # from self._xmlinput and send it to the driver
-            devicenames = self.driver.keys()
-            while not self._stop:
-                rxdata = await self._xmlinput()
-                if rxdata is None:
-                    return
-                # check for incoming duplicates
-                if rxdata.tag in DEFTAGS:
-                    devicename = rxdata.get("device")
-                    if devicename is None:
-                        # invalid definition
-                        continue
-                    if devicename in devicenames:
-                        # duplicate address
-                        logger.error(f"Duplicate address: Received a definition of device {devicename}")
-                        self.driver.shutdown()
-                        self.shutdown()
-                        break
-                await self.driver._readdata(rxdata)
-        except Exception:
-            logger.exception("Exception report from _STDINOUT.run_rx")
-            raise
-
-
-    async def run_tx(self, txdata):
-        """Gets data to be transmitted, and transmits it out on stdout"""
-        if self._stop:
-            return
-
-        if (txdata.tag == "setBLOBVector") and len(txdata):
-            # txdata is a setBLOBVector containing blobs
-            # send initial setBLOBVector
-            startdata = _makestart(txdata)
-            sys.stdout.buffer.write(startdata.encode())
-            sys.stdout.buffer.flush()
-            for oneblob in txdata.iter('oneBLOB'):
-                bytescontent = oneblob.text.encode()
-                # send start of oneblob
-                startoneblob = _makestart(oneblob)
-                sys.stdout.buffer.write(startoneblob.encode())
-                sys.stdout.buffer.flush()
-                # send content in chunks
-                chunksize = 1000
-                for b in range(0, len(bytescontent), chunksize):
-                    byteschunk = bytescontent[b:b+chunksize]
-                    sys.stdout.buffer.write(byteschunk)
-                    sys.stdout.buffer.flush()
-                    await asyncio.sleep(0)
-                sys.stdout.buffer.write(b"</oneBLOB>")
-                sys.stdout.buffer.flush()
-            # send enddata
-            sys.stdout.buffer.write(b"</setBLOBVector>\n")
-            sys.stdout.buffer.flush()
-        else:
-            # its straight xml, send it out on stdout
-            binarydata = ET.tostring(txdata)
-            binarydata += b"\n"
-            sys.stdout.buffer.write(binarydata)
-            sys.stdout.buffer.flush()
 
 
 
-    async def _xmlinput(self):
-        """get data from  _datainput, parse it, and return it as xml.etree.ElementTree object
-           Returns None if stop flags arises"""
-        message = b''
-        messagetagnumber = None
-        while not self._stop:
-            await asyncio.sleep(0)
-            data = await self._datainput()
-            # data is either None, or binary data ending in b">"
-            if data is None:
-                return
-            if self._stop:
-                return
-            if not message:
-                # data is expected to start with <tag, first strip any newlines
-                data = data.strip()
-                for index, st in enumerate(_STARTTAGS):
-                    if data.startswith(st):
-                        messagetagnumber = index
-                        break
-                    elif st in data:
-                        # remove any data prior to a starttag
-                        positionofst = data.index(st)
-                        data = data[positionofst:]
-                        messagetagnumber = index
-                        break
-                else:
-                    # data does not start with a recognised tag, so ignore it
-                    # and continue waiting for a valid message start
-                    continue
-                # set this data into the received message
-                message = data
-                # either further children of this tag are coming, or maybe its a single tag ending in "/>"
-                if message.endswith(b'/>'):
-                    # the message is complete, handle message here
-                    try:
-                        root = ET.fromstring(message.decode("utf-8"))
-                    except Exception:
-                        # failed to parse the message, continue at beginning
-                        message = b''
-                        messagetagnumber = None
-                        continue
-                    # xml datablock done, return it
-                    return root
-                # and read either the next message, or the children of this tag
-                continue
-            # To reach this point, the message is in progress, with a messagetagnumber set
-            # keep adding the received data to message, until an endtag is reached
-            message += data
-            if message.endswith(_ENDTAGS[messagetagnumber]):
-                # the message is complete, handle message here
-                try:
-                    root = ET.fromstring(message.decode("utf-8"))
-                except Exception:
-                    # failed to parse the message, continue at beginning
-                    message = b''
-                    messagetagnumber = None
-                    continue
-                # xml datablock done, return it
-                return root
-            # so message is in progress, with a messagetagnumber set
-            # but no valid endtag received yet, so continue the loop
 
 
-    async def _datainput(self):
-        """Waits for binary string of data ending in > from stdin
-           Returns None if stop flags arises"""
-        remainder = self._remainder
-        if b">" in remainder:
-            # This returns with binary data ending in > as long
-            # as there are > characters in self._remainder
-            binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
-            binarydata += b">"
-            return binarydata
-        # As soon as there are no > characters left in self._remainder
-        # get more data from stdin
-        while not self._stop:
-            await asyncio.sleep(0)
-            indata = sys.stdin.buffer.read(100)
-            if not indata:
-                await asyncio.sleep(0.02)
-                continue
-            remainder += indata
-            if b">" in indata:
-                binarydata, self._remainder = remainder.split(b'>', maxsplit=1)
-                binarydata += b">"
-                return binarydata
